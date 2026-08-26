@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # env_file:
+    #   - ./backend/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/src:/app/src  # Hot-reloads code inside Docker!
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - redis
+      - chromadb
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"           # Exposed so you can connect via MongoDB Compass
+    volumes:
+      - mongo_dev_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"             # Exposed for Redis Insight GUI
+    volumes:
+      - redis_dev_data:/data
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"             # Exposed to inspect vector embeddings
+    volumes:
+      - chroma_dev_data:/chroma/chroma
+    restart: unless-stopped
+
+  ai_engine:
+    build:
+      context: ./ai_engine
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ai_engine/src:/app/src
+    command: ["uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    restart: unless-stopped
+
+volumes:
+  mongo_dev_data:
+  redis_dev_data:
+  chroma_dev_data:
