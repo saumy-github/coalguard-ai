@@ -1,0 +1,9 @@
+{
+  "name": "sih26",
+  "private": true,
+  "scripts": {
+    "dev:up": "docker compose up -d --build backend mongodb redis chromadb",
+    "dev:up:all": "docker compose up -d --build",
+    "dev:down": "docker compose down"
+  }
+}
