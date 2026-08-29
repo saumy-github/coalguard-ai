@@ -45,10 +45,13 @@ services:
       context: ./ai_engine
       dockerfile: Dockerfile
     ports:
-      - "8001:8001"
+      - "8001:8000"
+    env_file:
+      - ./ai_engine/.env
     volumes:
       - ./ai_engine/src:/app/src
-    command: ["uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+      - ./ai_engine/data:/app/data
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     restart: unless-stopped
 
 volumes:

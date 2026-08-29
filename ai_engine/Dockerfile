@@ -25,4 +25,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY . .
 
-CMD ["uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "8001"]
+EXPOSE 8000
+
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
