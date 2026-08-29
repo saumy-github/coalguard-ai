@@ -226,11 +226,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# AI Engine / ML Artifacts
+# AI Engine / ML Artifacts & Datasets
 *.pt
 runs/
 ai_engine/runs/
 ai_engine/data/chroma_db/
 ai_engine/yolov8n.pt
 ai_engine/.env
-ai_engine/data/models/Personal Protective Equipment in Workplace Environments/
+ai_engine/data/models/
