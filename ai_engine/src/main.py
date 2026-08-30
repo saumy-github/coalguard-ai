@@ -83,10 +83,18 @@ async def health_check() -> Dict[str, Any]:
     except Exception as exc:
         modules["rag_engine"] = {"ready": False, "error": str(exc)}
 
-    all_ready = all(
-        (m.get("ready", False) if isinstance(m, dict) else False)
-        for m in modules.values()
-    )
+    all_ready = True
+    for key, m in modules.items():
+        if isinstance(m, dict):
+            if "ready" in m:
+                if not m["ready"]:
+                    all_ready = False
+            else:
+                # For modules like rag_engine that return multiple bool flags
+                if not all(v for v in m.values() if isinstance(v, bool)):
+                    all_ready = False
+        else:
+            all_ready = False
 
     return {
         "status": "healthy" if all_ready else "degraded",
