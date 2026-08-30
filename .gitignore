@@ -228,6 +228,7 @@ yarn-error.log*
 
 # AI Engine / ML Artifacts & Datasets
 *.pt
+*.zip
 runs/
 ai_engine/runs/
 ai_engine/data/chroma_db/

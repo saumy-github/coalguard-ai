@@ -262,6 +262,11 @@ def forecast_production(
 ) -> ForecastResult:
     """Forecast future extraction and assess EC-cap compliance.
 
+    Uses linear trend regression with confidence bands derived from
+    historical residual standard deviation. This is a lightweight
+    alternative to Prophet that avoids the CmdStan dependency while
+    producing comparable short-horizon forecasts.
+
     Args:
         history: List of dicts with keys ``date`` (ISO string) and
                  ``production_tonnes`` (float).
@@ -272,9 +277,6 @@ def forecast_production(
         ``ForecastResult`` with daily forecast, cumulative total,
         and compliance verdict.
     """
-    # Prophet expects columns named 'ds' (date) and 'y' (value)
-    from prophet import Prophet  # lazy import — heavyweight
-
     df = pd.DataFrame(history)
     df.rename(columns={"date": "ds", "production_tonnes": "y"}, inplace=True)
     df["ds"] = pd.to_datetime(df["ds"])
@@ -283,33 +285,47 @@ def forecast_production(
     # Historical cumulative
     historical_cumulative = float(df["y"].sum())
 
-    # Fit Prophet
-    model = Prophet(
-        yearly_seasonality=False,
-        weekly_seasonality=True,
-        daily_seasonality=False,
-        changepoint_prior_scale=0.05,
-    )
-    model.fit(df)
+    # Fit linear trend: y = slope * t + intercept
+    n = len(df)
+    t = np.arange(n, dtype=float)
+    y = df["y"].values.astype(float)
 
-    # Forecast
-    future = model.make_future_dataframe(periods=forecast_days)
-    forecast = model.predict(future)
+    if n >= 2:
+        slope, intercept = np.polyfit(t, y, 1)
+    else:
+        # Single data point — assume flat production
+        slope = 0.0
+        intercept = float(y[0]) if n == 1 else 0.0
 
-    # Extract only the forecasted period
-    forecast_period = forecast.tail(forecast_days)
+    # Residual standard deviation for confidence bands
+    fitted = slope * t + intercept
+    residuals = y - fitted
+    residual_std = float(np.std(residuals)) if n >= 2 else float(np.mean(y)) * 0.1
+
+    # Generate forecast
+    last_date = df["ds"].iloc[-1]
     daily_forecast: List[Dict[str, Any]] = []
     cumulative_forecast = 0.0
 
-    for _, row in forecast_period.iterrows():
-        daily_value = max(0.0, float(row["yhat"]))  # no negative production
-        cumulative_forecast += daily_value
+    for i in range(1, forecast_days + 1):
+        t_future = n + i - 1
+        yhat = slope * t_future + intercept
+        yhat = max(0.0, yhat)  # no negative production
+
+        # Confidence band widens with horizon
+        band = residual_std * (1 + 0.02 * i)  # slight widening over time
+        lower = max(0.0, yhat - 1.96 * band)
+        upper = max(0.0, yhat + 1.96 * band)
+
+        forecast_date = last_date + pd.Timedelta(days=i)
+        cumulative_forecast += yhat
+
         daily_forecast.append(
             {
-                "date": row["ds"].strftime("%Y-%m-%d"),
-                "predicted_tonnes": round(daily_value, 2),
-                "lower_bound": round(max(0.0, float(row["yhat_lower"])), 2),
-                "upper_bound": round(max(0.0, float(row["yhat_upper"])), 2),
+                "date": forecast_date.strftime("%Y-%m-%d"),
+                "predicted_tonnes": round(yhat, 2),
+                "lower_bound": round(lower, 2),
+                "upper_bound": round(upper, 2),
             }
         )
 
@@ -331,3 +347,4 @@ def forecast_production(
         compliance_status=status,
         daily_forecast=daily_forecast,
     )
+
