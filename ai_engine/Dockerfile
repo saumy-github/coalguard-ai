@@ -1,30 +1,28 @@
-# syntax=docker/dockerfile:1
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 # libgl1/libglib2.0-0: required by OpenCV/Ultralytics
-# build-essential: chroma-hnswlib (chromadb dep) has no cp312 wheel, needs to compile from source
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y \
+# build-essential: required for building packages like chromadb/hnswlib
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
-    build-essential
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Upgrade pip and packaging tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
 COPY requirements.txt .
 
-# CPU-only build: this container gets no GPU access from docker-compose, and most
-# dev/deploy machines have no NVIDIA GPU. Saves ~1.5-2GB of unused CUDA libs.
-# If GPU support is ever needed, drop this line and add torch back to requirements.txt.
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cpu
-
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
+# CPU-only PyTorch with standard PyPI fallback (--extra-index-url)
+RUN pip install --no-cache-dir torch==2.3.0 torchvision==0.18.0 --extra-index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
 EXPOSE 8000
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
