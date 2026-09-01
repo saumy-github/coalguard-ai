@@ -1,5 +1,8 @@
 # 🛡️ CoalGuard AI Engine — Complete Technical Documentation
 
+> **Last updated:** 2026-08-30 · 
+**Status:** STALE — still describes Facebook Prophet forecasting (removed in commit 04929a1) and shows an incorrect Next.js/Express.js architecture diagram that doesn't match the actual React+Vite frontend / FastAPI backend; see research/ai_engine_review.md §3
+
 **SIH Problem Statement PS26024**: Smart Governance & Compliance Monitoring System for Coal Mines  
 **Module**: `ai_engine/` — ML Micro-Service  
 **Last Updated**: August 2026

@@ -1,5 +1,8 @@
 ﻿# SIH 2026 Research Notes
 
+> **Last updated:** 2026-08-23 · 
+**Status:** HISTORICAL / REFERENCE ONLY — problem-statement selection research covering many unrelated PS candidates, from before PS 26024 was locked in
+
 This markdown version preserves the CSV content in a readable, sectioned format for quick scanning.
 
 ## SIH26003 - AI-Based Cognitive Gaming and Memory Assistance Platform for Elderly Dementia Patients in North Eastern Region (NER)

@@ -1,16 +1,26 @@
 import React from 'react';
 import { StatusBadge } from './StatusBadge';
 
-export const SummaryCard = ({ 
-  title, 
-  value, 
-  subtext, 
-  icon, 
-  status, 
+export const SummaryCard = ({
+  title,
+  value,
+  subtext,
+  icon,
+  status,
   statusLabel,
   trend,
   onClick,
-  className = '' 
+  className = ''
+}: {
+  title?: any;
+  value?: any;
+  subtext?: any;
+  icon?: any;
+  status?: any;
+  statusLabel?: any;
+  trend?: any;
+  onClick?: any;
+  className?: string;
 }) => {
   return (
     <div 

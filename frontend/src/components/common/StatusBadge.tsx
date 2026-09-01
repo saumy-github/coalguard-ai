@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const StatusBadge = ({ status, label }) => {
+export const StatusBadge = ({ status, label }: { status?: any; label?: any }) => {
   const getBadgeStyle = () => {
     switch (status) {
       case 'safe':

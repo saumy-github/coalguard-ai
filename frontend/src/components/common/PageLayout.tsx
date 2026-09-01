@@ -11,6 +11,15 @@ export const PageLayout = ({
   attentionAlert,
   children,
   detailedSection
+}: {
+  title?: any;
+  subtitle?: any;
+  badge?: any;
+  headerActions?: any;
+  summaryCards?: any[];
+  attentionAlert?: any;
+  children?: any;
+  detailedSection?: any;
 }) => {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">

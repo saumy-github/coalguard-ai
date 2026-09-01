@@ -1,5 +1,8 @@
 # Cryptographic Audit Ledger (Blockchain)
 
+> **Last updated:** 2026-08-26 · 
+**Status:** MOSTLY CURRENT — the AuditLedger.sol design (logReport/resolveReport) is consistent with research/lld.md §7m; no blockchain/ code exists in the repo yet to verify against, this is still the design to build from
+
 For the SIH26 PS 024 Coal Mine Governance system, we are implementing an **Immutable Audit Ledger** using a Solidity smart contract. This provides mathematical proof that safety violation tickets and inspection reports were not tampered with or deleted by mine managers trying to avoid regulatory fines.
 
 ## 1. Why Blockchain?
