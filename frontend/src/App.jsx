@@ -43,12 +43,12 @@ const MainContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#111112] text-[#d6c3b9] flex flex-col font-['Inter',sans-serif]">
+    <div className="min-h-screen bg-[#0f0c09] text-stone-300 flex flex-col font-sans selection:bg-amber-500/30">
       {/* Universal Top Header */}
       <Header />
 
       {/* Main Workspace Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
         {renderActiveView()}
       </main>
 
@@ -58,11 +58,14 @@ const MainContent = () => {
       <NotificationsDrawer />
       <ToastContainer />
 
-      {/* Subtle Footer */}
-      <footer className="border-t border-[#353534]/50 py-4 text-center text-xs font-mono text-[#9e8d85]">
+      {/* Subtle Tech Footer */}
+      <footer className="border-t border-white/5 py-4 text-center text-xs font-mono text-stone-500 relative z-10 bg-[#0f0c09]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>COALGUARD AI • Smart Mine Safety & DGMS Compliance</span>
-          <span>Smart India Hackathon 2026</span>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-sm bg-[#eab308] animate-pulse"></span>
+            <span className="uppercase tracking-widest font-bold">COALGUARD AI • Smart Mine Safety & DGMS Compliance</span>
+          </div>
+          <span className="text-[#eab308]/70 font-bold tracking-widest uppercase">Smart India Hackathon 2026</span>
         </div>
       </footer>
     </div>

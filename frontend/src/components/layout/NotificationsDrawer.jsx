@@ -62,7 +62,7 @@ export const NotificationsDrawer = () => {
                   {n.type === 'warning' ? (
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   ) : n.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-lime-400 shrink-0 mt-0.5" />
                   ) : (
                     <Info className="w-4 h-4 text-[#f6b994] shrink-0 mt-0.5" />
                   )}

@@ -129,7 +129,7 @@ export const GlobalSearchModal = () => {
           {/* Mines Results */}
           {filteredMines.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <p className="text-[11px] font-mono font-bold text-lime-400 uppercase tracking-wider flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5" /> Operating Mines
               </p>
               {filteredMines.map((m) => (
@@ -139,13 +139,13 @@ export const GlobalSearchModal = () => {
                     setActiveSubTab('my_mines');
                     setSearchOpen(false);
                   }}
-                  className="p-3 rounded-xl bg-[#1a1919] border border-[#353534] hover:border-emerald-500/50 cursor-pointer transition-all flex items-center justify-between"
+                  className="p-3 rounded-xl bg-[#1a1919] border border-[#353534] hover:border-lime-500/50 cursor-pointer transition-all flex items-center justify-between"
                 >
                   <div>
                     <h4 className="text-xs font-bold text-white font-['Sora']">{m.name}</h4>
                     <p className="text-[11px] text-[#9e8d85] font-mono mt-0.5">{m.district}, {m.state} ({m.subsidiary})</p>
                   </div>
-                  <span className="text-xs font-mono font-bold text-emerald-400">
+                  <span className="text-xs font-mono font-bold text-lime-400">
                     {m.complianceScore}% Score
                   </span>
                 </div>

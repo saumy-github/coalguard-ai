@@ -10,7 +10,7 @@ export const StatusBadge = ({ status, label }) => {
       case 'verified_closed':
       case 'active':
       case 'completed':
-        return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+        return 'bg-lime-500/15 text-lime-400 border-lime-500/30';
       
       case 'warning':
       case 'action_required':

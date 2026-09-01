@@ -149,50 +149,50 @@ export const Sidebar = () => {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity"
+        className="fixed inset-0 bg-[#0f0c09]/80 backdrop-blur-sm z-50 transition-opacity"
         onClick={() => setIsSidebarOpen(false)}
       />
 
       {/* Drawer */}
-      <div className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#121213] border-r border-[#51443d]/60 shadow-2xl z-50 flex flex-col justify-between animate-in slide-in-from-left duration-200">
+      <div className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#1a1511]/95 backdrop-blur-xl border-r border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-50 flex flex-col justify-between animate-fade-in-up">
         
         {/* Top: Header with close */}
         <div>
-          <div className="p-4 border-b border-[#353534] flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8d5d3e] to-[#4c270c] border border-[#e9c176]/50 flex items-center justify-center">
-                <ShieldAlert className="w-4 h-4 text-[#ffe3d3]" />
+          <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h2 className="text-sm font-extrabold text-white font-['Sora'] leading-tight">
-                  COAL<span className="text-[#f6b994]">GUARD</span> AI
+                <h2 className="text-base font-extrabold text-white font-['Sora'] leading-tight tracking-tight">
+                  COAL<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">GUARD</span> AI
                 </h2>
-                <p className="text-[10px] text-[#9e8d85] font-mono">Navigation Menu</p>
+                <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">Navigation Menu</p>
               </div>
             </div>
             
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="p-1.5 rounded-lg bg-[#1a1919] hover:bg-[#252423] text-[#d6c3b9] hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all border border-transparent hover:border-white/10"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Current User Card */}
-          <div className="p-4 bg-[#181717] border-b border-[#353534]/70">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8d5d3e]/40 to-[#252423] border border-[#8d5d3e] flex items-center justify-center text-[#ffe3d3] font-bold text-base font-['Sora'] shrink-0 shadow">
+          <div className="p-4 border-b border-white/5">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xl shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-xs font-bold text-white truncate font-['Sora']">
+                <h3 className="text-sm font-bold text-white truncate font-['Sora']">
                   {currentUser?.name || 'Operator'}
                 </h3>
-                <p className="text-[11px] text-[#f6b994] font-mono truncate">
+                <p className="text-[11px] text-amber-400 font-mono truncate uppercase tracking-wider mt-0.5">
                   {currentUser?.roleTitle}
                 </p>
-                <p className="text-[10px] text-[#9e8d85] font-mono truncate">
+                <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
                   {currentUser?.organization}
                 </p>
               </div>
@@ -200,8 +200,8 @@ export const Sidebar = () => {
           </div>
 
           {/* Navigation Links */}
-          <div className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-280px)]">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#9e8d85] px-3 py-1.5">
+          <div className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 px-3 py-2">
               {currentUser?.roleTitle} Menu
             </p>
 
@@ -212,25 +212,25 @@ export const Sidebar = () => {
                   key={item.id}
                   id={`sidebar-link-${item.id}`}
                   onClick={() => handleNavClick(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-mono transition-all text-left ${
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm transition-all text-left ${
                     isActive
-                      ? 'bg-gradient-to-r from-[#8d5d3e]/30 to-[#8d5d3e]/10 text-white font-bold border border-[#f6b994]/50 shadow-md'
-                      : 'text-[#d6c3b9] hover:bg-[#1f1e1e] hover:text-white'
+                      ? 'bg-amber-500/10 text-amber-400 font-bold border border-amber-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={isActive ? 'text-[#f6b994]' : 'text-[#9e8d85]'}>
+                    <span className={isActive ? 'text-amber-400' : 'text-slate-400'}>
                       {item.icon}
                     </span>
                     <span>{item.label}</span>
                   </div>
 
                   {item.badge ? (
-                    <span className="px-2 py-0.5 rounded-full bg-[#8d5d3e] text-[#ffe3d3] text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-[0_0_10px_rgba(16,185,129,0.4)]">
                       {item.badge}
                     </span>
                   ) : isActive ? (
-                    <ArrowRight className="w-3.5 h-3.5 text-[#f6b994]" />
+                    <ArrowRight className="w-4 h-4 text-amber-400" />
                   ) : null}
                 </button>
               );
@@ -239,24 +239,15 @@ export const Sidebar = () => {
         </div>
 
         {/* Bottom Actions */}
-        <div className="p-4 border-t border-[#353534] bg-[#141415] space-y-2">
+        <div className="p-4 border-t border-white/5 space-y-3">
           
-          <button
-            onClick={() => {
-              setActiveView('landing');
-              setIsSidebarOpen(false);
-            }}
-            className="w-full flex items-center justify-between p-2.5 rounded-xl bg-[#1c1b1b] hover:bg-[#252423] text-xs font-mono text-[#d6c3b9] hover:text-white transition-all border border-[#353534]"
-          >
-            <span>Public Showcase</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+
 
           <button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-mono text-red-400 hover:bg-red-950/30 hover:text-red-300 transition-colors border border-red-900/30"
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl text-sm font-bold text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all border border-transparent hover:border-rose-500/30"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
           </button>
 
