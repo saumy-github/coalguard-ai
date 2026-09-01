@@ -19,6 +19,7 @@ export const AppProvider = ({ children }) => {
   // Navigation state
   const [activeView, setActiveView] = useState('landing');
   const [activeSubTab, setActiveSubTab] = useState('overview');
+  const [preSelectedRole, setPreSelectedRole] = useState('safety_officer');
   
   // UI controls
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -89,7 +90,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Ticket actions
-  const addTicket = (ticketData) => {
+  const addTicket = (ticketData, silent = false) => {
     const newId = `TCK-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const newTicket = {
       id: newId,
@@ -124,11 +125,11 @@ export const AppProvider = ({ children }) => {
     };
     setAuditTrail((prev) => [auditEntry, ...prev]);
 
-    addToast('warning', 'Safety Ticket Created', `Ticket ${newId} logged and assigned.`);
+    if (!silent) addToast('warning', 'Safety Ticket Created', `Ticket ${newId} logged and assigned.`);
     return newTicket;
   };
 
-  const resolveTicket = (ticketId, correctiveAction) => {
+  const resolveTicket = (ticketId, correctiveAction, silent = false) => {
     setTickets((prev) =>
       prev.map((t) => {
         if (t.id === ticketId) {
@@ -155,11 +156,11 @@ export const AppProvider = ({ children }) => {
     };
     setAuditTrail((prev) => [auditEntry, ...prev]);
 
-    addToast('success', 'Issue Resolved', `Ticket ${ticketId} marked as resolved.`);
+    if (!silent) addToast('success', 'Issue Resolved', `Ticket ${ticketId} marked as resolved.`);
   };
 
   // Hazard Simulation
-  const simulateHazard = () => {
+  const simulateHazard = (silent = false) => {
     setIsHazardSimulated(true);
     // Update main methane sensor to critical
     setSensors((prev) =>
@@ -186,12 +187,12 @@ export const AppProvider = ({ children }) => {
       reportedBy: 'Automatic Sensor Warning (SN-7G-CH4-04)',
       dgmsRegulationRef: 'CMR 2017 Regulation 169 (Gas Safety)',
       aiSuggestedAction: '1. Pause machinery power at Face 4B.\n2. Increase auxiliary fan booster.\n3. Move workers to Fresh Air Station.\n4. Take manual reading before restart.'
-    });
+    }, silent);
 
-    addToast('error', 'Safety Alert Triggered', 'High Methane level (1.42%) detected at Face 4B.');
+    if (!silent) addToast('error', 'Safety Alert Triggered', 'High Methane level (1.42%) detected at Face 4B.');
   };
 
-  const resetHazard = () => {
+  const resetHazard = (silent = false) => {
     setIsHazardSimulated(false);
     setEvacuationBroadcasted(false);
     setSensors((prev) =>
@@ -208,7 +209,7 @@ export const AppProvider = ({ children }) => {
         return s;
       })
     );
-    addToast('success', 'Sensor Reset', 'Methane level back to normal (0.42%).');
+    if (!silent) addToast('success', 'Sensor Reset', 'Methane level back to normal (0.42%).');
   };
 
   const broadcastEvacuation = (message) => {
@@ -241,6 +242,8 @@ export const AppProvider = ({ children }) => {
         setActiveView,
         activeSubTab,
         setActiveSubTab,
+        preSelectedRole,
+        setPreSelectedRole,
         isSidebarOpen,
         setIsSidebarOpen,
         toggleSidebar: () => setIsSidebarOpen((prev) => !prev),

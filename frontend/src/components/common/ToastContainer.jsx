@@ -13,7 +13,7 @@ export const ToastContainer = () => {
         const getToastStyles = () => {
           switch (t.type) {
             case 'success':
-              return 'border-emerald-500/50 bg-[#161f1a] text-emerald-300';
+              return 'border-lime-500/50 bg-[#161f1a] text-lime-300';
             case 'warning':
               return 'border-amber-500/50 bg-[#241d13] text-amber-300';
             case 'error':
@@ -26,7 +26,7 @@ export const ToastContainer = () => {
         const getToastIcon = () => {
           switch (t.type) {
             case 'success':
-              return <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />;
+              return <CheckCircle2 className="w-4 h-4 text-lime-400 shrink-0 mt-0.5" />;
             case 'warning':
               return <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />;
             case 'error':

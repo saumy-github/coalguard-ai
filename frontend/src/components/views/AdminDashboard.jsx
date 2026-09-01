@@ -3,19 +3,19 @@ import { useApp } from '../../context/AppContext';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
-import { 
-  Sliders, 
-  Activity, 
-  Users, 
-  Database, 
-  Cpu, 
-  ListTree, 
-  Settings, 
-  User, 
-  CheckCircle2, 
-  Server, 
-  ShieldCheck, 
-  RefreshCw, 
+import {
+  Sliders,
+  Activity,
+  Users,
+  Database,
+  Cpu,
+  ListTree,
+  Settings,
+  User,
+  CheckCircle2,
+  Server,
+  ShieldCheck,
+  RefreshCw,
   UserPlus,
   Lock,
   ChevronRight
@@ -59,7 +59,7 @@ export const AdminDashboard = () => {
         title: "System Status",
         value: "Healthy",
         subtext: "All 12 Microservices Online",
-        icon: <Server className="w-4 h-4 text-emerald-400" />,
+        icon: <Server className="w-5 h-5 text-amber-400" />,
         status: "safe",
         statusLabel: "99.99% UPTIME"
       },
@@ -67,7 +67,7 @@ export const AdminDashboard = () => {
         title: "Active Users",
         value: `${usersList.length + 44}`,
         subtext: "Across 24 Mine Locations",
-        icon: <Users className="w-4 h-4 text-blue-400" />,
+        icon: <Users className="w-5 h-5 text-blue-400" />,
         status: "optimal",
         statusLabel: "ONLINE"
       },
@@ -75,7 +75,7 @@ export const AdminDashboard = () => {
         title: "Data & Storage",
         value: "Healthy",
         subtext: "PostgreSQL & Redis Sync OK",
-        icon: <Database className="w-4 h-4 text-purple-400" />,
+        icon: <Database className="w-5 h-5 text-lime-400" />,
         status: "safe",
         statusLabel: "SYNCED"
       },
@@ -83,7 +83,7 @@ export const AdminDashboard = () => {
         title: "AI Safety Engine",
         value: "Ready",
         subtext: "Response Latency: 120ms",
-        icon: <Cpu className="w-4 h-4 text-[#f6b994]" />,
+        icon: <Cpu className="w-5 h-5 text-orange-400" />,
         status: "safe",
         statusLabel: "OPTIMAL"
       }
@@ -98,7 +98,7 @@ export const AdminDashboard = () => {
         headerActions={
           <button
             onClick={() => setActiveSubTab('users_roles')}
-            className="btn-bronze px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2"
+            className="btn-primary-earth px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
           >
             <UserPlus className="w-4 h-4" />
             <span>Add New User</span>
@@ -106,36 +106,38 @@ export const AdminDashboard = () => {
         }
       >
         {/* Core Infrastructure Nodes */}
-        <div className="glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-4">
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mt-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-lime-500/5 blur-[80px] rounded-full pointer-events-none"></div>
+
           <SectionHeader
             title="Microservice Health Metrics"
             subtitle="Core operational layers running on CoalGuard AI infrastructure."
             action={
               <button
                 onClick={() => setActiveSubTab('system_health')}
-                className="text-xs font-mono text-[#f6b994] hover:underline flex items-center gap-1 font-bold"
+                className="text-sm text-amber-400 hover:text-emerald-300 font-bold flex items-center gap-1.5 transition-colors"
               >
                 <span>View Full Health</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             }
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 relative z-10">
             {[
               { name: 'Telemetry Ingestion Node', latency: '24ms', load: '14%', status: 'optimal' },
               { name: 'AI Decision Engine', latency: '120ms', load: '32%', status: 'optimal' },
               { name: 'Redis Cache Cluster', latency: '4ms', load: '18%', status: 'optimal' },
               { name: 'Audit Security Node', latency: '45ms', load: '21%', status: 'optimal' }
             ].map((node, idx) => (
-              <div key={idx} className="p-4 rounded-xl bg-[#181717] border border-[#353534] space-y-2">
+              <div key={idx} className="glass-panel glass-panel-hover p-5 rounded-2xl space-y-3 group">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-white font-['Sora']">{node.name}</h4>
+                  <h4 className="text-sm font-bold text-white tracking-wide">{node.name}</h4>
                   <StatusBadge status={node.status} />
                 </div>
-                <div className="flex justify-between text-xs font-mono text-[#9e8d85] pt-1">
-                  <span>Latency: {node.latency}</span>
-                  <span>Load: {node.load}</span>
+                <div className="flex justify-between text-xs font-mono text-slate-400 pt-2 border-t border-white/5">
+                  <span>Latency: <span className="text-white">{node.latency}</span></span>
+                  <span>Load: <span className="text-white">{node.load}</span></span>
                 </div>
               </div>
             ))}
@@ -143,28 +145,28 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Recent Audit Logs Snapshot */}
-        <div className="glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-3">
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mt-6">
           <SectionHeader
             title="Real-Time Audit Stream"
             subtitle="Immutable activity records captured across the system."
             action={
               <button
                 onClick={() => setActiveSubTab('activity_logs')}
-                className="text-xs font-mono text-[#f6b994] hover:underline flex items-center gap-1 font-bold"
+                className="text-sm text-orange-400 hover:text-cyan-300 font-bold flex items-center gap-1.5 transition-colors"
               >
                 <span>All Logs</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             }
           />
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {auditTrail.slice(0, 3).map((a) => (
-              <div key={a.blockNumber} className="p-3.5 rounded-xl bg-[#181717] border border-[#353534] flex items-center justify-between text-xs font-mono">
+              <div key={a.blockNumber} className="glass-panel glass-panel-hover p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm font-mono group">
                 <div>
-                  <span className="font-bold text-white">[{a.action}]</span>
-                  <span className="text-[#d6c3b9] ml-2">{a.details}</span>
-                  <p className="text-[10px] text-[#9e8d85] mt-0.5">{a.actor} ({a.actorRole}) • {a.timestamp}</p>
+                  <span className="font-bold text-orange-400 bg-orange-500/10 px-2 py-1 rounded">[{a.action}]</span>
+                  <span className="text-slate-300 ml-3">{a.details}</span>
+                  <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest">{a.actor} ({a.actorRole}) • {a.timestamp}</p>
                 </div>
                 <StatusBadge status="verified_closed" label="VERIFIED" />
               </div>
@@ -182,23 +184,23 @@ export const AdminDashboard = () => {
       subtitle="Detailed server status, database connections, and memory allocation."
       badge="Diagnostics"
     >
-      <div className="glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-4">
+      <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mt-4">
         <SectionHeader
           title="Component Health Check"
           subtitle="Real-time status for all system dependencies."
         />
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[
             { component: 'Primary PostgreSQL Database Cluster', uptime: '99.99%', memory: '1.4 GB / 8.0 GB', status: 'Healthy' },
             { component: 'Redis In-Memory Session Cache', uptime: '100%', memory: '240 MB / 2.0 GB', status: 'Healthy' },
             { component: 'Underground Sensor WebSocket Stream', uptime: '99.95%', memory: '520 MB / 4.0 GB', status: 'Healthy' },
             { component: 'Gemini AI Integration Gateway', uptime: '99.98%', memory: '680 MB / 4.0 GB', status: 'Healthy' }
           ].map((c, idx) => (
-            <div key={idx} className="p-4 rounded-xl bg-[#181717] border border-[#353534] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
+            <div key={idx} className="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm font-mono group">
               <div>
-                <h4 className="font-bold text-white font-['Sora']">{c.component}</h4>
-                <p className="text-[#9e8d85] text-[11px] mt-0.5">Uptime: {c.uptime} • Memory: {c.memory}</p>
+                <h4 className="font-bold text-white text-base tracking-wide group-hover:text-orange-400 transition-colors">{c.component}</h4>
+                <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">Uptime: <span className="text-amber-400">{c.uptime}</span> • Memory: <span className="text-white">{c.memory}</span></p>
               </div>
               <StatusBadge status="safe" label={c.status.toUpperCase()} />
             </div>
@@ -215,34 +217,36 @@ export const AdminDashboard = () => {
       subtitle="Manage operator accounts, assign permission tiers, and enforce authentication policies."
       badge="User Management"
     >
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4">
+
         {/* Left: Add User Form */}
-        <div className="md:col-span-5 glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-4">
+        <div className="md:col-span-5 glass-panel rounded-3xl p-6 sm:p-8 border-orange-500/20 space-y-6 relative overflow-hidden">
+          <div className="absolute -top-10 -left-10 w-48 h-48 bg-orange-500/10 blur-[60px] pointer-events-none"></div>
+
           <SectionHeader
             title="Register New User"
             subtitle="Create an authorized operator account."
           />
 
-          <form onSubmit={handleAddUser} className="space-y-3">
+          <form onSubmit={handleAddUser} className="space-y-5 relative z-10">
             <div>
-              <label className="text-xs font-mono text-[#d6c3b9] mb-1 block">Full Name</label>
+              <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Full Name</label>
               <input
                 type="text"
                 required
                 value={newUserName}
                 onChange={(e) => setNewUserName(e.target.value)}
                 placeholder="e.g. Ramesh Kumar"
-                className="w-full px-3 py-2 rounded-xl bg-[#141415] border border-[#353534] text-white text-xs font-mono focus:outline-none focus:border-[#f6b994]"
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-xs font-mono text-[#d6c3b9] mb-1 block">Role</label>
+              <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Role</label>
               <select
                 value={newUserRole}
                 onChange={(e) => setNewUserRole(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#141415] border border-[#353534] text-white text-xs font-mono focus:outline-none focus:border-[#f6b994]"
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
               >
                 <option value="field_worker">Underground Worker</option>
                 <option value="safety_officer">Mine Safety Officer</option>
@@ -253,18 +257,18 @@ export const AdminDashboard = () => {
             </div>
 
             <div>
-              <label className="text-xs font-mono text-[#d6c3b9] mb-1 block">Organization / Unit</label>
+              <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Organization / Unit</label>
               <input
                 type="text"
                 value={newUserOrg}
                 onChange={(e) => setNewUserOrg(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#141415] border border-[#353534] text-white text-xs font-mono focus:outline-none focus:border-[#f6b994]"
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full btn-bronze py-2.5 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-2"
+              className="w-full btn-primary-earth py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all"
             >
               <UserPlus className="w-4 h-4" />
               <span>Create Account</span>
@@ -273,18 +277,18 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Right: Active Users List */}
-        <div className="md:col-span-7 glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-3">
+        <div className="md:col-span-7 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
           <SectionHeader
             title="Authorized Operator Directory"
             subtitle="Showing registered system users and assigned roles."
           />
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {usersList.map((u) => (
-              <div key={u.id} className="p-3 rounded-xl bg-[#181717] border border-[#353534] flex items-center justify-between text-xs font-mono">
+              <div key={u.id} className="glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono group">
                 <div>
-                  <h4 className="font-bold text-white font-['Sora']">{u.name}</h4>
-                  <p className="text-[11px] text-[#9e8d85]">{u.role} • {u.org} ({u.id})</p>
+                  <h4 className="font-bold text-white tracking-wide text-base">{u.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">{u.role} • {u.org} <span className="text-orange-400">({u.id})</span></p>
                 </div>
                 <StatusBadge status="safe" label="ACTIVE" />
               </div>
@@ -303,23 +307,23 @@ export const AdminDashboard = () => {
       subtitle="Verify table integrity, backup schedules, and cache invalidation."
       badge="Storage"
     >
-      <div className="glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-4">
+      <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mt-4">
         <SectionHeader
           title="Data Storage Schema & Status"
           subtitle="PostgreSQL relational tables and live cache status."
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm font-mono">
           {[
             { table: 'sensors_telemetry', records: '2,482,100 rows', sync: 'Live Stream' },
             { table: 'incident_tickets', records: '1,420 rows', sync: 'Real-Time' },
             { table: 'dgms_compliance_audits', records: '384 rows', sync: 'Hourly' },
             { table: 'system_activity_ledger', records: '89,400 blocks', sync: 'Immutable' }
           ].map((t, idx) => (
-            <div key={idx} className="p-4 rounded-xl bg-[#181717] border border-[#353534] space-y-1">
-              <h4 className="font-bold text-white">{t.table}</h4>
-              <p className="text-[#9e8d85]">{t.records}</p>
-              <p className="text-[#f6b994] font-bold text-[10px]">Sync Policy: {t.sync}</p>
+            <div key={idx} className="glass-panel glass-panel-hover p-5 rounded-2xl space-y-2 group">
+              <h4 className="font-bold text-white text-base tracking-wide">{t.table}</h4>
+              <p className="text-slate-400">{t.records}</p>
+              <p className="text-orange-400 font-bold text-xs uppercase tracking-widest pt-2 border-t border-white/10 mt-2 inline-block group-hover:border-orange-500/30 transition-colors">Sync Policy: {t.sync}</p>
             </div>
           ))}
         </div>
@@ -334,24 +338,26 @@ export const AdminDashboard = () => {
       subtitle="Manage retrieval sources, regulation embeddings, and query latency."
       badge="AI System"
     >
-      <div className="glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-4">
+      <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mt-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-lime-500/10 blur-[80px] pointer-events-none"></div>
+
         <SectionHeader
           title="Active Regulatory Model: CoalGuard Safety Copilot"
           subtitle="Model parameters and grounding corpus."
         />
 
-        <div className="space-y-2.5 text-xs font-mono">
-          <div className="p-3.5 rounded-xl bg-[#181717] border border-[#353534] flex justify-between">
-            <span className="text-[#9e8d85]">Grounding Corpus:</span>
-            <span className="text-white font-bold">Coal Mines Regulations (CMR 2017) & Mines Act 1952</span>
+        <div className="space-y-3 text-sm font-mono relative z-10">
+          <div className="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
+            <span className="text-slate-400 uppercase tracking-widest text-xs">Grounding Corpus</span>
+            <span className="text-white font-bold bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">Coal Mines Regulations (CMR 2017) & Mines Act 1952</span>
           </div>
-          <div className="p-3.5 rounded-xl bg-[#181717] border border-[#353534] flex justify-between">
-            <span className="text-[#9e8d85]">Embedding Dimension:</span>
-            <span className="text-white">768-vector dense semantic index</span>
+          <div className="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
+            <span className="text-slate-400 uppercase tracking-widest text-xs">Embedding Dimension</span>
+            <span className="text-white bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">768-vector dense semantic index</span>
           </div>
-          <div className="p-3.5 rounded-xl bg-[#181717] border border-[#353534] flex justify-between">
-            <span className="text-[#9e8d85]">Average Retrieval Time:</span>
-            <span className="text-emerald-400 font-bold">92ms</span>
+          <div className="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
+            <span className="text-slate-400 uppercase tracking-widest text-xs">Average Retrieval Time</span>
+            <span className="text-amber-400 font-bold bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">92ms</span>
           </div>
         </div>
       </div>
@@ -365,20 +371,20 @@ export const AdminDashboard = () => {
       subtitle="Complete chronological audit records of all user actions and system events."
       badge="Activity Logs"
     >
-      <div className="glass-card rounded-2xl p-5 border border-[#51443d]/60 space-y-3">
+      <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mt-4">
         <SectionHeader
           title="System Audit Trail"
           subtitle="Cryptographically verified event entries."
         />
 
-        <div className="space-y-2">
+        <div className="space-y-4">
           {auditTrail.map((b) => (
-            <div key={b.blockNumber} className="p-3.5 rounded-xl bg-[#181717] border border-[#353534] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
+            <div key={b.blockNumber} className="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm font-mono group">
               <div>
-                <span className="text-[#f6b994] font-bold">Block #{b.blockNumber}</span>
-                <span className="text-white font-bold ml-2">[{b.action}]</span>
-                <p className="text-[#d6c3b9] mt-0.5">{b.details}</p>
-                <p className="text-[10px] text-[#9e8d85] mt-0.5">Actor: {b.actor} ({b.actorRole}) • {b.timestamp}</p>
+                <span className="text-lime-400 font-bold bg-lime-500/10 px-2 py-1 rounded border border-lime-500/20 uppercase tracking-wider text-xs mr-3">Block #{b.blockNumber}</span>
+                <span className="text-white font-bold tracking-wide">[{b.action}]</span>
+                <p className="text-slate-300 mt-2 bg-black/20 p-3 rounded-xl border border-white/5">{b.details}</p>
+                <p className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest">Actor: <span className="text-slate-300">{b.actor}</span> ({b.actorRole}) • {b.timestamp}</p>
               </div>
               <StatusBadge status="verified_closed" label="VERIFIED" />
             </div>
@@ -395,32 +401,32 @@ export const AdminDashboard = () => {
       subtitle="Global system parameters, alert thresholds, and security rules."
       badge="Settings"
     >
-      <div className="glass-card rounded-2xl p-6 border border-[#51443d]/60 max-w-2xl mx-auto space-y-4 text-xs font-mono">
+      <div className="glass-panel rounded-3xl p-8 max-w-3xl mx-auto space-y-6 mt-4 text-sm font-mono">
         <SectionHeader title="Global Thresholds" />
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#181717] border border-[#353534]">
+        <div className="space-y-4">
+          <div className="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between group">
             <div>
-              <p className="text-white font-bold">Methane (CH4) Alert Trigger</p>
-              <p className="text-[#9e8d85] text-[10px]">Statutory DGMS maximum safe level</p>
+              <p className="text-white font-bold text-base">Methane (CH4) Alert Trigger</p>
+              <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest">Statutory DGMS maximum safe level</p>
             </div>
-            <span className="text-[#f6b994] font-bold">1.25% LEL</span>
+            <span className="text-amber-400 font-bold bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">1.25% LEL</span>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#181717] border border-[#353534]">
+          <div className="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between group">
             <div>
-              <p className="text-white font-bold">Air Velocity Minimum</p>
-              <p className="text-[#9e8d85] text-[10px]">Minimum intake airway velocity</p>
+              <p className="text-white font-bold text-base">Air Velocity Minimum</p>
+              <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest">Minimum intake airway velocity</p>
             </div>
-            <span className="text-white font-bold">0.5 m/s</span>
+            <span className="text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">0.5 m/s</span>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#181717] border border-[#353534]">
+          <div className="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between group">
             <div>
-              <p className="text-white font-bold">Carbon Monoxide Limit</p>
-              <p className="text-[#9e8d85] text-[10px]">Continuous exposure ceiling</p>
+              <p className="text-white font-bold text-base">Carbon Monoxide Limit</p>
+              <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest">Continuous exposure ceiling</p>
             </div>
-            <span className="text-white font-bold">50 PPM</span>
+            <span className="text-rose-400 font-bold bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20">50 PPM</span>
           </div>
         </div>
       </div>
@@ -434,26 +440,28 @@ export const AdminDashboard = () => {
       subtitle="Master root credentials and security privileges."
       badge="Root Admin"
     >
-      <div className="glass-card rounded-2xl p-6 border border-[#51443d]/60 max-w-2xl mx-auto space-y-4">
-        <div className="flex items-center gap-4 pb-4 border-b border-[#353534]">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8d5d3e] to-[#4c270c] border border-[#f6b994]/60 flex items-center justify-center text-white text-2xl font-extrabold font-['Sora'] shadow-lg">
+      <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto space-y-6 mt-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+        <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
+          <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.2)]">
             {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
           </div>
           <div>
-            <h3 className="text-base font-bold text-white font-['Sora']">{currentUser?.name}</h3>
-            <p className="text-xs font-mono text-[#f6b994]">{currentUser?.roleTitle}</p>
-            <p className="text-[11px] font-mono text-[#9e8d85]">{currentUser?.organization}</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
+            <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
+            <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
           </div>
         </div>
 
-        <div className="space-y-2 text-xs font-mono">
-          <div className="flex justify-between py-1 border-b border-[#353534]/50">
-            <span className="text-[#9e8d85]">Admin Security ID:</span>
-            <span className="text-white font-bold">{currentUser?.employeeId}</span>
+        <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
+          <div className="flex justify-between items-center py-2 border-b border-white/5">
+            <span className="text-slate-500 uppercase text-xs tracking-wider">Admin Security ID</span>
+            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.employeeId}</span>
           </div>
-          <div className="flex justify-between py-1 border-b border-[#353534]/50">
-            <span className="text-[#9e8d85]">Access Level:</span>
-            <span className="text-emerald-400 font-bold">ROOT_SUPER_ADMIN</span>
+          <div className="flex justify-between items-center py-2 border-b border-white/5">
+            <span className="text-slate-500 uppercase text-xs tracking-wider">Access Level</span>
+            <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">ROOT_SUPER_ADMIN</span>
           </div>
         </div>
       </div>
@@ -461,22 +469,14 @@ export const AdminDashboard = () => {
   );
 
   switch (activeSubTab) {
-    case 'system_health':
-      return renderSystemHealth();
-    case 'users_roles':
-      return renderUsersRoles();
-    case 'data_storage':
-      return renderDataStorage();
-    case 'ai_system':
-      return renderAISystem();
-    case 'activity_logs':
-      return renderActivityLogs();
-    case 'settings':
-      return renderSettings();
-    case 'profile':
-      return renderProfile();
+    case 'system_health': return renderSystemHealth();
+    case 'users_roles': return renderUsersRoles();
+    case 'data_storage': return renderDataStorage();
+    case 'ai_system': return renderAISystem();
+    case 'activity_logs': return renderActivityLogs();
+    case 'settings': return renderSettings();
+    case 'profile': return renderProfile();
     case 'overview':
-    default:
-      return renderOverview();
+    default: return renderOverview();
   }
 };
