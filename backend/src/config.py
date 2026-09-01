@@ -8,5 +8,10 @@ class Settings(BaseSettings):
     mongodb_db_name: str
     frontend_url: str
 
+    jwt_secret_key: str
+    jwt_algorithm: str
+    jwt_expire_minutes: int
+    google_client_id: str
+
 
 settings = Settings()

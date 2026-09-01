@@ -1,3 +1,6 @@
+> **Last updated:** 2026-08-26 · 
+**Status:** HISTORICAL / REFERENCE ONLY — pre-lock-in strategic research, not actionable design content
+
 what were the last year PS from , ministry of coal
 
 Based on the official Smart India Hackathon archives, the Ministry of Coal has been highly active in the last few editions. Their problem statements consistently focus on Smart Automation, safety management, and heavy industrial IoT integration.

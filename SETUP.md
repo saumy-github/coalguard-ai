@@ -1,5 +1,8 @@
 # Developer Setup Guide
 
+> **Last updated:** 2026-08-26 · 
+**Status:** CURRENT
+
 Gets your local environment running. Read once, then use as reference.
 
 ## Project layout

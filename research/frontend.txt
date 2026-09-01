@@ -1,0 +1,156 @@
+1. User Types & Their Journeys
+Mine Safety Officer (Site-Level)
+Real-time monitoring and incident response at their specific mine site.
+
+Journey: Login → Dashboard (alarms, anomalies, open tickets) → Map View (hazard pins) → Inspection (photo uploads) → Ticket Management → Reports
+
+Corporate Management (CIL/CMPDI Level)
+Multi-mine oversight, compliance scores, and strategic decision-making.
+
+Journey: Login → Executive Dashboard (heatmap, production vs EC limits) → Mine Comparison → Risk Overview (predictive analytics) → Report Generation → Alert Management
+
+Regulatory Authority (DGMS/CPCB)
+Read-only access to verified audit trails and compliance records.
+
+Journey: Login → Audit Trail (immutable ledger) → Compliance Certificates → Historical Data → Export Reports
+
+Demo View (SIH Judges)
+See full system capabilities in a guided demo.
+
+Journey: Access → Guided Tour → Sandbox (trigger scenarios) → Feature Showcase
+
+2. Page-by-Page Features
+Page 1: Landing Page
+Purpose: First impression - convey scale, importance, professionalism.
+
+Hero section with animated background and tagline: "AI-powered governance for India's coal mines"
+
+Live-looking stat strip: "247 mines monitored, 1,842 violations auto-detected"
+
+Problem → Solution split (spreadsheets/paperwork vs unified dashboard)
+
+Four pillars visual: Safety / Environment / Production / Labour as icon cards
+
+4-step flow: Inspection → Observation → RAG Violation Mapping → Corrective Action
+
+Tech badges: RAG, IoT telemetry, CV/PPE detection, blockchain audit trail
+
+"View Live Demo" button (no auth required for judges)
+
+Page 2: Login & Authentication
+Split screen: Ministry of Coal branding + login form
+
+Fields: Employee ID/Email, Password, "Remember Me"
+
+"Explore as Evaluator" shortcut (critical for hackathon judging)
+
+Role-based redirection after login
+
+Page 3: Mine Safety Officer Dashboard
+Purpose: Mission control for a single mine site.
+
+Top Bar: Mine selector dropdown, live connection status (WebSocket pulse), alert bell, user avatar
+
+KPI Cards: Compliance Score (gauge), Active Incidents, Open Tickets, Today's Production
+
+Real-Time Telemetry: 3-column grid with live line charts for Methane (ppm), Air Quality Index, Equipment Status
+
+GIS Map: Satellite view with animated sensor pins, heatmap overlay, EC boundary lines
+
+Incident Feed: Auto-scrolling list with severity colors, click to open details
+
+Quick Actions: New Inspection, Report Incident, View Reports, Start Voice Chat
+
+Page 4: Ticket Management System
+Filter Bar: Status (All/Open/In Progress/Resolved/Closed), Priority, Date Range, "Create New Ticket" button
+
+Table View: Ticket ID, Title, Priority badge, Status, Assigned To, Created Date, Actions
+
+Detail Modal: Full details, timeline view, RAG Legal Citation (exact rule violated), attachments, comments, status update
+
+Create Ticket Flow: Select Mine/Location (GPS auto-capture) → Select Category → Describe Issue + Photo Upload → RAG Auto-Citation → Assign Officer → Submit (generates audit hash)
+
+Page 5: Inspection Management (Field Worker)
+Card View: "My Inspections" with date filter, tabs (All/Pending Sync/Synced/Draft)
+
+Inspection Cards: Location, Date, Inspector, Photo thumbnail, Status badge, Quick Actions (Edit, Delete, Sync)
+
+New Inspection Flow: GPS Capture → Photos (camera/gallery) → Categorization → Observation (voice-to-text available) → Auto-Mapping → Save as Draft or Submit
+
+Offline Support: Pending Sync queue with cloud icon, auto-sync on connection restore, progress bar
+
+Page 6: Corporate Dashboard
+Top KPI Row: Total Production vs Cap, Overall Compliance %, Active Incidents, Mines Operating
+
+Risk Heatmap: Map with color-coded mine pins (Red/Orange/Yellow/Green), click to drill down
+
+Production vs EC Limit: Gauge chart with warning at 85%
+
+Compliance Trends: Line chart over last 12 months, subsidiary comparison
+
+Priority Incidents: Horizontal bar chart by category
+
+Scheduled Reports: List with download buttons (PDF, Excel, CSV)
+
+Page 7: Regulatory Portal (DGMS View)
+Certificate Dashboard: List of compliance certificates with QR codes, status badges (Valid/Expired/Under Review)
+
+Audit Trail Explorer: Blockchain visualization with linked hash blocks (Inspection ID → Hash → Previous Hash → Timestamp)
+
+Compliance Summary: Table of all mines with statutory status, export to PDF
+
+Page 8: Reports & Analytics Center
+Templates: Daily Shift Report, Weekly Compliance Summary, Monthly Environmental Report, Quarterly Safety Performance, Annual Statutory Declaration
+
+Custom Builder: Drag-drop fields, date range, mine/zone selection, format (PDF/Excel/Word), scheduling
+
+Saved Reports: List with re-run and share options
+
+Page 9: AI/ML Insights & Predictions
+Predictive Alerts: "Methane levels predicted to exceed threshold in Mine #3 within 48 hours"
+
+Risk Forecasting: Prophet/SARIMA chart with confidence intervals
+
+Anomaly Detection: Auto-scrolling feed with time, sensor, deviation %, severity
+
+Spatial Risk Heatmap: GIS map with predicted risk overlay (Green → Yellow → Red)
+
+Recommendations: AI-generated actions (e.g., "Increase ventilation at Zone B by 15%")
+
+Page 10: Settings & Profile
+Tabs: Profile (edit details), Security (password, 2FA), Notifications (toggles), Preferences (theme, language, units), API Access
+
+Page 11: System Admin Dashboard
+System Health: Docker container status, Redis cache hits/misses, MongoDB connection
+
+User Management: Add/Edit/Delete users, role assignment, login logs
+
+Data Management: Backup/Restore, vector DB size, export all data
+
+ADD
+Evaluator Demo Dashboard — very useful for judges.
+Notification Center — common across dashboards.
+Global Search — search mine, incident, ticket, inspection, worker, etc.
+Role-specific profile.
+
+
+KEEP
+Officer Dashboard
+Corporate Dashboard
+Regulatory Dashboard
+Ticket Management
+Inspection Management
+Mine Map
+AI/ML Insights
+Reports
+Audit Trail
+Admin Dashboard
+
+
+DE-PRIORITIZE
+For the first frontend version, don't spend too much time on:
+API Access settings
+Complex report drag-and-drop builder
+Advanced admin analytics
+Overly detailed blockchain visualization
+Too many separate pages

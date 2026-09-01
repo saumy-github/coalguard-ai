@@ -1,5 +1,8 @@
 # Implementation Architecture & Deployment Strategy
 
+> **Last updated:** 2026-08-26 · 
+**Status:** PARTIALLY SUPERSEDED — the Docker Compose service list and VPS/hosting strategy are still broadly accurate; the RBAC roles (4-role, includes Evaluator) and any data-model/feature specifics are superseded by research/lld.md, use that instead
+
 This document outlines how we will implement the microservices architecture, containerize it using Docker, and deploy it cost-effectively for the hackathon.
 
 ## 1. System Architecture (Everything in Docker)

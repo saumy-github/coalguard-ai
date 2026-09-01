@@ -1,4 +1,8 @@
 # 🛡️ CoalGuard AI Engine — ML Service Documentation
+
+> **Last updated:** 2026-08-29 · 
+**Status:** STALE — still describes Prophet-based forecasting (removed in commit 04929a1) and lists `best.pt` as the loaded model though it's currently broken/falling back to stock weights; see research/ai_engine_review.md §3
+
 **SIH Problem Statement PS26024:** Smart Governance and Compliance Monitoring System for Coal Mines
 
 ---

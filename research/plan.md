@@ -1,5 +1,8 @@
 # System Architecture and Implementation Blueprint
 
+> **Last updated:** 2026-08-26 · 
+**Status:** SUPERSEDED by research/lld.md — the RBAC roles (incl. Evaluator), data model, and page list here are outdated; do not implement against this file, use research/lld.md
+
 ## Problem Statement Profile
 - **Problem Statement ID:** PS 26024
 - **Title:** AI-Based Smart Governance and Compliance Monitoring System for Coal Mines
