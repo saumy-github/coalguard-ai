@@ -1,6 +1,6 @@
 import React from 'react';
-import { useApp } from '../../context/AppContext';
-import { 
+import { useNavigate } from 'react-router-dom';
+import {
   ShieldAlert, 
   Sparkles, 
   Activity, 
@@ -51,7 +51,7 @@ const SootParticles = () => {
 };
 
 export const LandingPage = () => {
-  const { loginAsRole, setActiveView, setPreSelectedRole } = useApp();
+  const navigate = useNavigate();
 
   const roleCards = [
     {
@@ -142,7 +142,7 @@ export const LandingPage = () => {
             <button
               onClick={() => {
                 window.scrollTo(0, 0);
-                loginAsRole('sih_evaluator');
+                navigate('/login');
               }}
               className="btn-primary-earth px-8 py-4 rounded-2xl text-base font-bold flex items-center gap-3 w-full sm:w-auto justify-center"
             >
@@ -151,7 +151,7 @@ export const LandingPage = () => {
             </button>
 
             <button
-              onClick={() => setActiveView('login')}
+              onClick={() => navigate('/login')}
               className="btn-glass px-8 py-4 rounded-2xl text-base font-bold flex items-center gap-3 w-full sm:w-auto justify-center"
             >
               <span>Operator Login</span>
@@ -226,12 +226,7 @@ export const LandingPage = () => {
               key={card.role}
               onClick={() => {
                 window.scrollTo(0, 0);
-                if (card.role === 'sih_evaluator') {
-                  loginAsRole(card.role);
-                } else {
-                  setPreSelectedRole(card.role);
-                  setActiveView('login');
-                }
+                navigate('/login');
               }}
               className={`glass-panel rounded-3xl p-6 border ${card.color} cursor-pointer transition-all duration-300 hover:-translate-y-2 flex flex-col justify-between group`}
             >

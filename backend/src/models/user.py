@@ -13,6 +13,7 @@ UserType = Literal[
 
 class User(Document):
     email: Optional[str] = None
+    phone: Optional[str] = None
     password_hash: Optional[str] = None
     google_id: Optional[str] = None
     user_type: UserType

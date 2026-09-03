@@ -186,13 +186,18 @@ def check_compliance(observation: str) -> ComplianceResult:
 
     for doc, score in docs_with_scores:
         source = doc.metadata.get("source", "unknown")
+        # `source` may be an absolute path recorded by whichever OS last ran
+        # ingest_rag.py. Path() only recognises the current OS's separator,
+        # so a Windows-style path survives untouched on Linux — normalise
+        # both slash styles before extracting the filename.
+        source_name = Path(source.replace("\\", "/")).name
         page = doc.metadata.get("page", -1)
         context_parts.append(
-            f"[Source: {Path(source).name}, Page {page + 1}]\n{doc.page_content}"
+            f"[Source: {source_name}, Page {page + 1}]\n{doc.page_content}"
         )
         citations.append(
             {
-                "source": Path(source).name,
+                "source": source_name,
                 "page": page + 1,
                 "content_excerpt": doc.page_content[:300] + "…"
                 if len(doc.page_content) > 300
@@ -217,16 +222,23 @@ def check_compliance(observation: str) -> ComplianceResult:
     analysis = response_text
 
     for line in response_text.split("\n"):
-        line_stripped = line.strip()
-        if line_stripped.startswith("COMPLIANCE_STATUS:"):
-            raw_status = line_stripped.split(":", 1)[1].strip().upper()
+        # The LLM wraps labels in markdown bold (e.g. "**COMPLIANCE_STATUS:**
+        # NON_COMPLIANT"), which a literal `.startswith("COMPLIANCE_STATUS:")`
+        # never matches — strip `*` before checking so the label still lines
+        # up with the value that follows it.
+        line_clean = line.strip().replace("*", "").strip()
+        if line_clean.startswith("COMPLIANCE_STATUS:"):
+            raw_status = line_clean.split(":", 1)[1].strip().upper()
             if raw_status in ("COMPLIANT", "NON_COMPLIANT", "REVIEW_REQUIRED"):
                 compliance_status = raw_status
-        elif line_stripped.startswith("APPLICABLE_REGULATIONS:"):
-            raw_regs = line_stripped.split(":", 1)[1].strip()
+        elif line_clean.startswith("APPLICABLE_REGULATIONS:"):
+            raw_regs = line_clean.split(":", 1)[1].strip()
             applicable_regs = [r.strip() for r in raw_regs.split(",") if r.strip()]
-        elif line_stripped.startswith("ANALYSIS:"):
-            analysis = line_stripped.split(":", 1)[1].strip()
+        # No "ANALYSIS:" branch: the LLM puts that label on its own line and
+        # the actual analysis in the paragraphs *after* it, not on the same
+        # line — so `analysis` intentionally stays the full `response_text`
+        # captured above rather than being truncated to whatever follows the
+        # colon on the label's own line (which would be empty).
 
     return ComplianceResult(
         observation=observation,

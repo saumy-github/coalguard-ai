@@ -1,12 +1,12 @@
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from ..models.user import UserType
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    identifier: str  # email or phone
     password: str
 
 
@@ -26,6 +26,7 @@ class TokenResponse(BaseModel):
 class CurrentUserResponse(BaseModel):
     id: str
     email: Optional[str] = None
+    phone: Optional[str] = None
     user_type: UserType
     full_name: Optional[str] = None
     mine_id: Optional[str] = None

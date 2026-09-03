@@ -4,6 +4,7 @@
   "scripts": {
     "dev:up": "docker compose up -d --build backend mongodb redis chromadb",
     "dev:up:all": "docker compose up -d --build",
-    "dev:down": "docker compose down"
+    "dev:down": "docker compose down",
+    "dev:seed": "docker compose exec backend python -m scripts.index"
   }
 }

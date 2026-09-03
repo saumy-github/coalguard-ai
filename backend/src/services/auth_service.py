@@ -8,10 +8,12 @@ class AuthError(Exception):
     """Raised for any login failure; routes translate this to an HTTP error."""
 
 
-async def login_with_password(email: str, password: str) -> str:
-    user = await User.find_one(User.email == email)
+async def login_with_password(identifier: str, password: str) -> str:
+    user = await User.find_one(
+        {"$or": [{"email": identifier}, {"phone": identifier}]}
+    )
     if not user or not user.password_hash or not verify_password(password, user.password_hash):
-        raise AuthError("Invalid email or password")
+        raise AuthError("Invalid credentials")
     if not user.active:
         raise AuthError("Account is deactivated")
     return _issue_token(user)
