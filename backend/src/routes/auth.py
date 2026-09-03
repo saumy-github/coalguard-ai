@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest) -> TokenResponse:
     try:
-        token = await auth_service.login_with_password(payload.email, payload.password)
+        token = await auth_service.login_with_password(payload.identifier, payload.password)
     except auth_service.AuthError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
@@ -47,11 +47,20 @@ async def guest_login(payload: GuestLoginRequest) -> TokenResponse:
     return TokenResponse(access_token=token)
 
 
+@router.post("/logout")
+async def logout(user: User = Depends(get_current_user)) -> dict:
+    # JWT is stateless — there's nothing to invalidate server-side. This exists so
+    # the frontend has a real endpoint to call rather than only clearing local state.
+    # It does NOT revoke the token; it stays valid until it expires (see .env.example).
+    return {"status": "ok"}
+
+
 @router.get("/me", response_model=CurrentUserResponse)
 async def me(user: User = Depends(get_current_user)) -> CurrentUserResponse:
     return CurrentUserResponse(
         id=str(user.id),
         email=user.email,
+        phone=user.phone,
         user_type=user.user_type,
         full_name=user.full_name,
         mine_id=str(user.mine_id) if user.mine_id else None,

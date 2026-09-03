@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useUIStore } from '../../store/uiStore';
+import { useDashboardDataStore } from '../../store/dashboardDataStore';
 import { Search, X, ShieldAlert, FileText, Activity, MapPin, Sparkles, ArrowRight } from 'lucide-react';
 import { AI_KNOWLEDGE_BASE } from '../../data/mockData';
 
 export const GlobalSearchModal = () => {
-  const { isSearchOpen, setSearchOpen, tickets, sensors, mines, setActiveView, setActiveSubTab } = useApp();
+  const { isSearchOpen, setSearchOpen, setActiveSubTab } = useUIStore();
+  const { tickets, sensors, mines } = useDashboardDataStore();
   const [query, setQuery] = useState('');
 
   if (!isSearchOpen) return null;

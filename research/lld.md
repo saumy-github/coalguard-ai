@@ -12,7 +12,7 @@ Full design reference for the team. Builds on `architecture.md`, `plan.md`, `fol
 Grouped by who mostly owns them, but everything ultimately meets in MongoDB and the `backend` API.
 
 **Identity & access**
-- Email/password login, Google OAuth login, and guest login (pick a role, explore with seeded demo data)
+- Email/password login, Google OAuth login, and guest login (pick a role, explore with seeded demo data) — Google OAuth is built on both ends but currently switched off in the frontend UI pending a real OAuth Client ID, see `research/saumy/02-google-auth-deferred.md`
 - Role-based access control — 5 roles (see §3)
 
 **Field operations**
@@ -118,7 +118,7 @@ Solid arrows = real chain of command. Dotted arrows = oversight/administration r
 
 JWT (`python-jose`) with `user_type` + `mine_id`/`subsidiary_id` claims; `passlib[bcrypt]` for local password hashing. Three ways to obtain a token:
 - **In-house**: email/password against `User.password_hash`.
-- **Google OAuth**: frontend gets a Google ID token, backend verifies it and matches an existing invited `User.email` (does not self-provision a new account for an unrecognized email — an Admin must invite first, see §7p).
+- **Google OAuth**: frontend gets a Google ID token, backend verifies it and matches an existing invited `User.email` (does not self-provision a new account for an unrecognized email — an Admin must invite first, see §7p). Built on both ends, but the frontend button is currently disabled by a flag pending a real OAuth Client ID — see `research/saumy/02-google-auth-deferred.md`.
 - **Guest**: "continue as guest" logs into a pre-seeded demo `User` for whichever user type is picked.
 
 A phone-less Worker has no `password_hash`/`google_id` and simply can't authenticate — they still exist as a full document so attendance, tickets, and certifications can reference them, and the Mine Safety Officer acts on their behalf for check-in/out.
@@ -250,7 +250,7 @@ backend/src/
 ### a) Login / Auth
 Three entry points on `Login`, all producing the same JWT shape:
 1. **Email/password** — `POST /auth/login`, backend verifies against `passlib` bcrypt hash, issues JWT with `user_type`/`mine_id`/`subsidiary_id` claims.
-2. **Google OAuth** — frontend runs Google's sign-in flow, gets an ID token, sends it to `POST /auth/google`; backend verifies the token's signature against Google's public keys and matches an existing `User.email` (an Admin must have already invited that email — see §7p; an unrecognized email is rejected, not auto-created).
+2. **Google OAuth** — frontend runs Google's sign-in flow, gets an ID token, sends it to `POST /auth/google`; backend verifies the token's signature against Google's public keys and matches an existing `User.email` (an Admin must have already invited that email — see §7p; an unrecognized email is rejected, not auto-created). **Currently disabled in the frontend** (`GOOGLE_AUTH_ENABLED = false` in `Login.tsx`) — fully built on both ends, just not exposed in the UI until a real Google Cloud OAuth Client ID replaces the placeholder/misconfigured value. See `research/saumy/02-google-auth-deferred.md` for why and how to re-enable it.
 3. **Guest** — `POST /auth/guest` with a chosen user type, backend logs into a pre-seeded demo account for that type. No password involved.
 
 All three return the same JWT; the frontend stores it and attaches it as a Bearer token. RBAC scoping happens entirely from the claims inside the token — the frontend never sends `mine_id` for the backend to trust.

@@ -6,8 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from .config import settings
-from .models.user import User
+from .models import ALL_MODELS
 from .routes.auth import router as auth_router
+from .routes.users import router as users_router
 
 
 @asynccontextmanager
@@ -15,7 +16,7 @@ async def lifespan(app: FastAPI):
     app.state.mongo_client = AsyncIOMotorClient(settings.mongodb_uri)
     await init_beanie(
         database=app.state.mongo_client[settings.mongodb_db_name],
-        document_models=[User],
+        document_models=ALL_MODELS,
     )
     yield
     app.state.mongo_client.close()
@@ -31,6 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.get("/health")
