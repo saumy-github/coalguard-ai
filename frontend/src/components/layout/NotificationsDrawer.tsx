@@ -1,11 +1,9 @@
 import React from 'react';
-import { useUIStore } from '../../store/uiStore';
-import { useDashboardDataStore } from '../../store/dashboardDataStore';
+import { useApp } from '../../context/AppContext';
 import { X, Bell, AlertTriangle, Info, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export const NotificationsDrawer = () => {
-  const { isNotificationsOpen, setNotificationsOpen } = useUIStore();
-  const { notifications, setNotifications } = useDashboardDataStore();
+  const { isNotificationsOpen, setNotificationsOpen, notifications, setNotifications } = useApp();
 
   if (!isNotificationsOpen) return null;
 

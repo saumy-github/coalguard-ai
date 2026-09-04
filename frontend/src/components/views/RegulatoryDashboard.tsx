@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../../store/authStore';
-import { useUIStore } from '../../store/uiStore';
-import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { displayName, userTypeLabel } from '../../lib/userDisplay';
+import { useApp } from '../../context/AppContext';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -23,9 +20,7 @@ import {
 } from 'lucide-react';
 
 export const RegulatoryDashboard = () => {
-  const user = useAuthStore((state) => state.user);
-  const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
-  const { mines, inspections } = useDashboardDataStore();
+  const { currentUser, activeSubTab, setActiveSubTab, mines, inspections, addToast } = useApp();
   const [searchMine, setSearchMine] = useState('');
 
   // Notice issuance state
@@ -453,19 +448,19 @@ export const RegulatoryDashboard = () => {
 
         <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
           <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-            {displayName(user).charAt(0).toUpperCase()}
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'R'}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
-            <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.user_type)}</p>
-            <p className="text-xs text-slate-400 mt-1">{user?.organization}</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
+            <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
+            <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
           </div>
         </div>
 
         <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Inspector Warrant ID</span>
-            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{user?.employeeId}</span>
+            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.employeeId}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Jurisdiction</span>

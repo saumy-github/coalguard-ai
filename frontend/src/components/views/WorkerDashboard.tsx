@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../../store/authStore';
-import { useUIStore } from '../../store/uiStore';
-import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { displayName, userTypeLabel } from '../../lib/userDisplay';
+import { useApp } from '../../context/AppContext';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -28,9 +25,17 @@ import {
 } from 'lucide-react';
 
 export const WorkerDashboard = () => {
-  const user = useAuthStore((state) => state.user);
-  const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
-  const { workerTasks, markTaskComplete, addTicket, sensors, notifications } = useDashboardDataStore();
+  const {
+    currentUser,
+    activeSubTab,
+    setActiveSubTab,
+    workerTasks,
+    markTaskComplete,
+    addTicket,
+    sensors,
+    notifications,
+    addToast
+  } = useApp();
 
   // Problem Report Form State
   const [reportTitle, setReportTitle] = useState('');
@@ -69,7 +74,7 @@ export const WorkerDashboard = () => {
       category: reportCategory,
       severity: reportSeverity,
       location: reportLocation,
-      reportedBy: `${displayName(user) || 'Worker'} (Field Team)`
+      reportedBy: `${currentUser?.name || 'Worker'} (Field Team)`
     });
 
     setReportTitle('');
@@ -119,7 +124,7 @@ export const WorkerDashboard = () => {
 
     return (
       <PageLayout
-        title={`Good Morning, ${displayName(user) || 'Worker'}`}
+        title={`Good Morning, ${currentUser?.name || 'Worker'}`}
         subtitle="Your work schedule, task checklist, and safety overview for today."
         badge="Worker Dashboard"
         summaryCards={summaryCards}
@@ -611,31 +616,31 @@ export const WorkerDashboard = () => {
 
           <div className="flex items-center gap-5 pb-6 border-b border-white/10">
             <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-              {displayName(user).charAt(0).toUpperCase()}
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'W'}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
-              <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.user_type)}</p>
-              <p className="text-xs text-slate-400 mt-1">{user?.organization}</p>
+              <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
+              <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
+              <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
             </div>
           </div>
 
           <div className="space-y-4 text-sm font-mono text-slate-300">
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Employee ID</span>
-              <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{user?.employeeId}</span>
+              <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.employeeId}</span>
             </div>
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Badge Number</span>
-              <span className="text-white">{user?.badgeNumber}</span>
+              <span className="text-white">{currentUser?.badgeNumber}</span>
             </div>
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Assigned Mine</span>
-              <span className="text-white">{user?.mineAssigned}</span>
+              <span className="text-white">{currentUser?.mineAssigned}</span>
             </div>
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Shift Timing</span>
-              <span className="text-white bg-amber-500/10 text-amber-400 px-2 py-1 rounded">{user?.shift}</span>
+              <span className="text-white bg-amber-500/10 text-amber-400 px-2 py-1 rounded">{currentUser?.shift}</span>
             </div>
           </div>
         </div>

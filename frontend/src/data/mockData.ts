@@ -1,3 +1,82 @@
+export const DEMO_USERS = {
+  field_worker: {
+    id: 'usr_wrk_4081',
+    name: 'Rahul Kumar Soren',
+    employeeId: 'WRK-4081',
+    role: 'field_worker',
+    roleTitle: 'Field Worker',
+    designation: 'Underground Operations & Strata Control',
+    organization: 'Bharat Coking Coal Limited (BCCL)',
+    mineAssigned: 'Moonidih Coal Mine, Dhanbad',
+    department: 'Underground Operations',
+    badgeNumber: 'BCCL-UG-9921',
+    shift: 'Shift A (06:00 - 14:00 IST)',
+    status: 'deployed'
+  },
+  safety_officer: {
+    id: 'usr_mso_7820',
+    name: 'abc_name',
+    employeeId: 'MSO-7820',
+    role: 'safety_officer',
+    roleTitle: 'Mine Safety Officer',
+    designation: 'Pit-Head Safety Command & Ventilation',
+    organization: 'Eastern Coalfields Limited (ECL)',
+    mineAssigned: 'Sector 7G Pit-Head, Raniganj Coalfield',
+    department: 'Mine Safety & Rescue',
+    badgeNumber: 'DGMS-CERT-MSO-412',
+    shift: 'General Safety Command',
+    status: 'active'
+  },
+  corporate_management: {
+    id: 'usr_corp_1092',
+    name: 'Vikramaditya Sharma',
+    employeeId: 'CORP-1092',
+    role: 'corporate_management',
+    roleTitle: 'Corporate Executive',
+    designation: 'Enterprise Mining Strategy & ESG Governance',
+    organization: 'Coal India Limited (HQ)',
+    department: 'Enterprise Intelligence & Sustainability',
+    badgeNumber: 'CIL-EXEC-0048',
+    status: 'active'
+  },
+  regulatory_authority: {
+    id: 'usr_reg_9914',
+    name: 'Dr. Rajeshwar Prasad Rao',
+    employeeId: 'REG-9914',
+    role: 'regulatory_authority',
+    roleTitle: 'DGMS Regulatory Director',
+    designation: 'Directorate General of Mines Safety',
+    organization: 'DGMS, Ministry of Labour & Employment',
+    department: 'Eastern Zone Regulatory Audit',
+    badgeNumber: 'DGMS-GOI-INSP-88',
+    status: 'active'
+  },
+  system_admin: {
+    id: 'usr_adm_0010',
+    name: 'Arjun Singhal',
+    employeeId: 'ADM-0010',
+    role: 'system_admin',
+    roleTitle: 'System Administrator',
+    designation: 'System Infrastructure & Security',
+    organization: 'CoalGuard AI Core Systems',
+    department: 'Infrastructure & Safety Network',
+    badgeNumber: 'ROOT-SEC-01',
+    status: 'active'
+  },
+  sih_evaluator: {
+    id: 'usr_sih_2026',
+    name: 'SIH Evaluator',
+    employeeId: 'SIH-EVAL-2026',
+    role: 'sih_evaluator',
+    roleTitle: 'SIH Evaluator',
+    designation: 'Grand Finale Evaluation Panel',
+    organization: 'Ministry of Coal & AICTE',
+    department: 'Evaluation Panelist',
+    badgeNumber: 'SIH-JURY-2026',
+    status: 'active'
+  }
+};
+
 export const OPERATING_MINES = [
   {
     id: 'mine-01',
@@ -227,32 +306,7 @@ export const LIVE_SENSORS = [
   }
 ];
 
-export interface Ticket {
-  id: string
-  title: string
-  description: string
-  category: string
-  severity: string
-  status: string
-  mineId: string
-  mineName: string
-  location: string
-  reportedBy: string
-  assignedTo: string
-  createdAt: string
-  dgmsRegulationRef: string
-  aiSuggestedAction: string
-  ledgerHash: string
-  sensorAnomaly?: {
-    parameter: string
-    reading: string
-    threshold: string
-  }
-  resolvedAt?: string
-  correctiveActionTaken?: string
-}
-
-export const INITIAL_TICKETS: Ticket[] = [
+export const INITIAL_TICKETS = [
   {
     id: 'TCK-2026-8941',
     title: 'High Methane Level in Face 4B Return Incline',

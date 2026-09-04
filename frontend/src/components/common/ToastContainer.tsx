@@ -1,9 +1,9 @@
 import React from 'react';
-import { useUIStore } from '../../store/uiStore';
+import { useApp } from '../../context/AppContext';
 import { CheckCircle2, AlertTriangle, AlertOctagon, Info, X } from 'lucide-react';
 
 export const ToastContainer = () => {
-  const { toasts, removeToast } = useUIStore();
+  const { toasts, removeToast } = useApp();
 
   if (!toasts || toasts.length === 0) return null;
 

@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../../store/authStore';
-import { useUIStore } from '../../store/uiStore';
-import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { displayName, userTypeLabel } from '../../lib/userDisplay';
+import { useApp } from '../../context/AppContext';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -22,9 +19,7 @@ import {
 } from 'lucide-react';
 
 export const CorporateDashboard = () => {
-  const user = useAuthStore((state) => state.user);
-  const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
-  const { mines } = useDashboardDataStore();
+  const { currentUser, activeSubTab, setActiveSubTab, mines, addToast } = useApp();
   const [selectedSubsidiary, setSelectedSubsidiary] = useState('ALL');
 
   const filteredMines = selectedSubsidiary === 'ALL'
@@ -453,23 +448,23 @@ export const CorporateDashboard = () => {
 
         <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
           <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-orange-500/30 flex items-center justify-center text-orange-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-            {displayName(user).charAt(0).toUpperCase()}
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'C'}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
-            <p className="text-sm font-mono text-orange-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.user_type)}</p>
-            <p className="text-xs text-slate-400 mt-1">{user?.organization}</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
+            <p className="text-sm font-mono text-orange-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
+            <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
           </div>
         </div>
 
         <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Executive Badge</span>
-            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{user?.badgeNumber}</span>
+            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.badgeNumber}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Department</span>
-            <span className="text-white bg-orange-500/10 text-orange-400 px-2 py-1 rounded">{user?.department}</span>
+            <span className="text-white bg-orange-500/10 text-orange-400 px-2 py-1 rounded">{currentUser?.department}</span>
           </div>
         </div>
       </div>

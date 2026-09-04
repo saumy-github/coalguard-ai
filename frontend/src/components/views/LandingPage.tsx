@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
+import { useApp } from '../../context/AppContext';
+import { 
   ShieldAlert, 
   Sparkles, 
   Activity, 
@@ -25,9 +25,9 @@ const SootParticles = () => {
     left: `${Math.random() * 100}%`,
     animationDuration: `${Math.random() * 5 + 5}s`, // 5s to 10s
     animationDelay: `-${Math.random() * 10}s`, // Negative delay so they start already falling
-    width: `${Math.random() * 5 + 2}px`,
-    height: `${Math.random() * 5 + 2}px`,
-    opacity: Math.random() * 0.4 + 0.1
+    width: `${Math.random() * 6 + 3}px`, // Increased from 5+2 to 6+3
+    height: `${Math.random() * 6 + 3}px`,
+    opacity: Math.random() * 0.6 + 0.25 // Increased from 0.4+0.1 to 0.6+0.25
   }));
 
   return (
@@ -35,7 +35,7 @@ const SootParticles = () => {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute bg-[#1a1511] border border-white/5 rounded-sm"
+          className="absolute bg-stone-500/20 border border-white/10 rounded-sm"
           style={{
             left: p.left,
             width: p.width,
@@ -51,7 +51,7 @@ const SootParticles = () => {
 };
 
 export const LandingPage = () => {
-  const navigate = useNavigate();
+  const { loginAsRole, setActiveView, setPreSelectedRole } = useApp();
 
   const roleCards = [
     {
@@ -142,7 +142,7 @@ export const LandingPage = () => {
             <button
               onClick={() => {
                 window.scrollTo(0, 0);
-                navigate('/login');
+                loginAsRole('sih_evaluator');
               }}
               className="btn-primary-earth px-8 py-4 rounded-2xl text-base font-bold flex items-center gap-3 w-full sm:w-auto justify-center"
             >
@@ -151,7 +151,7 @@ export const LandingPage = () => {
             </button>
 
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => setActiveView('login')}
               className="btn-glass px-8 py-4 rounded-2xl text-base font-bold flex items-center gap-3 w-full sm:w-auto justify-center"
             >
               <span>Operator Login</span>
@@ -226,9 +226,14 @@ export const LandingPage = () => {
               key={card.role}
               onClick={() => {
                 window.scrollTo(0, 0);
-                navigate('/login');
+                if (card.role === 'sih_evaluator') {
+                  loginAsRole(card.role);
+                } else {
+                  setPreSelectedRole(card.role);
+                  setActiveView('login');
+                }
               }}
-              className={`glass-panel rounded-3xl p-6 border ${card.color} cursor-pointer transition-all duration-300 hover:-translate-y-2 flex flex-col justify-between group`}
+              className={`glass-panel glass-panel-hover rounded-3xl p-6 border ${card.color} cursor-pointer transition-all duration-300 hover:-translate-y-2 flex flex-col justify-between group`}
             >
               <div>
                 <div className="flex items-center justify-between gap-3 mb-5">

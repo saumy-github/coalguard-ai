@@ -1,9 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useAuthStore } from '../../store/authStore';
-import { useUIStore } from '../../store/uiStore';
-import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { displayName, userTypeLabel } from '../../lib/userDisplay';
-import { api } from '../../lib/api';
+import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -25,72 +21,35 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-interface AdminUser {
-  id: string;
-  email: string | null;
-  phone: string | null;
-  user_type: string;
-  full_name: string | null;
-  role_title: string | null;
-  is_guest: boolean;
-  active: boolean;
-}
-
 export const AdminDashboard = () => {
-  const user = useAuthStore((state) => state.user);
-  const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
-  const { auditTrail } = useDashboardDataStore();
-
-  const [usersList, setUsersList] = useState<AdminUser[]>([]);
+  const { currentUser, activeSubTab, setActiveSubTab, auditTrail, addToast } = useApp();
 
   const [newUserName, setNewUserName] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPhone, setNewUserPhone] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState('worker');
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUserRole, setNewUserRole] = useState('field_worker');
+  const [newUserOrg, setNewUserOrg] = useState('ECL (Sector 7G)');
 
-  const fetchUsers = async () => {
-    try {
-      const { data } = await api.get<AdminUser[]>('/users');
-      setUsersList(data);
-    } catch {
-      addToast('error', 'Failed to Load Users', 'Could not fetch the operator directory.');
-    }
-  };
+  const [usersList, setUsersList] = useState([
+    { id: 'USR-01', name: 'abc_name', role: 'Mine Safety Officer', org: 'ECL', status: 'active' },
+    { id: 'USR-02', name: 'Rajesh Soren', role: 'Underground Worker', org: 'BCCL', status: 'active' },
+    { id: 'USR-03', name: 'Dr. Amitabh Sen', role: 'Corporate Exec', org: 'CIL HQ', status: 'active' },
+    { id: 'USR-04', name: 'Shri Vikramaditya Roy', role: 'DGMS Inspector', org: 'DGMS', status: 'active' }
+  ]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const handleAddUser = async (e: React.FormEvent) => {
+  const handleAddUser = (e) => {
     e.preventDefault();
-    if (!newUserName.trim() || !newUserPassword.trim() || (!newUserEmail.trim() && !newUserPhone.trim())) {
-      addToast('warning', 'Missing Details', 'Provide a name, password, and at least one of email or phone.');
-      return;
-    }
+    if (!newUserName.trim()) return;
 
-    setIsCreatingUser(true);
-    try {
-      await api.post('/users', {
-        email: newUserEmail.trim() || null,
-        phone: newUserPhone.trim() || null,
-        password: newUserPassword,
-        user_type: newUserRole,
-        full_name: newUserName.trim(),
-      });
-      addToast('success', 'User Registered', `${newUserName} can now sign in with the credentials you set.`);
-      setNewUserName('');
-      setNewUserEmail('');
-      setNewUserPhone('');
-      setNewUserPassword('');
-      await fetchUsers();
-    } catch (err) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      addToast('error', 'Could Not Create User', detail || 'Please check the details and try again.');
-    } finally {
-      setIsCreatingUser(false);
-    }
+    const newUser = {
+      id: `USR-0${usersList.length + 1}`,
+      name: newUserName,
+      role: newUserRole,
+      org: newUserOrg,
+      status: 'active'
+    };
+
+    setUsersList([...usersList, newUser]);
+    setNewUserName('');
+    addToast('success', 'User Registered', `${newUserName} added to access control list.`);
   };
 
   // 1. Dashboard Overview
@@ -106,8 +65,8 @@ export const AdminDashboard = () => {
       },
       {
         title: "Active Users",
-        value: `${usersList.length}`,
-        subtext: "Registered operator accounts",
+        value: `${usersList.length + 44}`,
+        subtext: "Across 24 Mine Locations",
         icon: <Users className="w-5 h-5 text-blue-400" />,
         status: "optimal",
         statusLabel: "ONLINE"
@@ -282,42 +241,6 @@ export const AdminDashboard = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Email</label>
-                <input
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Phone</label>
-                <input
-                  type="text"
-                  value={newUserPhone}
-                  onChange={(e) => setNewUserPhone(e.target.value)}
-                  placeholder="+91..."
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
-                />
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-500 -mt-2">At least one of email or phone is required.</p>
-
-            <div>
-              <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Password</label>
-              <input
-                type="text"
-                required
-                value={newUserPassword}
-                onChange={(e) => setNewUserPassword(e.target.value)}
-                placeholder="Set an initial password"
-                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
-              />
-            </div>
-
             <div>
               <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Role</label>
               <select
@@ -325,21 +248,30 @@ export const AdminDashboard = () => {
                 onChange={(e) => setNewUserRole(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
               >
-                <option value="worker">Underground Worker</option>
-                <option value="mine_safety_officer">Mine Safety Officer</option>
+                <option value="field_worker">Underground Worker</option>
+                <option value="safety_officer">Mine Safety Officer</option>
                 <option value="corporate_management">Corporate Management</option>
                 <option value="regulatory_authority">DGMS Regulatory Inspector</option>
-                <option value="admin">System Administrator</option>
+                <option value="system_admin">System Administrator</option>
               </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Organization / Unit</label>
+              <input
+                type="text"
+                value={newUserOrg}
+                onChange={(e) => setNewUserOrg(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
+              />
             </div>
 
             <button
               type="submit"
-              disabled={isCreatingUser}
-              className="w-full btn-primary-earth py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full btn-primary-earth py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all"
             >
               <UserPlus className="w-4 h-4" />
-              <span>{isCreatingUser ? 'Creating...' : 'Create Account'}</span>
+              <span>Create Account</span>
             </button>
           </form>
         </div>
@@ -355,17 +287,12 @@ export const AdminDashboard = () => {
             {usersList.map((u) => (
               <div key={u.id} className="glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono group">
                 <div>
-                  <h4 className="font-bold text-white tracking-wide text-base">{u.full_name || u.email || u.phone}</h4>
-                  <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-                    {userTypeLabel(u.user_type)} • {u.email || u.phone} <span className="text-orange-400">({u.id.slice(-6)})</span>
-                  </p>
+                  <h4 className="font-bold text-white tracking-wide text-base">{u.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">{u.role} • {u.org} <span className="text-orange-400">({u.id})</span></p>
                 </div>
-                <StatusBadge status={u.active ? 'safe' : 'warning'} label={u.active ? 'ACTIVE' : 'INACTIVE'} />
+                <StatusBadge status="safe" label="ACTIVE" />
               </div>
             ))}
-            {usersList.length === 0 && (
-              <p className="text-sm text-slate-500 font-mono text-center py-6">No operator accounts yet.</p>
-            )}
           </div>
         </div>
 
@@ -518,19 +445,19 @@ export const AdminDashboard = () => {
 
         <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
           <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.2)]">
-            {displayName(user).charAt(0).toUpperCase()}
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
-            <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.user_type)}</p>
-            <p className="text-xs text-slate-400 mt-1">{user?.organization}</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
+            <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
+            <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
           </div>
         </div>
 
         <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Admin Security ID</span>
-            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{user?.employeeId}</span>
+            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.employeeId}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Access Level</span>

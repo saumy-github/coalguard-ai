@@ -1,18 +1,12 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 
-export const EmptyState = ({
-  icon,
-  title = 'No records found',
-  description = 'Everything is currently up to date.',
-  actionLabel,
-  onAction
-}: {
-  icon?: any;
-  title?: any;
-  description?: any;
-  actionLabel?: any;
-  onAction?: any;
+export const EmptyState = ({ 
+  icon, 
+  title = 'No records found', 
+  description = 'Everything is currently up to date.', 
+  actionLabel, 
+  onAction 
 }) => {
   return (
     <div className="glass-card rounded-2xl p-8 sm:p-12 text-center border border-[#51443d]/40 flex flex-col items-center justify-center my-4">
