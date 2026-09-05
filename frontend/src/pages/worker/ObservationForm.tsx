@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { addObservation } from '../../lib/db';
-import { useSyncManager } from '../../hooks/useSyncManager';
 import { Save, MapPin, Mic, Square, X } from 'lucide-react';
 
 // research/lld.md §4 Observation schema: description, photo_urls, voice_note_url, lat, lng, pillar.
@@ -24,9 +23,17 @@ function fileToDataUrl(file: File | Blob): Promise<string> {
   });
 }
 
-export const ObservationForm = () => {
+interface ObservationFormProps {
+  isOnline: boolean;
+  syncObservations: () => Promise<void>;
+}
+
+// isOnline/syncObservations are passed down from WorkerApp's single
+// useSyncManager() call rather than calling the hook again here — see the
+// comment on that call site for why a second instance is a real bug, not
+// just redundant.
+export const ObservationForm = ({ isOnline, syncObservations }: ObservationFormProps) => {
   const { location, loading: geoLoading } = useGeolocation();
-  const { isOnline, syncObservations } = useSyncManager();
 
   const [description, setDescription] = useState('');
   const [pillar, setPillar] = useState<Pillar>('safety');
@@ -84,7 +91,7 @@ export const ObservationForm = () => {
       voice_note_url: voiceNoteUrl,
       lat: location.latitude,
       lng: location.longitude,
-      timestamp: new Date().toISOString(),
+      captured_at: new Date().toISOString(),
       synced: 0,
     };
 

@@ -14,8 +14,8 @@ from __future__ import annotations
 import asyncio
 
 from src.auth.security import hash_password
-from src.models.mine import Mine, Subsidiary
 from src.models.user import User
+from src.services.org_service import ensure_placeholder_org
 
 # Dev/test credential only — never use this in a real deployment.
 TEST_PASSWORD = "test123"
@@ -27,23 +27,6 @@ SEED_USERS = [
     {"user_type": "regulatory_authority", "email": "regulator@example.com", "full_name": "Test Regulatory Auditor"},
     {"user_type": "admin", "email": "admin@example.com", "full_name": "Test Admin"},
 ]
-
-
-async def ensure_placeholder_org() -> tuple[Subsidiary, Mine]:
-    """Mine/Subsidiary CRUD (research/lld.md §7b) doesn't exist yet — create one
-    placeholder pair if none exist, just enough for seeded users to reference.
-    """
-    subsidiary = await Subsidiary.find_one()
-    if subsidiary is None:
-        subsidiary = await Subsidiary(name="Test Subsidiary", code="TEST").insert()
-        print(f"Created placeholder Subsidiary: {subsidiary.name} ({subsidiary.id})")
-
-    mine = await Mine.find_one(Mine.subsidiary_id == subsidiary.id)
-    if mine is None:
-        mine = await Mine(subsidiary_id=subsidiary.id, name="Test Mine").insert()
-        print(f"Created placeholder Mine: {mine.name} ({mine.id})")
-
-    return subsidiary, mine
 
 
 async def seed_users() -> None:

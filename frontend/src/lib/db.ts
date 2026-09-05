@@ -13,7 +13,9 @@ export interface Observation {
   voice_note_url: string | null
   lat: number | null
   lng: number | null
-  timestamp: string
+  // Matches backend/src/schemas/inspections.py's ObservationIn.captured_at —
+  // named for what it is (when the Worker captured this), not just "timestamp".
+  captured_at: string
   synced: number // 0 = pending, 1 = synced
 }
 

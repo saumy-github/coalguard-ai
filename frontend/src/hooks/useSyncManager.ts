@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getPendingObservations, markObservationSynced } from '../lib/db';
+import { api } from '../lib/api';
 
 export const useSyncManager = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -10,7 +11,7 @@ export const useSyncManager = () => {
       setIsOnline(true);
       syncObservations();
     };
-    
+
     const handleOffline = () => {
       setIsOnline(false);
     };
@@ -35,22 +36,17 @@ export const useSyncManager = () => {
 
     try {
       const pending = await getPendingObservations();
-      
+
       for (const obs of pending) {
         try {
-          // Send to backend via native fetch
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/observations`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(obs),
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to sync observation: ${response.statusText}`);
-          }
-          
+          // id/synced are local IndexedDB bookkeeping only — not part of the
+          // wire schema (backend/src/schemas/inspections.py ObservationIn).
+          // `api` (axios, see lib/api.ts) attaches the Bearer token itself;
+          // this used to be a bare fetch with no auth header at all, against
+          // a path (/api/observations) the backend never had.
+          const { id, synced, ...payload } = obs;
+          await api.post('/inspections/observations', payload);
+
           if (obs.id) {
             await markObservationSynced(obs.id);
           }
@@ -69,4 +65,3 @@ export const useSyncManager = () => {
 
   return { isOnline, isSyncing, syncObservations };
 };
-

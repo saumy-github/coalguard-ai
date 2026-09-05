@@ -8,6 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from .config import settings
 from .models import ALL_MODELS
 from .routes.auth import router as auth_router
+from .routes.inspections import router as inspections_router
 from .routes.users import router as users_router
 
 
@@ -33,6 +34,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(inspections_router)
 
 
 @app.get("/health")

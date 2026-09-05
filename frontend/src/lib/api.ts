@@ -5,6 +5,11 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export const api = axios.create({
   baseURL: API_URL,
+  // Without this, a slow/stuck request (e.g. a large base64 photo in an
+  // offline-queue sync, on a throttled connection) hangs forever with no
+  // feedback — axios has no default timeout. 30s is generous for JSON but
+  // not infinite.
+  timeout: 30000,
 })
 
 // Attach the JWT from the auth store to every request. Imported lazily inside
