@@ -5,7 +5,7 @@ import type { UserType } from '../../utils/userTypes'
 
 interface RequireAuthProps {
   children: ReactNode
-  // Restricts the route to these user_types once the session is known. Omit
+  // Restricts the route to these roles once the session is known. Omit
   // for "any authenticated user". A logged-in user of the wrong role is
   // authenticated, just on the wrong page — so this redirects to /dashboard,
   // not /login, and does not decide anything until the role itself is known
@@ -38,7 +38,7 @@ export const RequireAuth = ({ children, roles }: RequireAuthProps) => {
     if (!user) {
       return null
     }
-    if (!roles.includes(user.user_type as UserType)) {
+    if (!roles.includes(user.role as UserType)) {
       return <Navigate to="/dashboard" replace />
     }
   }

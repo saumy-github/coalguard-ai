@@ -7,11 +7,34 @@ registered everywhere automatically.
 
 from .inspection import Inspection
 from .mine import Mine, Subsidiary
+from .mine_assignment import MineAssignment
 from .mine_level import MineLevel
 from .person_issue import PersonIssue
+from .regulatory_report import RegulatoryReport
 from .site_issue import SiteIssue
 from .user import User
 
-ALL_MODELS = [User, Mine, Subsidiary, MineLevel, PersonIssue, SiteIssue, Inspection]
+ALL_MODELS = [
+    User,
+    Mine,
+    Subsidiary,
+    MineAssignment,
+    MineLevel,
+    PersonIssue,
+    SiteIssue,
+    Inspection,
+    RegulatoryReport,
+]
 
-__all__ = ["User", "Mine", "Subsidiary", "MineLevel", "PersonIssue", "SiteIssue", "Inspection", "ALL_MODELS"]
+__all__ = [
+    "User",
+    "Mine",
+    "Subsidiary",
+    "MineAssignment",
+    "MineLevel",
+    "PersonIssue",
+    "SiteIssue",
+    "Inspection",
+    "RegulatoryReport",
+    "ALL_MODELS",
+]

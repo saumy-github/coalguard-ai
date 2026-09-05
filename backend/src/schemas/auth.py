@@ -15,7 +15,7 @@ class GoogleLoginRequest(BaseModel):
 
 
 class GuestLoginRequest(BaseModel):
-    user_type: UserType
+    role: UserType
 
 
 class TokenResponse(BaseModel):
@@ -27,8 +27,9 @@ class CurrentUserResponse(BaseModel):
     id: str
     email: Optional[str] = None
     phone: Optional[str] = None
-    user_type: UserType
+    role: UserType
     full_name: Optional[str] = None
-    mine_id: Optional[str] = None
-    subsidiary_id: Optional[str] = None
     is_guest: bool
+    # Active MineAssignment mine IDs (Decision #12) — replaces the old bare
+    # mine_id/subsidiary_id, which only ever supported a single mine anyway.
+    mine_ids: list[str] = []

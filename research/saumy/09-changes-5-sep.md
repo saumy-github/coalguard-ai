@@ -1,31 +1,43 @@
 # Frontend Modularization & Fake-Data Plan
 
 > **Last updated:** 2026-09-06 (uncommitted — not yet pushed, exists only in this local working tree) ·
-**Status:** PLAN — several structural decisions confirmed in discussion, others still open (see bottom). No code changed yet.
+**Status:** PLAN — several structural decisions confirmed in discussion, others still open (see bottom). **The teammate branch (`origin/frontend-store-migration`) has since been merged** (commit `654fe510`) — this revision reconciles the plan against what actually landed. No decision-#8–16 work has been implemented yet; this update is scoped to correcting facts and re-opening one decision, not executing the plan.
 
-Grounded in reading the actual current `frontend/src` tree directly (file counts, grep, git history) — not the older `research/branch-audit-frontend.md`/`research/cleanup-plan.md` (2026-09-01/02), which describe a JSX/Context-API version of this app that no longer exists. Those were only cross-checked, then set aside where stale.
+Grounded in reading the actual current `frontend/src`/`backend/src` tree directly (file counts, grep, git history, live endpoint checks) after the merge — not the older `research/branch-audit-frontend.md`/`research/cleanup-plan.md` (2026-09-01/02), which describe a JSX/Context-API version of this app that no longer exists. Those were only cross-checked, then set aside where stale.
 
 ---
 
 ## Current structure, precisely
 
 - `pages/Dashboard.tsx` — one `switch(user_type)` picking one of 5 role components.
-- 5 role dashboards, each a monolith: `WorkerDashboard.tsx` (664 lines), `SafetyOfficerDashboard.tsx` (672), `CorporateDashboard.tsx` (489), `RegulatoryDashboard.tsx` (490), `AdminDashboard.tsx` (555). Every "page" for that role (Overview, Tasks, Report, Notifications, Profile, ...) is a `render___()` function living inside the *same file*, chosen by a `switch(activeSubTab)` at the bottom. `activeSubTab` is one shared string in `uiStore` (Zustand) — not a URL route. The Mine Map (`/dashboard/map`) is the only page in the entire app that's a real route instead of a tab.
+- 5 role dashboards, each a monolith: `WorkerDashboard.tsx` (664 lines), `SafetyOfficerDashboard.tsx` (672), `CorporateDashboard.tsx` (489), `RegulatoryDashboard.tsx` (490), `AdminDashboard.tsx` (487, down from 555 — the merge changed it, see regression note below). Every "page" for that role (Overview, Tasks, Report, Notifications, Profile, ...) is a `render___()` function living inside the *same file*, chosen by a `switch(activeSubTab)` at the bottom. `activeSubTab` is one shared string in `uiStore` (Zustand) — not a URL route. The Mine Map (`/dashboard/map`) is the only page in the entire app that's a real route instead of a tab.
 - Shared shell (`Header`, `Sidebar`, `NotificationsDrawer`, `GlobalSearchModal`, `ToastContainer`, `common/*`) — genuinely reusable, role-agnostic, in decent shape.
-- `data/mockData.ts` (529 lines) → wrapped by `store/dashboardDataStore.ts` (182 lines) → imported by all 5 dashboards **and** the shared shell itself (`Sidebar`'s notification badge, `Header`, `NotificationsDrawer`, `GlobalSearchModal`). Real API calls exist only in `WorkerDashboard.tsx` (2 — the `07`-plan `/site-issues` wiring) and `AdminDashboard.tsx` (2 — `/users`). `SafetyOfficerDashboard`, `CorporateDashboard`, `RegulatoryDashboard` make zero real API calls.
+- `data/mockData.ts` (608 lines, up from 529 — the merge added more) → wrapped by `store/dashboardDataStore.ts` (182 lines) → imported by all 5 dashboards **and** the shared shell itself (`Sidebar`'s notification badge, `Header`, `NotificationsDrawer`, `GlobalSearchModal`). **Real API calls now exist only in `WorkerDashboard.tsx`** (2 — the `07`-plan `/site-issues` wiring). `AdminDashboard.tsx`, `SafetyOfficerDashboard`, `CorporateDashboard`, `RegulatoryDashboard` make **zero** real API calls — Admin used to be real (`GET`/`POST /users`) before the merge; see the regression note below.
+
+### A regression the merge introduced, not something this plan asked for
+
+**`AdminDashboard.tsx`'s real `/users` wiring is gone.** Confirmed by reading the current file: `usersList` is now a hardcoded 4-entry `useState` array, `handleAddUser` only pushes into that local array (no `api.post`), and the role `<select>` defaults to `'field_worker'` — a role name the backend has never recognized (real values are `worker`/`mine_safety_officer`/`corporate_management`/`regulatory_authority`/`admin`). This matches exactly what Codex's audit flagged before the merge landed ("It changes Admin from the current real `/users` API back to an in-memory mock user list... uses invalid backend role names"). Nobody asked for this regression — it needs to be reverted (restore the real `GET`/`POST /users` calls, fix the role dropdown to use real `UserType` values) as part of whatever phase touches Admin, independent of the rest of this plan's decisions.
 - No `context/` folder exists anywhere in current `frontend/src` — confirmed by direct search. It was a leftover reference to the old, now fully-replaced JSX app (`AppContext.jsx`), already superseded by the `store/` Zustand stores.
+
+### What the merge actually added (verified against live code, not the merge message)
+
+- **`frontend/src/lib/` is gone — renamed to `frontend/src/utils/`.** Decision #5 executed: the folder was renamed (14 importing files updated) *and* the `.gitignore`'s original bare `lib/` line (standard Python-boilerplate rule, unrelated to this frontend folder) was restored afterward — the rename removes the collision, the restored rule is back to doing what it was always meant to do (ignore Python packaging output elsewhere), not a partial/either-or fix as originally scoped.
+- **Real guest login now exists end-to-end.** `POST /auth/guest` (backend, `auth/guest.py` + `seed_guests.py`, one seeded guest `User` per role) is wired to a real `loginAsGuest` in `authStore.ts`, and `LandingPage.tsx` was completely reworked around it — the old hardcoded 6-role-card array (with stale `field_worker`/`system_admin` keys) is gone, replaced by `ROLES`/`DASHBOARD_PATH_BY_ROLE` (`utils/userTypes.ts`, single source of truth for the 5 real roles) driving actual "Continue as Guest" buttons. This is a genuine new real surface, not mock — update Part 1's table below.
+- **A new `Inspection` model + `POST /inspections/observations` endpoint now exist** (`backend/src/models/inspection.py`, `services/inspection_service.py`, `routes/inspections.py`), backing the `/worker` route's offline observation queue. **This directly conflicts with Decision #12's target design**: `inspection_service.create_manual_observation` falls back to `org_service.ensure_placeholder_org()` (`user.mine_id` or a shared "Test Subsidiary"/"Test Mine" placeholder) — exactly the `User.mine_id`/`subsidiary_id` pattern Decision #12 replaces with `mine_assignments`. **Agreed handling**: leave `Inspection` as-is for now; it gets revisited/migrated when Decision #12's authorization migration actually happens, not before. Don't build anything further on top of the current `Inspection` shape in the meantime.
+- **`Sidebar.tsx` picked up a cleaner `NAV_ITEMS_BY_ROLE` record** (one static table keyed by `UserType`, replacing the old `if/else` chain) — a small step toward Decision #2/#7, but still tab-based (`activeSubTab`), not routes. Decisions #2 and #7 remain entirely unimplemented — `App.tsx` still defines routes inline, and only `/dashboard/map` is a real route; everything else is still a tab.
+- **`/worker` is untouched (Decision #1 not executed) — see re-opened note below.**
 
 ---
 
 ## Decisions confirmed in discussion
 
-### 1. Delete `/worker` entirely
+### 1. Delete `/worker` entirely — **RESOLVED: reversed — `/worker` stays**
 
-`WorkerApp.tsx` + `ObservationForm.tsx` (route-based, under `/worker`) get removed, along with the tab-based `WorkerDashboard.tsx` under `/dashboard` being the one true Worker surface going forward.
+Originally: `WorkerApp.tsx` + `ObservationForm.tsx` (route-based, under `/worker`) get removed, along with the tab-based `WorkerDashboard.tsx` under `/dashboard` being the one true Worker surface going forward.
 
-**Provenance, traced via git history** (not the stale docs): the real logic here — `useGeolocation.ts`, `useSyncManager.ts`, the observation form, offline IndexedDB queue — was authored by **Akshat Kashyap** in commit `7ca612f8` ("feat: extract mobile PWA into separate frontend/mobile app", 2026-09-01), originally under `frontend/mobile/src/pages/inspector/`. It reached its current path via merge commit `2267a7b8` (`saumy-github`, 2026-09-02), which relocated it to `frontend/src/pages/worker/` without git registering it as a tracked rename.
+**Provenance, traced via git history** (not the stale docs): the real logic here — `useGeolocation.ts`, `useSyncManager.ts`, the observation form, offline IndexedDB queue — was authored by **Akshat Kashyap**, originally in commit `7ca612f8` ("feat: extract mobile PWA into separate frontend/mobile app", 2026-09-01), under `frontend/mobile/src/pages/inspector/`, relocated to `frontend/src/pages/worker/` via merge commit `2267a7b8` (`saumy-github`, 2026-09-02). **Since then it was substantially reworked again** on `origin/frontend-store-migration` (commit `f3ab0627`, "Add inspections endpoint; fix offline-sync auth, 404, hang, and role-gate bugs") and merged in via `654fe510` — the offline queue now has fixed auth headers, no more 404/hang bugs, a real backend `Inspection` model to submit to (`POST /inspections/observations`), and the route itself is properly role-gated (`RequireAuth roles={['worker']}`).
 
-**Consequence to keep in mind, not a reason to reverse the decision**: this is currently the *only* place in the app with real geolocation and offline-queue capability — both called for by `lld.md` §7e's actual `NewInspection` feature. Deleting the route deletes that capability too, not just a redundant screen. Fine if the intent is to rebuild it properly later as part of a real inspection flow (see Open Questions).
+**Why this reversed**: the case for deleting this got weaker, not stronger, since it was first decided — the code is now real working functionality (verified live: an unauthenticated/wrong-role request is correctly redirected, `idb`-backed offline queue installed and type-checks clean), not the rough state it was in originally. Deleting it would throw away more real, working code than before. **Final: `/worker` stays.** It still needs migrating onto Decision #12's `role`/`mine_assignments` model like everything else (see `org_service.py`/`Inspection` note above) — that happens as part of Phase 1, not as a separate decision anymore.
 
 ### 2. Real per-page routes, RBAC-gated, replacing tab-switching
 
@@ -46,11 +58,11 @@ Your framing: *"all the data which needs to be placed will come from the backend
 
 `context/` — confirmed not to exist in the current codebase at all; no action needed.
 
-### 5. `lib/` → renamed to `utils/` (proposed), not a `.gitignore` fix
+### 5. `lib/` → `utils/` — **DONE**
 
-**Real bug found, not just a style question**: the root `.gitignore` line 17 is a bare `lib/` (from the standard Python boilerplate template, meant for Python packaging output like `build/lib/`). A pattern with no leading slash matches a directory of that name *anywhere in the repo* — confirmed with `git check-ignore -v`, which shows it matching `frontend/src/lib/api.ts`, `db.ts`, and `userDisplay.ts`. `git ls-files` confirms none of the three are tracked. **`api.ts` — the axios client with the auth-token interceptor that every store and API call in the app depends on — has never been pushed to any remote branch.** Anyone cloning this repo fresh right now gets a frontend that doesn't build.
+**The bug**: the root `.gitignore` line 17 was a bare `lib/` (standard Python boilerplate, meant for Python packaging output like `build/lib/`). A pattern with no leading slash matches a directory of that name *anywhere in the repo* — confirmed with `git check-ignore -v`, which showed it matching `frontend/src/lib/api.ts`, `db.ts`, and `userDisplay.ts`. `git ls-files` confirmed none of the three were tracked. **`api.ts` — the axios client with the auth-token interceptor every store and API call depends on — had never been pushed to any remote branch.**
 
-Decision: rename the folder (not adjust `.gitignore`) to `utils/` — covers all three files (API client, IndexedDB helper, display formatters) without colliding with the Python boilerplate pattern. Requires updating every `../lib/...` import across the codebase as part of the rename (more work than a one-line gitignore fix would have been, but it's the chosen approach).
+**Executed**: `frontend/src/lib/` renamed to `frontend/src/utils/` (`git mv`, preserving history), all 14 importing files updated (`../lib/...` → `../utils/...`), and the `.gitignore`'s original `lib/`/`lib64/` lines restored afterward — since the folder no longer has that name, the rule is back to doing what it was always meant to do (Python packaging elsewhere) with no collision. `frontend/src/utils/` now also holds `userTypes.ts` (new, from the merge — `UserType`/`ROLES`/`DASHBOARD_PATH_BY_ROLE`, single source of truth for the 5 roles).
 
 ### 6. Zustand stays — routing and state-library choice are independent decisions
 
@@ -191,7 +203,7 @@ This keeps `users` compact, lets profile data evolve independently, and prevents
 | Worker | Worker role | Must have a Worker assignment for the issue/mine; personal warnings must additionally match `PersonIssue.worker_id == current_user.id`. |
 | Safety Officer | Safety Officer role | Must have a Safety Officer assignment for the mine; may view that mine's site and person issues. |
 | Corporate Management | Corporate Manager role | May view only mines with an active Corporate Management assignment and their issue aggregates/queues. |
-| Regulatory Authority | Regulator role | Scope/authority design is deferred; do not grant broad access merely because the frontend has a regulator dashboard. |
+| Regulatory Authority | Regulator role | Resolved in Decision #13 — see that decision's "Regulator scope" note. Simplified for now (one Regulatory Authority assumed): every mine with an active Corporate Management assignment. Not a stored assignment on the regulator's own account. |
 | Admin | Admin role | Global administrative scope, limited to genuine administration endpoints such as user/role/assignment management. |
 
 Frontend guards and sidebar links remain useful for navigation, but they are never the security boundary. Every data endpoint must apply the role-and-scope check server-side before returning or mutating records.
@@ -315,6 +327,16 @@ A Corporate user may create a `corporate_submission` only for an assigned mine. 
 
 `average_resolution_time` is not currently calculable from the existing issue model: it has no genuine resolution workflow, `resolved_at`, verifier, or evidence. Until that workflow exists, it is a corporate-declared aggregate value and must be labelled accordingly. Once corrective actions are implemented, calculate it from recorded timestamps and retain the calculation inputs.
 
+#### Regulator scope: simplified to one Regulatory Authority for now
+
+The real-world body this role models, India's Directorate General of Mines Safety (DGMS), is not a single national office. It is organized into 8 zones and 38 regional offices, each region under its own Director of Mines Safety, with jurisdiction over whichever mines sit in that region regardless of which company operates them (DGMS notification raising regional offices from 29 to 38; DGMS's own published zone/region jurisdiction list). So multiple regulator accounts, each scoped to a different, geography-defined set of mines — not tied to any one corporate operator — is the realistic long-term model.
+
+Building that properly needs a real regulator-to-mine (or regulator-to-corporate) assignment relationship, plus a way to manage it — more than this phase needs, and more than the current demo data can meaningfully exercise. For now, this platform assumes **exactly one Regulatory Authority account exists**. Under that assumption, "which mines does the regulator see" has a trivial answer that needs no new collection at all: every mine with an active Corporate Management assignment, anywhere. `accessible_mine_ids` for the `regulator` role is computed this way directly — one query over `mine_assignments` filtered to `role == corporate_manager` — not a stored assignment on the regulator's own account.
+
+This stops being correct the moment a second regulator exists: two regulators would trivially see the same "all corporate-managed mines" set, with no way to tell their jurisdictions apart. The real fix, deferred until it's actually needed, is a `regulator_assignments` collection (`regulator_user_id`, `corporate_user_id`, `active`, `assigned_at`) recording which specific corporate managers — and by extension their mines — each regulator oversees. That shape also matches Decision #14's already-planned provisioning hierarchy, where a Regulatory Authority is the one who creates Corporate Management accounts in the first place, so "oversees" and "created" naturally line up once that collection exists.
+
+To make the regulator's aggregate pages (Overview KPIs, Mines list) actually demonstrate cross-mine aggregation rather than aggregating a single mine, seed data now includes **two** Corporate Management accounts, each managing their own mine — reusing the org names already used as flavor text on the Landing page rather than inventing new ones: the existing placeholder mine becomes ECL (Sector 7G), and a new second mine is added for BCCL (Moonidih).
+
 #### Blockchain / tamper-evident ledger: the correct role
 
 Blockchain is not the operational database. Do not write raw sensor readings, live issue updates, worker personal data, photos, full PDFs, or every UI event to a blockchain/ledger. Those remain in ordinary database and file/object storage.
@@ -420,21 +442,21 @@ This is the authoritative backlog of functionality deliberately removed from the
 
 #### Deferred Corporate work
 
-- **Cross-mine safety oversight:** first real Corporate feature after mine assignments and scoped issue APIs; it aggregates only mines managed by that user.
-- **Mine directory/map:** requires a real mine registry, geographic/location fields, and corporate mine assignments.
+- **Cross-mine safety oversight:** done — Phase 6. Aggregates only mines with an active Corporate Management assignment for that user.
+- **Mine directory/map:** requires a real mine registry (Decision #14/Phase 8) beyond the minimal `lat`/`lng` Phase 7 added just for the Regulatory Mines page.
 - **Production, environmental, EC quota, ESG, and compliance scores:** each requires its own source-of-truth data model and calculation rules; they must not be inferred from issue records.
 - **AI forecasts/insights:** require the underlying historical data, model contract, validation, and an accountable business workflow.
-- **Corporate reports:** Decision #13 provides the future aggregate safety/compliance report path; generated board/ESG reports need a separate report-generation and storage design.
+- **Compliance report submission:** done — Phase 7's trimmed `RegulatoryReport` loop. Generated board/ESG PDF reports still need a separate report-generation and storage design.
 - **Corporate profile details:** designation and department need a real corporate-profile API.
 
 #### Deferred Regulatory work
 
-- **Aggregate mine map:** requires mine locations and regulator mine assignments; show mine-level status only, never raw worker/incident detail.
-- **Corporate submissions and regulator verification:** use the versioned report model in Decision #13; both parties can add linked reports/follow-ups, never overwrite history.
-- **Inspections, actions, evidence, and closure:** require the models/workflow set out in Decision #13.
+Resolved by Phase 7 (`10-frontend-coding-plan.md`), trimmed scope: the aggregate Mines page (minimal `Mine.lat`/`lng`, no map widget), the corporate-submission/regulator-verification report loop (versioned `RegulatoryReport`, immutable — never overwritten, only new linked reports), and a real `GET /auth/me` profile. Still genuinely deferred, per Phase 7's own "deliberately not done here" list:
+
+- **Inspections, actions, evidence, and closure:** require the models/workflow set out in Decision #13, not built in Phase 7's trimmed pass.
 - **Average resolution time:** label as corporate-declared until a real corrective-action system records resolution timestamps and verification.
-- **Tamper-evident audit:** first build the chained-hash append-only ledger. Consider a permissioned blockchain only after a genuine multi-party trust requirement is established.
-- **Regulatory profile details and jurisdiction scope:** require dedicated profile/jurisdiction models; do not assume global access from the role alone.
+- **Tamper-evident audit ledger:** the chained-hash append-only ledger itself, ordered after the report/action models per Decision #13's implementation order. Consider a permissioned blockchain only after a genuine multi-party trust requirement is established.
+- **Multi-regulator jurisdiction scope:** Phase 7 assumes exactly one Regulatory Authority account exists (Decision #13's "Regulator scope" note) — a regulator's mines are computed as "every mine with an active Corporate Management assignment," not a stored assignment of its own. A `regulator_assignments` collection (regulator↔corporate manager) is required once a second regulator exists.
 
 #### Deferred Admin work
 
@@ -489,9 +511,21 @@ Deferred pages are added only when their real backend workflow exists—for exam
 
 Every role-specific route is protected twice: `RequireAuth` plus a role guard in the frontend for navigation/UX, and server-side role-and-mine-scope authorization for every requested resource. A readable URL is not authorization. Visiting another role's URL must result in a redirect/403-style denied state, and must never expose data.
 
+### 17. MineLevel today: count-only, no real shape/geometry — and an open question on embedding
+
+Documented in response to a direct question (2026-09-06), not a resolved decision — no schema change made.
+
+**Current state.** `MineLevel` (`backend/src/models/mine_level.py`) is its own collection: `mine_id`, `level` (a letter, e.g. `"A"`), `section_count` (an int). It carries no shape, geometry, or coordinate data of any kind. The demo layout is fixed and identical for every seeded mine (`research/saumy/06-maps-plan.md`): A=20, B=15, C=10.
+
+The visual "shape" seen on the Mine Map (`frontend/src/components/MineLevelMap.tsx`) is generated **entirely client-side**, purely from `section_count` — a Voronoi diagram is built from N seed points, deterministically seeded by `level + section index` (stable across reloads, not reshuffled every visit), then clipped into cells. This is a presentation-layer illusion recomputed from a number; it has no relationship to any mine's real physical layout, and the backend has no opinion about shape at all.
+
+**Open question: embed `MineLevel` on `Mine`, or keep it a separate collection?** Given today's actual usage — a fixed 3-level layout per mine, never queried independently of its owning mine, no per-level lifecycle (nothing creates or deletes a single level on its own), and no other collection ever references a `MineLevel` by its own id — embedding as `Mine.levels: list[{level, section_count}]` would be simpler and remove a collection/join for no real cost today. The tradeoff, if levels ever need independent identity (queried across mines, referenced by id elsewhere, given their own audit trail), is that a separate collection scales better for that. Not decided; revisit whenever the mine-registry work (Decision #14/Phase 8's mine management) next touches `Mine`'s shape.
+
 ---
 
 ## Part 1 — Make real-vs-mock legible (cheapest, do first)
+
+**Mostly superseded by Decision #15's "Remove now" table** — written before Decisions #8–16 existed, back when the plan was "badge the mock stuff and migrate later." Decision #15 replaced that for most of the app: remove the mock UI outright rather than label it. The one place a `<DemoDataBadge />`-style marker might still be worth building is the handful of things Part 3's table below says to deliberately *keep* mocked for now (`OPERATING_MINES`, `LIVE_SENSORS` — no real `Mine`/`Asset` CRUD yet) — flagging as an open question rather than deciding: still want a badge component for those, or is "it's in this plan doc" enough?
 
 A small `<DemoDataBadge />` component (a tiny "DEMO DATA" pill, similar visual weight to the existing `StatusBadge`), dropped into any page/section still rendering from `mockData.ts`. Not a redesign — one component, applied where needed.
 
@@ -507,12 +541,14 @@ A small `<DemoDataBadge />` component (a tiny "DEMO DATA" pill, similar visual w
 | Safety Officer | Overview / Safety Issues queue | Current UI is mock, but it is the next real surface: combine real `SiteIssue` and `PersonIssue` records after RBAC migration. |
 | Safety Officer | Monitoring, sensor calibration, Inspections, AI Assistant, Reports & History | Mock/unsupported — deferred. |
 | Safety Officer | Profile | Partially real — convert to the basic read-only `/auth/me` fields; current role-specific fields are mock. |
-| Admin | Users & Roles | **Real** — `GET/POST /users` |
+| Admin | Users & Roles | **Regressed to mock by the merge** (was real `GET/POST /users` before) — see regression note in "Current structure." Needs reverting, not migrating. |
 | Admin | System Health, Data & Storage, AI System, Activity Logs, Settings, Profile | Mock or static |
 | Corporate | Profile | Partially real — convert to the basic read-only `/auth/me` fields. |
 | Corporate | Overview, mine directory/map, risks, compliance, AI insights, reports | Mock/unsupported — deferred pending mine assignments and corporate-scoped APIs; cross-mine safety oversight is the first future real surface. |
 | Regulatory | everything | Mock (`OPERATING_MINES`, `INITIAL_AUDIT_TRAIL`) |
 | Shared shell | Notification badge/drawer, Global Search, footer | Mock/decorative — remove now; reintroduce only with backend support or real product content. |
+| Landing page | Role picker / guest login | **Real, new since the merge** — `POST /auth/guest` via `loginAsGuest`, driven by `ROLES`/`DASHBOARD_PATH_BY_ROLE` (`utils/userTypes.ts`). No longer needs migrating — already off mock data. |
+| `/worker` (reopened, Decision #1) | Offline observation submission | **Real** — `POST /inspections/observations`, IndexedDB queue, role-gated. Flagged separately for the Decision #12 conflict noted above. |
 
 Once badged, this table becomes the tracking mechanism as tabs migrate to real routes + real data.
 
@@ -561,26 +597,30 @@ Each role's current dashboard file goes away entirely, replaced by route entries
 
 ## Sequence recap
 
-1. Fix the `.gitignore`-shadowed `lib/`→`utils/` rename first — this is a live bug (untracked, unpushed core app code), independent of everything else, worth doing before any other frontend work touches those files.
-2. Implement the Decision #12 role-and-mine-assignment authorization migration: models, seed/migration data, shared backend scope checks, `/auth/me`, Admin management, and authorization tests.
-3. Remove unsupported shared chrome: notification badge/drawer, global search, simulated Wi-Fi state control, and dashboard footer. Record them as future work, not demo features.
-4. Delete `/worker`, `WorkerApp.tsx`, and `ObservationForm.tsx` after resolving the separate geolocation/offline-queue retention question below.
-5. Introduce real routes plus assignment-aware `RequireRole` guards. Migrate the Worker surface to Report a Problem, Map, basic Profile, and the server-filtered personal-issue warning area.
-6. Migrate the Safety Officer to Overview, combined Safety Issues queue, Map, and basic Profile. Defer monitoring, calibration, inspections, AI, resolution workflow, and history.
-7. Add Corporate cross-mine issue oversight only after mine assignments and corporate-scoped endpoints are verified. Keep all production/compliance/forecast/report pages deferred.
-8. Add the Regulatory report-and-verification workflow after Corporate mine assignments are ready: aggregate map, corporate submissions, regulator verification/findings, actions/evidence, and the chained-hash audit ledger in the order defined by Decision #13.
-9. Apply `<DemoDataBadge />` only to any remaining, intentionally retained demo pages during transition; do not badge features that have been decided for removal.
-10. Delete `dashboardDataStore.ts`/`data/mockData.ts` once every remaining consumer has migrated, been removed, or has an explicit deferred empty state.
+**Authoritative phase breakdown now lives in `research/saumy/10-frontend-coding-plan.md`** — this list is kept as a one-line-per-phase mirror of it, not an independent sequence, specifically so the two can't drift out of sync the way this list and `10` briefly did (found and fixed 2026-09-06: `10` originally had no scheduled route-migration step for Corporate/Regulatory/Admin, and this list independently omitted the Admin-regression fix and Admin provisioning entirely while still listing a `DemoDataBadge` step that Decisions #8–16's "remove now" stance had already superseded). If you're reading phase detail, read `10`, not this list.
+
+0. Revert the Admin regression (real `/users` restored) — standalone, no dependencies.
+1. Decision #12: role + `mine_assignments` authorization foundation. (Also where `Inspection`'s placeholder-org fallback gets migrated, per the note above — not before.)
+2. Remove unsupported shared chrome: notification badge/drawer, global search, simulated Wi-Fi toggle, dashboard footer.
+3. Worker: personal-issue warning (needs a new `GET /person-issues/me`), real `/auth/me` profile, strip mock overview content. (`/worker` itself migrated onto `role`/`mine_assignments` as part of Phase 1, per Decision #1's resolution — kept, not a separate phase.)
+4. Safety Officer: real combined Safety Issues queue, real overview, real profile.
+5. Real per-page routes + `RequireRole` guard, migrating Worker and Safety Officer onto them.
+6. Corporate: cross-mine issue oversight, **migrated onto real routes in the same phase** (not deferred to later).
+7. Regulatory: trimmed report/verification loop only (actions/evidence/audit-ledger deferred to backlog; simplified to one Regulatory Authority for now — see Decision #13's "Regulator scope" note), **migrated onto real routes in the same phase**, plus a new Corporate Reports route.
+8. Admin: delegated provisioning hierarchy + role changes + mine assignment/registry management (audit-event trail deferred, same as Phase 7's ledger), **migrated onto real routes in the same phase** — last role off `activeSubTab`.
+9. Delete `dashboardDataStore.ts`/`data/mockData.ts` and the now-dead `activeSubTab`, once every consumer has migrated or been removed.
 
 ---
 
 ## Open questions — asked in chat, recorded here
 
-**Deferred — to discuss in detail later, not answered yet:**
+**Deferred — still open:**
 
-1. **Geolocation/offline-queue capability**: deleting `/worker` removes the only real implementation of this. Whether it gets rebuilt later as part of a proper `NewInspection` flow (per `lld.md` §7e), or dropped from scope entirely, changes whether `useGeolocation.ts`/`useSyncManager.ts`/`lib/db.ts` get deleted outright or moved/kept for later reuse. Not decided.
-2. **What renders for pages with zero real backend once mock data is removed from them** (most of Corporate/Regulatory, several Safety Officer/Admin tabs) — an explicit "not yet available" empty state, or hold off removing mock data for those *specific* pages until their backend exists, even though other pages migrate sooner. Affects sequencing in Part 3. Not decided.
+1. **What renders for pages with zero real backend once mock data is removed from them** (most of Corporate/Regulatory, several Safety Officer/Admin tabs) — an explicit "not yet available" empty state, or hold off removing mock data for those *specific* pages until their backend exists, even though other pages migrate sooner. Affects sequencing in Part 3. Not decided.
+2. **`<DemoDataBadge>`** (Part 1) — mostly superseded by Decision #15's "remove now" stance, but still possibly worth building for the couple of things Part 3 says to keep mocked (`OPERATING_MINES`, `LIVE_SENSORS`). Not decided.
 
 **Resolved:**
 
-3. **Route config location — decided: a dedicated `routes/` folder**, matching the reference structure (image 5), not inline in `App.tsx`. See decision #7 above.
+3. **Route config location — decided: a dedicated `routes/` folder**, matching the reference structure (image 5), not inline in `App.tsx`. See decision #7 above. Not yet built.
+4. **`lib/` vs `utils/` — decided and executed**: renamed to `utils/`, `.gitignore` restored. See decision #5 above.
+5. **Decision #1 (`/worker`) — decided: keep it**, reversing the original delete plan. See decision #1 above.

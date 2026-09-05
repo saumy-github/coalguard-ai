@@ -8,8 +8,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from .config import settings
 from .models import ALL_MODELS
 from .routes.auth import router as auth_router
+from .routes.mine_assignments import router as mine_assignments_router
 from .routes.mine_levels import router as mine_levels_router
+from .routes.mines import router as mines_router
 from .routes.person_issues import router as person_issues_router
+from .routes.regulatory_reports import router as regulatory_reports_router
 from .routes.site_issues import router as site_issues_router
 from .routes.inspections import router as inspections_router
 from .routes.users import router as users_router
@@ -37,8 +40,11 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(mine_assignments_router)
 app.include_router(mine_levels_router)
+app.include_router(mines_router)
 app.include_router(person_issues_router)
+app.include_router(regulatory_reports_router)
 app.include_router(site_issues_router)
 app.include_router(inspections_router)
 

@@ -7,11 +7,10 @@ export interface CurrentUser {
   id: string
   email: string | null
   phone: string | null
-  user_type: string
+  role: string
   full_name: string | null
-  mine_id: string | null
-  subsidiary_id: string | null
   is_guest: boolean
+  mine_ids: string[]
   // Cosmetic profile fields the backend doesn't provide yet — kept optional so
   // surviving dashboard/profile JSX (organization, badge number, etc.) still
   // compiles without redesign. Always undefined until the backend adds them.
@@ -85,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
       loginAsGuest: async (userType) => {
         set({ isLoading: true, error: null })
         try {
-          const { data } = await api.post('/auth/guest', { user_type: userType })
+          const { data } = await api.post('/auth/guest', { role: userType })
           set({ token: data.access_token })
           await get().fetchCurrentUser()
         } catch (err) {

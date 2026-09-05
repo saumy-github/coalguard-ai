@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from ..auth.dependencies import require_mine_scope, require_user_types
+from ..auth.dependencies import require_mine_assignment, require_role
 from ..models.mine_level import MineLevel
 from ..models.user import User
 from ..schemas.mine_levels import MineLevelResponse
@@ -15,7 +15,7 @@ def _to_response(mine_level: MineLevel) -> MineLevelResponse:
 
 @router.get("", response_model=list[MineLevelResponse])
 async def list_mine_levels(
-    user: User = Depends(require_user_types("worker", "mine_safety_officer")),
+    user: User = Depends(require_role("worker", "safety_officer")),
 ) -> list[MineLevelResponse]:
-    mine_levels = await mine_level_service.list_mine_levels(require_mine_scope(user))
+    mine_levels = await mine_level_service.list_mine_levels(await require_mine_assignment(user))
     return [_to_response(mine_level) for mine_level in mine_levels]

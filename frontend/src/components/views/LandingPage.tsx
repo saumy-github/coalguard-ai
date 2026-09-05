@@ -47,8 +47,9 @@ const SootParticles = () => {
   );
 };
 
-// research/lld.md §3's 5 roles, sourced from lib/userTypes so this can't drift
-// from Sidebar/Header again the way the old 6/7-role list did.
+// research/saumy/09-changes-5-sep.md Decision #12's 5 roles, sourced from
+// utils/userTypes so this can't drift from Sidebar/Header again the way the
+// old 6/7-role list did.
 const ROLE_DISPLAY: Record<UserType, { icon: React.ReactNode; org: string; desc: string; color: string }> = {
   worker: {
     icon: <HardHat className="w-6 h-6 text-amber-400" />,
@@ -56,19 +57,19 @@ const ROLE_DISPLAY: Record<UserType, { icon: React.ReactNode; org: string; desc:
     desc: 'Mobile-first shift tasks, gas sensor alerts, voice problem reporting, and safety status.',
     color: 'border-amber-500/30 hover:border-amber-400/80 hover:shadow-[0_0_20px_rgba(251,191,36,0.15)]'
   },
-  mine_safety_officer: {
+  safety_officer: {
     icon: <Activity className="w-6 h-6 text-amber-400" />,
     org: 'ECL (Sector 7G)',
     desc: 'Live multi-gas monitoring, mine map, incident action assignment, and evacuation broadcast.',
     color: 'border-amber-500/30 hover:border-amber-400/80 hover:shadow-[0_0_20px_rgba(52,211,153,0.15)]'
   },
-  corporate_management: {
+  corporate_manager: {
     icon: <Building2 className="w-6 h-6 text-stone-400" />,
     org: 'Coal India Ltd (HQ)',
     desc: 'Pan-India mines overview, daily production vs environmental quotas, and AI risk forecasts.',
     color: 'border-stone-500/30 hover:border-stone-400/80 hover:shadow-[0_0_20px_rgba(96,165,250,0.15)]'
   },
-  regulatory_authority: {
+  regulator: {
     icon: <Landmark className="w-6 h-6 text-purple-400" />,
     org: 'Ministry of Labour',
     desc: 'District compliance ratings, surprise inspection records, and statutory notice history.',
@@ -105,7 +106,7 @@ export const LandingPage = () => {
 
       {/* Hero Section */}
       <div className="glass-panel rounded-[2.5rem] p-8 sm:p-16 text-center relative overflow-hidden shadow-2xl border border-white/10 bg-tech-grid">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0f0c09]/40 to-[#0f0c09]/90 pointer-events-none z-0"></div>
+        <div className="absolute inset-0 bg-linear-to-b from-[#0f0c09]/40 to-[#0f0c09]/90 pointer-events-none z-0"></div>
         <SootParticles />
 
         <div className="relative z-10 max-w-4xl mx-auto space-y-8">
@@ -116,7 +117,7 @@ export const LandingPage = () => {
           </div>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-white tracking-tight leading-tight">
-            COAL<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">GUARD</span> AI
+            COAL<span className="text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-orange-400">GUARD</span> AI
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-400 font-light leading-relaxed max-w-2xl mx-auto">
@@ -125,7 +126,7 @@ export const LandingPage = () => {
 
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
             <button
-              onClick={() => handleGuestLogin('mine_safety_officer')}
+              onClick={() => handleGuestLogin('safety_officer')}
               className="btn-primary-earth px-8 py-4 rounded-2xl text-base font-bold flex items-center gap-3 w-full sm:w-auto justify-center"
             >
               <Play className="w-5 h-5 fill-current" />

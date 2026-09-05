@@ -1,44 +1,60 @@
-from fastapi import APIRouter, Depends
+from beanie import PydanticObjectId
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from ..auth.dependencies import require_user_types
+from ..auth.dependencies import accessible_mine_ids, require_role
 from ..models.user import User
-from ..schemas.users import CreateUserRequest, UserResponse
-from ..services import user_service
+from ..schemas.users import ChangeRoleRequest, CreateUserRequest, UserResponse
+from ..services import provision_service, user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-def _to_response(user: User) -> UserResponse:
+async def _to_response(user: User) -> UserResponse:
     return UserResponse(
         id=str(user.id),
         email=user.email,
         phone=user.phone,
-        user_type=user.user_type,
-        mine_id=str(user.mine_id) if user.mine_id else None,
-        subsidiary_id=str(user.subsidiary_id) if user.subsidiary_id else None,
+        role=user.role,
         full_name=user.full_name,
         role_title=user.role_title,
         is_guest=user.is_guest,
         active=user.active,
+        mine_ids=[str(mine_id) for mine_id in await accessible_mine_ids(user)],
     )
 
 
-@router.post("", response_model=UserResponse, dependencies=[Depends(require_user_types("admin"))])
-async def create_user(payload: CreateUserRequest) -> UserResponse:
-    user = await user_service.create_user(
+@router.post("", response_model=UserResponse)
+async def create_user(
+    payload: CreateUserRequest,
+    actor: User = Depends(require_role("admin", "regulator", "corporate_manager", "safety_officer")),
+) -> UserResponse:
+    user = await provision_service.provision_user(
+        actor=actor,
         email=payload.email,
         phone=payload.phone,
         password=payload.password,
-        user_type=payload.user_type,
+        role=payload.role,
         mine_id=payload.mine_id,
-        subsidiary_id=payload.subsidiary_id,
         full_name=payload.full_name,
         role_title=payload.role_title,
     )
-    return _to_response(user)
+    return await _to_response(user)
 
 
-@router.get("", response_model=list[UserResponse], dependencies=[Depends(require_user_types("admin"))])
+@router.get("", response_model=list[UserResponse], dependencies=[Depends(require_role("admin"))])
 async def list_users() -> list[UserResponse]:
     users = await user_service.list_users()
-    return [_to_response(user) for user in users]
+    return [await _to_response(user) for user in users]
+
+
+@router.patch("/{user_id}/role", response_model=UserResponse)
+async def change_role(
+    user_id: str,
+    payload: ChangeRoleRequest,
+    actor: User = Depends(require_role("admin")),
+) -> UserResponse:
+    target = await User.get(PydanticObjectId(user_id))
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    updated = await provision_service.change_role(actor=actor, target=target, new_role=payload.role)
+    return await _to_response(updated)

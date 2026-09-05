@@ -141,7 +141,7 @@ export const ObservationForm = ({ isOnline, syncObservations }: ObservationFormP
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full bg-slate-800 text-white rounded p-2 border border-slate-700 min-h-[100px]"
+            className="w-full bg-slate-800 text-white rounded p-2 border border-slate-700 min-h-25"
             placeholder="Describe the observation..."
             required
           />

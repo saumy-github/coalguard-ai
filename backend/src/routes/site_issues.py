@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from ..auth.dependencies import require_mine_scope, require_user_types
+from ..auth.dependencies import accessible_mine_ids, require_mine_assignment, require_role
 from ..models.site_issue import SiteIssue
 from ..models.user import User
 from ..schemas.site_issues import CreateSiteIssueRequest, DetectSiteIssueRequest, SiteIssueResponse
@@ -29,10 +29,10 @@ def _to_response(issue: SiteIssue) -> SiteIssueResponse:
 @router.post("", response_model=SiteIssueResponse)
 async def create_site_issue(
     payload: CreateSiteIssueRequest,
-    user: User = Depends(require_user_types("worker", "mine_safety_officer")),
+    user: User = Depends(require_role("worker", "safety_officer")),
 ) -> SiteIssueResponse:
     issue = await site_issue_service.create_site_issue(
-        mine_id=require_mine_scope(user),
+        mine_id=await require_mine_assignment(user),
         level=payload.level,
         section=payload.section,
         issue_type=payload.issue_type,
@@ -45,19 +45,22 @@ async def create_site_issue(
 
 @router.get("", response_model=list[SiteIssueResponse])
 async def list_site_issues(
-    user: User = Depends(require_user_types("worker", "mine_safety_officer")),
+    user: User = Depends(require_role("worker", "safety_officer", "corporate_manager")),
 ) -> list[SiteIssueResponse]:
-    issues = await site_issue_service.list_site_issues(require_mine_scope(user))
+    if user.role == "corporate_manager":
+        issues = await site_issue_service.list_site_issues_for_mines(await accessible_mine_ids(user))
+    else:
+        issues = await site_issue_service.list_site_issues(await require_mine_assignment(user))
     return [_to_response(issue) for issue in issues]
 
 
 @router.post("/detect", response_model=SiteIssueResponse | None)
 async def detect_site_issue(
     payload: DetectSiteIssueRequest,
-    user: User = Depends(require_user_types("worker", "mine_safety_officer")),
+    user: User = Depends(require_role("worker", "safety_officer")),
 ) -> SiteIssueResponse | None:
     issue = await site_issue_service.create_site_issue_from_reading(
-        mine_id=require_mine_scope(user),
+        mine_id=await require_mine_assignment(user),
         level=payload.level,
         section=payload.section,
         methane=payload.methane,

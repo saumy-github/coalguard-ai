@@ -1,6 +1,7 @@
 from typing import Optional
 
 from beanie import PydanticObjectId
+from beanie.operators import In
 
 from . import ai_engine_client
 from ..models.person_issue import PersonIssue, PersonIssueSeverity, PersonIssueType
@@ -34,6 +35,27 @@ async def create_person_issue(
 
 async def list_person_issues(mine_id: PydanticObjectId) -> list[PersonIssue]:
     return await PersonIssue.find(PersonIssue.mine_id == mine_id).to_list()
+
+
+async def list_person_issues_for_mines(mine_ids: list[PydanticObjectId]) -> list[PersonIssue]:
+    """Corporate Management scope (Decision #11) — zero assigned mines must
+    mean zero issues, never every mine's issues.
+    """
+    if not mine_ids:
+        return []
+    return await PersonIssue.find(In(PersonIssue.mine_id, mine_ids)).to_list()
+
+
+async def list_person_issues_for_worker(
+    *, mine_id: PydanticObjectId, worker_id: PydanticObjectId
+) -> list[PersonIssue]:
+    """Server-side filtered to this worker's own issues only — Decision #9
+    (research/saumy/09-changes-5-sep.md) is explicit that client-side filtering
+    the mine-wide list would expose other workers' PersonIssue records.
+    """
+    return await PersonIssue.find(
+        PersonIssue.mine_id == mine_id, PersonIssue.worker_id == worker_id
+    ).to_list()
 
 
 async def create_person_issue_from_detection(

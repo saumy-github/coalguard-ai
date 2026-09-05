@@ -1,6 +1,7 @@
 from typing import Optional
 
 from beanie import PydanticObjectId
+from beanie.operators import In
 
 from . import ai_engine_client
 from ..models.site_issue import SiteIssue, SiteIssueSeverity, SiteIssueType
@@ -48,6 +49,16 @@ async def create_site_issue(
 
 async def list_site_issues(mine_id: PydanticObjectId) -> list[SiteIssue]:
     return await SiteIssue.find(SiteIssue.mine_id == mine_id).to_list()
+
+
+async def list_site_issues_for_mines(mine_ids: list[PydanticObjectId]) -> list[SiteIssue]:
+    """Corporate Management scope (Decision #11) — zero assigned mines must
+    mean zero issues, never every mine's issues, so this never falls back to
+    an unfiltered query when `mine_ids` is empty.
+    """
+    if not mine_ids:
+        return []
+    return await SiteIssue.find(In(SiteIssue.mine_id, mine_ids)).to_list()
 
 
 async def create_site_issue_from_reading(

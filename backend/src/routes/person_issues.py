@@ -1,7 +1,7 @@
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
-from ..auth.dependencies import require_mine_scope, require_user_types
+from ..auth.dependencies import accessible_mine_ids, require_mine_assignment, require_role
 from ..models.person_issue import PersonIssue
 from ..models.user import User
 from ..schemas.person_issues import CreatePersonIssueRequest, PersonIssueResponse
@@ -30,10 +30,10 @@ def _to_response(issue: PersonIssue) -> PersonIssueResponse:
 @router.post("", response_model=PersonIssueResponse)
 async def create_person_issue(
     payload: CreatePersonIssueRequest,
-    user: User = Depends(require_user_types("mine_safety_officer")),
+    user: User = Depends(require_role("safety_officer")),
 ) -> PersonIssueResponse:
     issue = await person_issue_service.create_person_issue(
-        mine_id=require_mine_scope(user),
+        mine_id=await require_mine_assignment(user),
         worker_id=PydanticObjectId(payload.worker_id) if payload.worker_id else None,
         level=payload.level,
         section=payload.section,
@@ -47,9 +47,22 @@ async def create_person_issue(
 
 @router.get("", response_model=list[PersonIssueResponse])
 async def list_person_issues(
-    user: User = Depends(require_user_types("worker", "mine_safety_officer")),
+    user: User = Depends(require_role("worker", "safety_officer", "corporate_manager")),
 ) -> list[PersonIssueResponse]:
-    issues = await person_issue_service.list_person_issues(require_mine_scope(user))
+    if user.role == "corporate_manager":
+        issues = await person_issue_service.list_person_issues_for_mines(await accessible_mine_ids(user))
+    else:
+        issues = await person_issue_service.list_person_issues(await require_mine_assignment(user))
+    return [_to_response(issue) for issue in issues]
+
+
+@router.get("/me", response_model=list[PersonIssueResponse])
+async def list_my_person_issues(
+    user: User = Depends(require_role("worker")),
+) -> list[PersonIssueResponse]:
+    issues = await person_issue_service.list_person_issues_for_worker(
+        mine_id=await require_mine_assignment(user), worker_id=user.id
+    )
     return [_to_response(issue) for issue in issues]
 
 
@@ -58,12 +71,12 @@ async def detect_person_issue(
     level: str = Form(...),
     section: int = Form(...),
     file: UploadFile = File(...),
-    user: User = Depends(require_user_types("worker", "mine_safety_officer")),
+    user: User = Depends(require_role("worker", "safety_officer")),
 ) -> PersonIssueResponse | None:
     image_bytes = await file.read()
     issue = await person_issue_service.create_person_issue_from_detection(
         image_bytes=image_bytes,
-        mine_id=require_mine_scope(user),
+        mine_id=await require_mine_assignment(user),
         level=level,
         section=section,
     )

@@ -3,7 +3,7 @@ Seed the guest demo accounts — one per user type, no password.
 
 Distinct from `seed_users.py`'s real password-set test accounts: these back
 "Continue as Guest" (`POST /auth/guest`, `src/auth/guest.py`) on the frontend
-Landing page. `login_as_guest` looks one of these up by `user_type` and fails
+Landing page. `login_as_guest` looks one of these up by `role` and fails
 with "No guest account exists" if it isn't there yet — this script is what
 makes that account exist. Idempotent (`ensure_guest_users_seeded` itself
 skips anything already present).

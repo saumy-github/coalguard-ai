@@ -1,33 +1,21 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { useDashboardDataStore } from '../../store/dashboardDataStore';
 import { useUIStore } from '../../store/uiStore';
 import { displayName, userTypeLabel } from '../../utils/userDisplay';
 import type { UserType } from '../../utils/userTypes';
 import {
   X,
   LayoutDashboard,
-  CheckSquare,
   AlertCircle,
   Map,
-  Bell,
   User,
-  Activity,
   FileText,
-  ClipboardCheck,
-  Sparkles,
-  History,
-  Building2,
   ShieldAlert,
   FileCheck,
-  TrendingUp,
   Layers,
   Users,
-  Database,
-  Cpu,
   ListTree,
-  Settings,
   ArrowRight,
   LogOut
 } from 'lucide-react';
@@ -37,60 +25,42 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   badge?: string | null;
-  path?: string;
+  path: string;
 }
 
-// One nav list per backend user_type (research/lld.md §3) — replaces the old
-// 6/7-role menu that still had field_worker/system_admin/sih_evaluator keys.
-// `map` carries a real `path` since it's a routed page (research/saumy/06-maps-plan.md),
-// every other item is a same-page tab via `activeSubTab`.
-const NAV_ITEMS_BY_ROLE: Record<UserType, (unreadCount: number) => NavItem[]> = {
-  worker: (unreadCount) => [
-    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'tasks', label: 'My Tasks', icon: <CheckSquare className="w-4 h-4" /> },
-    { id: 'report', label: 'Report a Problem', icon: <AlertCircle className="w-4 h-4" /> },
-    { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" />, path: '/dashboard/map' },
-    { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" />, badge: unreadCount > 0 ? `${unreadCount}` : null },
-    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> }
+// One nav list per backend role (research/saumy/09-changes-5-sep.md Decision
+// #12). All 5 roles are fully real routes now (Decision #16, Phases 5-8) —
+// every item carries a `path`.
+const NAV_ITEMS_BY_ROLE: Record<UserType, () => NavItem[]> = {
+  worker: () => [
+    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, path: '/dashboard/worker' },
+    { id: 'report', label: 'Report a Problem', icon: <AlertCircle className="w-4 h-4" />, path: '/dashboard/worker/report' },
+    { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" />, path: '/dashboard/worker/map' },
+    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, path: '/dashboard/worker/profile' }
   ],
-  mine_safety_officer: () => [
-    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'monitoring', label: 'Live Monitoring', icon: <Activity className="w-4 h-4" /> },
-    { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" />, path: '/dashboard/map' },
-    { id: 'incidents', label: 'Incidents', icon: <AlertCircle className="w-4 h-4" /> },
-    { id: 'inspections', label: 'Inspections', icon: <ClipboardCheck className="w-4 h-4" /> },
-    { id: 'ai_assistant', label: 'AI Assistant', icon: <Sparkles className="w-4 h-4" /> },
-    { id: 'reports_history', label: 'Reports & History', icon: <History className="w-4 h-4" /> },
-    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> }
+  safety_officer: () => [
+    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, path: '/dashboard/safety' },
+    { id: 'issues', label: 'Safety Issues', icon: <AlertCircle className="w-4 h-4" />, path: '/dashboard/safety/issues' },
+    { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" />, path: '/dashboard/safety/map' },
+    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, path: '/dashboard/safety/profile' }
   ],
-  corporate_management: () => [
-    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'my_mines', label: 'My Mines', icon: <Building2 className="w-4 h-4" /> },
-    { id: 'risks_incidents', label: 'Risks & Incidents', icon: <ShieldAlert className="w-4 h-4" /> },
-    { id: 'compliance', label: 'Compliance', icon: <FileCheck className="w-4 h-4" /> },
-    { id: 'ai_insights', label: 'AI Insights', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'reports', label: 'Reports', icon: <FileText className="w-4 h-4" /> },
-    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> }
+  corporate_manager: () => [
+    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, path: '/dashboard/corporate' },
+    { id: 'reports', label: 'Compliance Reports', icon: <FileText className="w-4 h-4" />, path: '/dashboard/corporate/reports' },
+    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, path: '/dashboard/corporate/profile' }
   ],
-  regulatory_authority: () => [
-    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'mines', label: 'Mines', icon: <Layers className="w-4 h-4" /> },
-    { id: 'compliance', label: 'Compliance', icon: <FileCheck className="w-4 h-4" /> },
-    { id: 'inspections', label: 'Inspections', icon: <ClipboardCheck className="w-4 h-4" /> },
-    { id: 'actions_required', label: 'Actions Required', icon: <AlertCircle className="w-4 h-4" /> },
-    { id: 'audit_history', label: 'Audit History', icon: <History className="w-4 h-4" /> },
-    { id: 'reports', label: 'Reports', icon: <FileText className="w-4 h-4" /> },
-    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> }
+  regulator: () => [
+    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, path: '/dashboard/regulatory' },
+    { id: 'mines', label: 'Mines', icon: <Layers className="w-4 h-4" />, path: '/dashboard/regulatory/mines' },
+    { id: 'compliance', label: 'Compliance', icon: <FileCheck className="w-4 h-4" />, path: '/dashboard/regulatory/compliance' },
+    { id: 'reports', label: 'Reports', icon: <FileText className="w-4 h-4" />, path: '/dashboard/regulatory/reports' },
+    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, path: '/dashboard/regulatory/profile' }
   ],
   admin: () => [
-    { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'system_health', label: 'System Health', icon: <Activity className="w-4 h-4" /> },
-    { id: 'users_roles', label: 'Users & Roles', icon: <Users className="w-4 h-4" /> },
-    { id: 'data_storage', label: 'Data & Storage', icon: <Database className="w-4 h-4" /> },
-    { id: 'ai_system', label: 'AI System', icon: <Cpu className="w-4 h-4" /> },
-    { id: 'activity_logs', label: 'Activity Logs', icon: <ListTree className="w-4 h-4" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
-    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> }
+    { id: 'users', label: 'Users', icon: <Users className="w-4 h-4" />, path: '/dashboard/admin/users' },
+    { id: 'mines', label: 'Mines', icon: <Layers className="w-4 h-4" />, path: '/dashboard/admin/mines' },
+    { id: 'access', label: 'Access', icon: <ListTree className="w-4 h-4" />, path: '/dashboard/admin/access' },
+    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, path: '/dashboard/admin/profile' }
   ]
 };
 
@@ -99,29 +69,17 @@ export const Sidebar = () => {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const { isSidebarOpen, setIsSidebarOpen, activeSubTab, setActiveSubTab } = useUIStore();
-  const notifications = useDashboardDataStore((state) => state.notifications);
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const { isSidebarOpen, setIsSidebarOpen } = useUIStore();
 
   if (!isSidebarOpen) return null;
 
   // Empty (not a guessed-role fallback) until the role is actually known —
   // showing another role's menu during the /auth/me hydration gap would be
   // worse than showing nothing, same reasoning as RequireAuth's user check.
-  const navItems = user?.user_type ? NAV_ITEMS_BY_ROLE[user.user_type as UserType](unreadCount) : [];
+  const navItems = user?.role ? NAV_ITEMS_BY_ROLE[user.role as UserType]() : [];
 
   const handleNavClick = (item: NavItem) => {
-    if (item.path) {
-      navigate(item.path);
-    } else {
-      setActiveSubTab(item.id);
-      // Sub-tabs only render inside /dashboard — if a path-based page (e.g. the
-      // Mine Map) navigated us away from it, hop back so the tab click is visible.
-      if (location.pathname !== '/dashboard') {
-        navigate('/dashboard');
-      }
-    }
+    navigate(item.path);
     setIsSidebarOpen(false);
   };
 
@@ -146,12 +104,12 @@ export const Sidebar = () => {
         <div>
           <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 <ShieldAlert className="w-5 h-5 text-amber-400" />
               </div>
               <div>
                 <h2 className="text-base font-extrabold text-white font-['Sora'] leading-tight tracking-tight">
-                  COAL<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">GUARD</span> AI
+                  COAL<span className="text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-orange-400">GUARD</span> AI
                 </h2>
                 <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">Navigation Menu</p>
               </div>
@@ -168,7 +126,7 @@ export const Sidebar = () => {
           {/* Current User Card */}
           <div className="p-4 border-b border-white/5">
             <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xl shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xl shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                 {displayName(user).charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
@@ -176,7 +134,7 @@ export const Sidebar = () => {
                   {displayName(user)}
                 </h3>
                 <p className="text-[11px] text-amber-400 font-mono truncate uppercase tracking-wider mt-0.5">
-                  {userTypeLabel(user?.user_type)}
+                  {userTypeLabel(user?.role)}
                 </p>
                 {user?.organization && (
                   <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
@@ -190,11 +148,11 @@ export const Sidebar = () => {
           {/* Navigation Links */}
           <div className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
             <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 px-3 py-2">
-              {userTypeLabel(user?.user_type)} Menu
+              {userTypeLabel(user?.role)} Menu
             </p>
 
             {navItems.map((item) => {
-              const isActive = item.path ? location.pathname === item.path : activeSubTab === item.id;
+              const isActive = location.pathname === item.path;
               return (
                 <button
                   key={item.id}

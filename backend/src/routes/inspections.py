@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from ..auth.dependencies import require_user_types
+from ..auth.dependencies import require_role
 from ..models.inspection import Inspection
 from ..models.user import User
 from ..schemas.inspections import InspectionResponse, ObservationIn
@@ -22,7 +22,7 @@ def _to_response(inspection: Inspection) -> InspectionResponse:
 @router.post("/observations", response_model=InspectionResponse)
 async def submit_observation(
     payload: ObservationIn,
-    user: User = Depends(require_user_types("worker")),
+    user: User = Depends(require_role("worker")),
 ) -> InspectionResponse:
     inspection = await inspection_service.create_manual_observation(user, payload)
     return _to_response(inspection)
