@@ -6,8 +6,11 @@ registered everywhere automatically.
 """
 
 from .mine import Mine, Subsidiary
+from .mine_level import MineLevel
+from .person_issue import PersonIssue
+from .site_issue import SiteIssue
 from .user import User
 
-ALL_MODELS = [User, Mine, Subsidiary]
+ALL_MODELS = [User, Mine, Subsidiary, MineLevel, PersonIssue, SiteIssue]
 
-__all__ = ["User", "Mine", "Subsidiary", "ALL_MODELS"]
+__all__ = ["User", "Mine", "Subsidiary", "MineLevel", "PersonIssue", "SiteIssue", "ALL_MODELS"]

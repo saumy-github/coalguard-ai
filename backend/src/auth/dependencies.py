@@ -1,3 +1,4 @@
+from beanie import PydanticObjectId
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
@@ -48,3 +49,14 @@ def require_user_types(*user_types: UserType):
         return user
 
     return dependency
+
+
+def require_mine_scope(user: User) -> PydanticObjectId:
+    """A required PydanticObjectId field silently accepts `None` instead of
+    raising, so an unguarded `user.mine_id` on a mine_id=None user fabricates a
+    fresh random ObjectId on insert rather than failing loudly — this must be
+    called before using `user.mine_id` anywhere it isn't already Optional.
+    """
+    if user.mine_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User has no associated mine")
+    return user.mine_id

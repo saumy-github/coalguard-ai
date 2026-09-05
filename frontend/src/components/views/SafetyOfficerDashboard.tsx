@@ -351,73 +351,6 @@ export const SafetyOfficerDashboard = () => {
     </PageLayout>
   );
 
-  // 3. Mine Map
-  const renderMap = () => (
-    <PageLayout
-      title="Subterranean Mine Topography"
-      subtitle="Interactive 3D mine level map with workers, active sensors, and emergency refuge chambers."
-      badge="Mine Map"
-    >
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mt-4">
-        <SectionHeader
-          title="Sector 7G Deep Coalfield (Raniganj)"
-          subtitle="Showing Sub-Levels 0m, -150m, -320m, and -450m."
-        />
-
-        {/* Visual Map */}
-        <div className="relative w-full h-[32rem] rounded-3xl bg-[#08080a] border border-white/10 overflow-hidden p-8 flex flex-col justify-between shadow-inner">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:40px_40px]" />
-
-          <div className="absolute top-20 right-20 w-48 h-48 bg-amber-500/10 blur-[80px] rounded-full"></div>
-          {isHazardSimulated && (
-            <div className="absolute bottom-32 left-32 w-64 h-64 bg-rose-500/20 blur-[100px] rounded-full animate-pulse-slow"></div>
-          )}
-
-          {/* Levels */}
-          <div className="relative z-10 flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <span className="text-sm font-bold text-white tracking-wide">Level 0m (Surface Intake & Winding House)</span>
-            <span className="text-sm font-mono text-orange-400 font-bold">Fan Speed: 5.4 m/s</span>
-          </div>
-
-          <div className="w-1.5 bg-amber-500/20 h-12 mx-auto rounded-full" />
-
-          <div className="relative z-10 flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <span className="text-sm font-mono text-slate-300">Level -150m (Main Return Airway Incline #2)</span>
-            <span className="text-sm font-mono text-amber-400 font-bold">Sensor SN-AIR-08: Normal</span>
-          </div>
-
-          <div className="w-1.5 bg-amber-500/20 h-12 mx-auto rounded-full" />
-
-          <div className={`relative z-10 p-5 rounded-2xl border flex items-center justify-between transition-all backdrop-blur-md shadow-lg ${isHazardSimulated ? 'bg-rose-500/10 border-rose-500/50 shadow-[0_0_30px_rgba(244,63,94,0.2)]' : 'bg-amber-500/10 border-amber-500/30'
-            }`}>
-            <div>
-              <div className="flex items-center gap-3">
-                <span className={`w-3 h-3 rounded-full ${isHazardSimulated ? 'bg-rose-500 animate-ping shadow-[0_0_10px_#f43f5e]' : 'bg-amber-400 shadow-[0_0_10px_#10b981]'}`} />
-                <h4 className="text-sm font-bold text-white tracking-wide">
-                  Sub-Level -320m (Active Face 4B - Coal Extraction)
-                </h4>
-              </div>
-              <p className={`text-xs font-mono mt-2 ${isHazardSimulated ? 'text-rose-200/80' : 'text-emerald-100/70'}`}>
-                14 Workers Assigned • Strata Support Active • Refuge Chamber 9 Clear
-              </p>
-            </div>
-            <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-lg border tracking-widest uppercase ${isHazardSimulated ? 'bg-rose-500/20 border-rose-500/30 text-rose-400' : 'bg-amber-500/20 border-amber-500/30 text-amber-400'
-              }`}>
-              {isHazardSimulated ? '⚠️ ALERT: Methane 1.42%' : '✓ Safe Status'}
-            </span>
-          </div>
-
-          <div className="w-1.5 bg-amber-500/20 h-12 mx-auto rounded-full" />
-
-          <div className="relative z-10 flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <span className="text-sm font-mono text-slate-400">Sub-Level -450m (Goaf Isolation Seal #3)</span>
-            <span className="text-sm font-mono text-slate-500">Seal Intact</span>
-          </div>
-        </div>
-      </div>
-    </PageLayout>
-  );
-
   // 4. Incidents & Actions
   const renderIncidents = () => (
     <PageLayout
@@ -728,7 +661,6 @@ export const SafetyOfficerDashboard = () => {
 
   switch (activeSubTab) {
     case 'monitoring': return renderMonitoring();
-    case 'map': return renderMap();
     case 'incidents': return renderIncidents();
     case 'inspections': return renderInspections();
     case 'ai_assistant': return renderAIAssistant();

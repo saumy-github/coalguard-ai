@@ -151,7 +151,7 @@ This creates 5 test accounts, all with password `test123`:
 
 | Identifier | Role |
 |---|---|
-| `+919990000001` (phone) | Worker |
+| `9990000001` (phone) | Worker |
 | `officer@example.com` | Mine Safety Officer |
 | `corporate@example.com` | Corporate Management |
 | `regulator@example.com` | Regulatory Authority |

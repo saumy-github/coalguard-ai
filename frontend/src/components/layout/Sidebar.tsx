@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { useDashboardDataStore } from '../../store/dashboardDataStore';
@@ -34,6 +34,7 @@ import {
 
 export const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
@@ -53,7 +54,7 @@ export const Sidebar = () => {
         { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
         { id: 'tasks', label: 'My Tasks', icon: <CheckSquare className="w-4 h-4" /> },
         { id: 'report', label: 'Report a Problem', icon: <AlertCircle className="w-4 h-4" /> },
-        { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" /> },
+        { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" />, path: '/dashboard/map' },
         { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" />, badge: unreadCount > 0 ? `${unreadCount}` : null },
         { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> }
       ];
@@ -63,7 +64,7 @@ export const Sidebar = () => {
       return [
         { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
         { id: 'monitoring', label: 'Live Monitoring', icon: <Activity className="w-4 h-4" /> },
-        { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" /> },
+        { id: 'map', label: 'Mine Map', icon: <Map className="w-4 h-4" />, path: '/dashboard/map' },
         { id: 'incidents', label: 'Incidents', icon: <AlertCircle className="w-4 h-4" /> },
         { id: 'inspections', label: 'Inspections', icon: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'ai_assistant', label: 'AI Assistant', icon: <Sparkles className="w-4 h-4" /> },
@@ -115,8 +116,17 @@ export const Sidebar = () => {
 
   const navItems = getNavItems();
 
-  const handleNavClick = (itemId: string) => {
-    setActiveSubTab(itemId);
+  const handleNavClick = (item: { id: string; path?: string }) => {
+    if (item.path) {
+      navigate(item.path);
+    } else {
+      setActiveSubTab(item.id);
+      // Sub-tabs only render inside /dashboard — if a path-based page (e.g. the
+      // Mine Map) navigated us away from it, hop back so the tab click is visible.
+      if (location.pathname !== '/dashboard') {
+        navigate('/dashboard');
+      }
+    }
     setIsSidebarOpen(false);
   };
 
@@ -187,12 +197,12 @@ export const Sidebar = () => {
             </p>
 
             {navItems.map((item) => {
-              const isActive = activeSubTab === item.id;
+              const isActive = item.path ? location.pathname === item.path : activeSubTab === item.id;
               return (
                 <button
                   key={item.id}
                   id={`sidebar-link-${item.id}`}
-                  onClick={() => handleNavClick(item.id)}
+                  onClick={() => handleNavClick(item)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm transition-all text-left ${
                     isActive
                       ? 'bg-amber-500/10 text-amber-400 font-bold border border-amber-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]'

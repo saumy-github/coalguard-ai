@@ -13,5 +13,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int
     google_client_id: str
 
+    ai_engine_url: str
+
 
 settings = Settings()

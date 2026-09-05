@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './components/auth/RequireAuth';
 import { Login } from './pages/auth/Login';
 import { Dashboard } from './pages/Dashboard';
+import { MineMapPage } from './pages/MineMapPage';
 import { WorkerApp } from './pages/worker/WorkerApp';
 import { LandingPage } from './components/views/LandingPage';
 
@@ -24,6 +25,14 @@ export function App() {
         element={
           <RequireAuth>
             <Dashboard />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/dashboard/map"
+        element={
+          <RequireAuth>
+            <MineMapPage />
           </RequireAuth>
         }
       />

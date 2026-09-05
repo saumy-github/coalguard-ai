@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { useDashboardDataStore } from '../../store/dashboardDataStore';
 import { displayName, userTypeLabel } from '../../lib/userDisplay';
+import { api } from '../../lib/api';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -30,16 +31,50 @@ import {
 export const WorkerDashboard = () => {
   const user = useAuthStore((state) => state.user);
   const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
-  const { workerTasks, markTaskComplete, addTicket, sensors, notifications } = useDashboardDataStore();
+  const { workerTasks, markTaskComplete, sensors, notifications } = useDashboardDataStore();
 
-  // Problem Report Form State
+  // Problem Report Form State — issue_type/severity values match SiteIssueType/
+  // SiteIssueSeverity in backend/src/models/site_issue.py exactly, since this
+  // form submits directly to POST /site-issues (07-issue-collections-coding-plan.md
+  // Phase 4). level/section are a static A/B/C select for now rather than a
+  // GET /mine-levels-driven dropdown — that wiring is 05-maps-coding-plan.md's
+  // Phase 3, deliberately not done here.
   const [reportTitle, setReportTitle] = useState('');
-  const [reportCategory, setReportCategory] = useState('Gas Leakage');
-  const [reportLocation, setReportLocation] = useState('Face 4B South (Seam IV)');
-  const [reportSeverity, setReportSeverity] = useState('high');
+  const [reportIssueType, setReportIssueType] = useState('equipment_fault');
+  const [reportLevel, setReportLevel] = useState('A');
+  const [reportSection, setReportSection] = useState(1);
+  const [reportSeverity, setReportSeverity] = useState('WARNING');
   const [reportDesc, setReportDesc] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [hasPhoto, setHasPhoto] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  interface SiteIssueRecord {
+    id: string;
+    level: string;
+    section: number;
+    issue_type: string;
+    source: string;
+    observation: string;
+    severity: string;
+    status: string;
+    created_at: string;
+  }
+
+  const [siteIssues, setSiteIssues] = useState<SiteIssueRecord[]>([]);
+
+  const fetchSiteIssues = async () => {
+    try {
+      const { data } = await api.get<SiteIssueRecord[]>('/site-issues');
+      setSiteIssues(data);
+    } catch {
+      // Non-critical for this page — the form still works without the list.
+    }
+  };
+
+  useEffect(() => {
+    fetchSiteIssues();
+  }, []);
 
   const handleVoiceRecord = () => {
     setIsRecording(true);
@@ -59,23 +94,33 @@ export const WorkerDashboard = () => {
     addToast('info', 'Location Shared', 'GPS & Beacon location (Sub-Level -320m Face 4B) shared with Safety Officer.');
   };
 
-  const handleReportSubmit = (e) => {
+  const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportTitle.trim()) return;
 
-    addTicket({
-      title: reportTitle,
-      description: reportDesc || 'Reported by field worker during shift inspection.',
-      category: reportCategory,
-      severity: reportSeverity,
-      location: reportLocation,
-      reportedBy: `${displayName(user) || 'Worker'} (Field Team)`
-    });
+    const observation = reportDesc.trim() ? `${reportTitle}: ${reportDesc}` : reportTitle;
 
-    setReportTitle('');
-    setReportDesc('');
-    setHasPhoto(false);
-    setActiveSubTab('tasks');
+    setIsSubmittingReport(true);
+    try {
+      await api.post('/site-issues', {
+        level: reportLevel,
+        section: reportSection,
+        issue_type: reportIssueType,
+        observation,
+        severity: reportSeverity,
+      });
+
+      addToast('success', 'Report Submitted', 'Your report has been logged to the Safety Officer.');
+      setReportTitle('');
+      setReportDesc('');
+      setHasPhoto(false);
+      await fetchSiteIssues();
+      setActiveSubTab('report');
+    } catch {
+      addToast('error', 'Submission Failed', 'Could not submit the report — please try again.');
+    } finally {
+      setIsSubmittingReport(false);
+    }
   };
 
   // 1. Dashboard / Overview
@@ -384,17 +429,18 @@ export const WorkerDashboard = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Category</label>
+              <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Issue Type</label>
               <select
-                value={reportCategory}
-                onChange={(e) => setReportCategory(e.target.value)}
+                value={reportIssueType}
+                onChange={(e) => setReportIssueType(e.target.value)}
                 className="w-full px-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 appearance-none custom-select"
               >
-                <option value="Gas Leakage">Gas Leakage</option>
-                <option value="Roof & Strata">Roof & Strata</option>
-                <option value="Ventilation">Ventilation Issue</option>
-                <option value="Electrical Safety">Electrical Defect</option>
-                <option value="Equipment Failure">Equipment Failure</option>
+                <option value="high_methane">Gas Leakage (Methane)</option>
+                <option value="high_co">Gas Leakage (Carbon Monoxide)</option>
+                <option value="low_ventilation">Ventilation Issue</option>
+                <option value="high_temperature">High Temperature</option>
+                <option value="equipment_fault">Equipment Fault</option>
+                <option value="other">Other</option>
               </select>
             </div>
 
@@ -405,24 +451,37 @@ export const WorkerDashboard = () => {
                 onChange={(e) => setReportSeverity(e.target.value)}
                 className="w-full px-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 appearance-none custom-select"
               >
-                <option value="low">Low (Minor issue)</option>
-                <option value="medium">Medium (Requires check)</option>
-                <option value="high">High (Urgent check)</option>
-                <option value="critical">Critical (Immediate danger)</option>
+                <option value="WARNING">Warning (Requires check)</option>
+                <option value="CRITICAL">Critical (Immediate danger)</option>
               </select>
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Location</label>
-            <input
-              type="text"
-              required
-              value={reportLocation}
-              onChange={(e) => setReportLocation(e.target.value)}
-              placeholder="e.g. Sub-Level -320m, Crosscut 9"
-              className="w-full px-5 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-slate-600"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Level</label>
+              <select
+                value={reportLevel}
+                onChange={(e) => setReportLevel(e.target.value)}
+                className="w-full px-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 appearance-none custom-select"
+              >
+                <option value="A">Level A</option>
+                <option value="B">Level B</option>
+                <option value="C">Level C</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Section</label>
+              <input
+                type="number"
+                required
+                min={1}
+                value={reportSection}
+                onChange={(e) => setReportSection(Number(e.target.value))}
+                className="w-full px-5 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 transition-all"
+              />
+            </div>
           </div>
 
           <div>
@@ -465,97 +524,48 @@ export const WorkerDashboard = () => {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all transform hover:-translate-y-1 mt-4"
+            disabled={isSubmittingReport}
+            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all transform hover:-translate-y-1 mt-4 disabled:opacity-50 disabled:hover:translate-y-0"
           >
             <Send className="w-5 h-5" />
-            <span>Submit Report to Command Center</span>
+            <span>{isSubmittingReport ? 'Submitting...' : 'Submit Report to Command Center'}</span>
           </button>
 
         </form>
       </div>
-    </PageLayout>
-  );
 
-  // 4. Mine Map
-  const renderMap = () => (
-    <PageLayout
-      title="Mine Safety Map"
-      subtitle="Subterranean view showing worker locations, sensors, and emergency refuge chambers."
-      badge="Interactive Map"
-    >
-      <div className="glass-panel rounded-3xl p-8 space-y-6 mt-4">
-        <SectionHeader
-          title="Sector 7G - Subterranean Level -320m"
-          subtitle="Showing active extractors, escape routes, and ventilation shafts."
-        />
-
-        {/* Visual Map Canvas Representation */}
-        <div className="relative w-full h-96 sm:h-[28rem] rounded-3xl bg-[#08080a] border border-white/10 overflow-hidden flex items-center justify-center p-6 shadow-inner">
-
-          {/* Grid lines */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:40px_40px]" />
-
-          {/* Ambient Glows */}
-          <div className="absolute top-10 right-20 w-40 h-40 bg-amber-500/20 blur-[60px] rounded-full"></div>
-          <div className="absolute bottom-10 left-20 w-40 h-40 bg-orange-500/20 blur-[60px] rounded-full"></div>
-
-          {/* Mine Shaft Visuals */}
-          <div className="relative z-10 w-full max-w-2xl h-full flex flex-col justify-between py-6">
-
-            {/* Surface Level */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <span className="text-sm font-bold text-white tracking-wide">Surface Level (0m) - Pit-Head Intake Fan</span>
-              <StatusBadge status="optimal" label="FAN RUNNING" />
-            </div>
-
-            {/* Shaft line */}
-            <div className="w-1.5 bg-amber-500/30 h-16 mx-auto rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
-
-            {/* Level -150m */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <span className="text-sm font-mono text-slate-300">Level -150m: Main Return Airway</span>
-              <span className="text-sm font-mono font-bold text-amber-400">Clear</span>
-            </div>
-
-            {/* Shaft line */}
-            <div className="w-1.5 bg-amber-500/30 h-16 mx-auto rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
-
-            {/* Sub-Level -320m (Active Face) */}
-            <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur-md">
+      {/* Recently reported site issues for this mine */}
+      <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto space-y-4 mt-6">
+        <SectionHeader title="Recent Site Issues" subtitle="Reported by anyone at your mine, most recent first." />
+        {siteIssues.length === 0 && (
+          <p className="text-sm font-mono text-slate-400">No site issues reported yet.</p>
+        )}
+        {[...siteIssues]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .map((issue) => (
+            <div
+              key={issue.id}
+              className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start justify-between gap-4"
+            >
               <div>
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping shadow-[0_0_10px_#10b981]" />
-                  <h4 className="text-sm font-bold text-white tracking-wide">
-                    Sub-Level -320m: Face 4B (Your Assigned Station)
-                  </h4>
-                </div>
-                <p className="text-xs font-mono text-emerald-100/70 mt-2">
-                  14 Workers Active • Refuge Chamber 9 Available (200m East)
+                <p className="text-sm font-bold text-white">{issue.observation}</p>
+                <p className="text-xs font-mono text-slate-500 mt-1">
+                  Level {issue.level}, Section {issue.section} · {issue.issue_type} · {issue.source}
                 </p>
               </div>
-
-              <span className="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/30 tracking-widest shadow-inner">
-                SAFE ZONE
+              <span
+                className={`shrink-0 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider ${
+                  issue.severity === 'CRITICAL'
+                    ? 'bg-red-500/20 text-red-300'
+                    : issue.severity === 'WARNING'
+                      ? 'bg-amber-500/20 text-amber-300'
+                      : 'bg-white/10 text-slate-300'
+                }`}
+              >
+                {issue.status === 'open' ? issue.severity : 'RESOLVED'}
               </span>
             </div>
-
-          </div>
-
-        </div>
-
-        {/* Map Legend */}
-        <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-slate-400 pt-2 bg-white/5 p-4 rounded-xl border border-white/5">
-          <span className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#10b981]" /> Active Worker Station
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" /> Fresh Air Refuge Base
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-[0_0_8px_#22d3ee]" /> Multi-Gas Sensor Node
-          </span>
-        </div>
-
+          ))}
       </div>
     </PageLayout>
   );
@@ -669,7 +679,6 @@ export const WorkerDashboard = () => {
   switch (activeSubTab) {
     case 'tasks': return renderTasks();
     case 'report': return renderReport();
-    case 'map': return renderMap();
     case 'notifications': return renderNotifications();
     case 'profile': return renderProfile();
     case 'overview':

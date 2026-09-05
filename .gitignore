@@ -235,3 +235,5 @@ ai_engine/data/chroma_db/
 ai_engine/yolov8n.pt
 ai_engine/.env
 ai_engine/data/models/
+
+.vscode

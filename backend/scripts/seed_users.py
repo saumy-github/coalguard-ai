@@ -15,13 +15,21 @@ import asyncio
 
 from src.auth.security import hash_password
 from src.models.mine import Mine, Subsidiary
+from src.models.mine_level import MineLevel
 from src.models.user import User
 
 # Dev/test credential only — never use this in a real deployment.
 TEST_PASSWORD = "test123"
 
+# research/saumy/06-maps-plan.md's confirmed demo layout for the one placeholder mine.
+DEMO_MINE_LEVELS = [
+    {"level": "A", "section_count": 20},
+    {"level": "B", "section_count": 15},
+    {"level": "C", "section_count": 10},
+]
+
 SEED_USERS = [
-    {"user_type": "worker", "phone": "+919990000001", "full_name": "Test Worker", "role_title": "Worker"},
+    {"user_type": "worker", "phone": "9990000001", "full_name": "Test Worker", "role_title": "Worker"},
     {"user_type": "mine_safety_officer", "email": "officer@example.com", "full_name": "Test Mine Safety Officer"},
     {"user_type": "corporate_management", "email": "corporate@example.com", "full_name": "Test Corporate Manager"},
     {"user_type": "regulatory_authority", "email": "regulator@example.com", "full_name": "Test Regulatory Auditor"},
@@ -42,6 +50,11 @@ async def ensure_placeholder_org() -> tuple[Subsidiary, Mine]:
     if mine is None:
         mine = await Mine(subsidiary_id=subsidiary.id, name="Test Mine").insert()
         print(f"Created placeholder Mine: {mine.name} ({mine.id})")
+
+    if await MineLevel.find_one(MineLevel.mine_id == mine.id) is None:
+        for level in DEMO_MINE_LEVELS:
+            await MineLevel(mine_id=mine.id, **level).insert()
+        print(f"Seeded {len(DEMO_MINE_LEVELS)} MineLevel rows for {mine.name}")
 
     return subsidiary, mine
 
@@ -67,14 +80,18 @@ async def seed_users() -> None:
             print(f"  [skip] {seed['user_type']:<22} {identifier} (already exists)")
             continue
 
-        is_worker = seed["user_type"] == "worker"
+        # Scope per lld.md §3: Worker and Mine Safety Officer are single-mine;
+        # Corporate Management is subsidiary-wide; Regulatory Authority and Admin
+        # are cross-mine/global and get neither.
+        is_mine_scoped = seed["user_type"] in ("worker", "mine_safety_officer")
+        is_subsidiary_scoped = seed["user_type"] == "corporate_management"
         await User(
             email=seed.get("email"),
             phone=seed.get("phone"),
             password_hash=hash_password(TEST_PASSWORD),
             user_type=seed["user_type"],
-            mine_id=mine.id if is_worker else None,
-            subsidiary_id=subsidiary.id if not is_worker else None,
+            mine_id=mine.id if is_mine_scoped else None,
+            subsidiary_id=subsidiary.id if is_subsidiary_scoped else None,
             full_name=seed.get("full_name"),
             role_title=seed.get("role_title"),
             is_guest=False,
