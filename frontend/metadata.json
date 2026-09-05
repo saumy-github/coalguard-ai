@@ -1,6 +1,0 @@
-{
-  "name": "COALGUARD AI",
-  "description": "AI-Powered Smart Mine Governance, Safety, Compliance and Intelligence Platform",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

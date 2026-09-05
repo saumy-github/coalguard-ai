@@ -306,7 +306,32 @@ export const LIVE_SENSORS = [
   }
 ];
 
-export const INITIAL_TICKETS = [
+export interface Ticket {
+  id: string
+  title: string
+  description: string
+  category: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  status: 'action_required' | 'in_investigation' | 'resolved' | 'verified_closed'
+  mineId: string
+  mineName: string
+  location: string
+  reportedBy: string
+  assignedTo: string
+  createdAt: string
+  resolvedAt?: string
+  dgmsRegulationRef: string
+  aiSuggestedAction: string
+  correctiveActionTaken?: string
+  ledgerHash: string
+  sensorAnomaly?: {
+    parameter: string
+    reading: string
+    threshold: string
+  }
+}
+
+export const INITIAL_TICKETS: Ticket[] = [
   {
     id: 'TCK-2026-8941',
     title: 'High Methane Level in Face 4B Return Incline',

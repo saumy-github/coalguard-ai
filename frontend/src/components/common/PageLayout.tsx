@@ -1,6 +1,16 @@
-import React from 'react';
-import { SummaryCard } from './SummaryCard';
-import { SectionHeader } from './SectionHeader';
+import React, { type ReactNode } from 'react';
+import { SummaryCard, type SummaryCardProps } from './SummaryCard';
+
+export interface PageLayoutProps {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  badge?: ReactNode;
+  headerActions?: ReactNode;
+  summaryCards?: SummaryCardProps[];
+  attentionAlert?: ReactNode;
+  children?: ReactNode;
+  detailedSection?: ReactNode;
+}
 
 export const PageLayout = ({
   title,
@@ -10,11 +20,11 @@ export const PageLayout = ({
   summaryCards = [],
   attentionAlert,
   children,
-  detailedSection
-}) => {
+  detailedSection,
+}: PageLayoutProps) => {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      
+
       {/* 1. Page Header */}
       <div className="glass-card rounded-2xl p-5 sm:p-6 border border-[#51443d]/60 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

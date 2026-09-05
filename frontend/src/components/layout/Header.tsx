@@ -1,47 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useApp } from '../../context/AppContext';
-import { 
-  Menu, 
-  Search, 
-  Bell, 
-  ShieldAlert, 
-  ChevronDown, 
-  HardHat, 
-  Activity, 
-  Building2, 
-  Landmark, 
-  Sliders, 
-  Award,
-  LogOut,
-  Sparkles,
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { useDashboardDataStore } from '../../store/dashboardDataStore';
+import { useUIStore } from '../../store/uiStore';
+import {
+  Menu,
+  Search,
+  Bell,
+  ShieldAlert,
   Wifi,
   WifiOff
 } from 'lucide-react';
 
 export const Header = () => {
-  const { 
-    currentUser, 
-    activeView, 
-    setActiveView, 
-    setActiveSubTab,
-    toggleSidebar, 
-    setSearchOpen, 
-    setNotificationsOpen,
-    notifications,
-    loginAsRole,
-    logout,
-    isOfflineMode,
-    setIsOfflineMode
-  } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const token = useAuthStore((state) => state.token);
+  const { toggleSidebar, setSearchOpen, setNotificationsOpen, isOfflineMode, setIsOfflineMode } = useUIStore();
+  const notifications = useDashboardDataStore((state) => state.notifications);
 
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
+  const isChromeHidden = location.pathname === '/' || location.pathname === '/login';
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsRoleDropdownOpen(false);
       }
     };
@@ -49,25 +36,12 @@ export const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const roles = [
-    { key: 'field_worker', title: 'Field Worker', subtitle: 'Underground Operations', icon: <HardHat className="w-4 h-4 text-amber-400" /> },
-    { key: 'safety_officer', title: 'Mine Safety Officer', subtitle: 'Pit-Head Safety Command', icon: <Activity className="w-4 h-4 text-amber-400" /> },
-    { key: 'corporate_management', title: 'Corporate Exec', subtitle: 'Enterprise & ESG Governance', icon: <Building2 className="w-4 h-4 text-stone-400" /> },
-    { key: 'regulatory_authority', title: 'DGMS Regulatory', subtitle: 'Directorate General of Mines Safety', icon: <Landmark className="w-4 h-4 text-purple-400" /> },
-    { key: 'system_admin', title: 'System Admin', subtitle: 'System Health & Security', icon: <Sliders className="w-4 h-4 text-orange-400" /> },
-    { key: 'sih_evaluator', title: 'SIH Evaluator', subtitle: 'Interactive 60s Demo Suite', icon: <Award className="w-4 h-4 text-rose-400" /> }
-  ];
-
   const getPageTitle = () => {
-    switch (activeView) {
-      case 'landing': return 'Overview';
-      case 'login': return 'Operator Login';
-      case 'worker_dashboard': return 'Worker Dashboard';
-      case 'safety_officer_dashboard': return 'Mine Safety Command';
-      case 'corporate_dashboard': return 'Corporate Executive';
-      case 'regulatory_dashboard': return 'Regulatory Authority';
-      case 'admin_dashboard': return 'System Administration';
-      case 'sih_evaluator': return 'SIH 2026 Evaluation Hub';
+    switch (location.pathname) {
+      case '/': return 'Overview';
+      case '/login': return 'Operator Login';
+      case '/worker': return 'New Inspection';
+      case '/dashboard': return 'Mine Safety Command';
       default: return 'Mine Safety';
     }
   };
@@ -75,10 +49,10 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-40 w-full bg-[#0f0c09]/80 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        
+
         {/* Left: Hamburger & Brand */}
         <div className="flex items-center gap-4">
-          {activeView !== 'landing' && activeView !== 'login' && (
+          {!isChromeHidden && (
             <button
               id="header-hamburger-btn"
               onClick={toggleSidebar}
@@ -90,7 +64,7 @@ export const Header = () => {
           )}
 
           <div
-            onClick={() => setActiveView('landing')}
+            onClick={() => navigate('/')}
             className="flex items-center gap-3 cursor-pointer group"
           >
             <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.2)] group-hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] group-hover:border-amber-400 transition-all duration-300">
@@ -117,20 +91,21 @@ export const Header = () => {
           </span>
         </div>
 
-        {/* Right: Actions & User Menu */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
-          
-          {/* Quick Demo SIH shortcut */}
-          <button
-            onClick={() => loginAsRole('sih_evaluator')}
-            className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-mono font-bold transition-all hover:shadow-[0_0_15px_rgba(244,63,94,0.2)]"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>SIH Demo Suite</span>
-          </button>
 
-          {/* Search Button */}
-          {activeView !== 'landing' && activeView !== 'login' && (
+          {token && (
+            <button
+              onClick={() => setIsOfflineMode(!isOfflineMode)}
+              className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-mono border border-white/5 transition-all"
+              title="Toggle offline-mode preview"
+            >
+              {isOfflineMode ? <WifiOff className="w-4 h-4 text-red-400" /> : <Wifi className="w-4 h-4 text-lime-400" />}
+              <span className="text-slate-300">{isOfflineMode ? 'Offline' : 'Online'}</span>
+            </button>
+          )}
+
+          {!isChromeHidden && (
             <button
               id="header-search-btn"
               onClick={() => setSearchOpen(true)}
@@ -141,8 +116,7 @@ export const Header = () => {
             </button>
           )}
 
-          {/* Notifications Button */}
-          {activeView !== 'landing' && activeView !== 'login' && (
+          {!isChromeHidden && (
             <button
               id="header-notif-btn"
               onClick={() => setNotificationsOpen(true)}
@@ -158,7 +132,6 @@ export const Header = () => {
             </button>
           )}
 
-          {/* User Profile & Role Switcher Dropdown removed per user request */}
         </div>
 
       </div>

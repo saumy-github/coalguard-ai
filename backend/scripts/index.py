@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 
 from scripts.db import connect
+from scripts.seed_guests import seed_guests
 from scripts.seed_users import seed_users
 
 
@@ -21,6 +22,7 @@ async def main() -> None:
 
     print("\n🌱 Seeding users...\n")
     await seed_users()
+    await seed_guests()
 
     print("\n✨ Seeding complete.")
     client.close()

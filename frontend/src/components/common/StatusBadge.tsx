@@ -1,6 +1,11 @@
 import React from 'react';
 
-export const StatusBadge = ({ status, label }) => {
+export interface StatusBadgeProps {
+  status: string;
+  label?: string;
+}
+
+export const StatusBadge = ({ status, label }: StatusBadgeProps) => {
   const getBadgeStyle = () => {
     switch (status) {
       case 'safe':
@@ -11,7 +16,7 @@ export const StatusBadge = ({ status, label }) => {
       case 'active':
       case 'completed':
         return 'bg-lime-500/15 text-lime-400 border-lime-500/30';
-      
+
       case 'warning':
       case 'action_required':
       case 'in_progress':

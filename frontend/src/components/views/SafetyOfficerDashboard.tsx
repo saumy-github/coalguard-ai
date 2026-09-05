@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useAuthStore } from '../../store/authStore';
+import { useDashboardDataStore } from '../../store/dashboardDataStore';
+import { useUIStore } from '../../store/uiStore';
+import { displayName, userTypeLabel } from '../../lib/userDisplay';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -29,10 +32,9 @@ import {
 import { AI_KNOWLEDGE_BASE } from '../../data/mockData';
 
 export const SafetyOfficerDashboard = () => {
+  const user = useAuthStore((state) => state.user);
+  const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
   const {
-    currentUser,
-    activeSubTab,
-    setActiveSubTab,
     sensors,
     tickets,
     auditTrail,
@@ -41,9 +43,8 @@ export const SafetyOfficerDashboard = () => {
     simulateHazard,
     resetHazard,
     broadcastEvacuation,
-    resolveTicket,
-    addToast
-  } = useApp();
+    resolveTicket
+  } = useDashboardDataStore();
 
   // AI Assistant Query state
   const [aiQuery, setAiQuery] = useState('');
@@ -129,7 +130,7 @@ export const SafetyOfficerDashboard = () => {
           <div className="flex items-center gap-3">
             {!isHazardSimulated ? (
               <button
-                onClick={simulateHazard}
+                onClick={() => simulateHazard()}
                 className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-sm font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)]"
               >
                 <Flame className="w-4 h-4" />
@@ -137,7 +138,7 @@ export const SafetyOfficerDashboard = () => {
               </button>
             ) : (
               <button
-                onClick={resetHazard}
+                onClick={() => resetHazard()}
                 className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-sm font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -698,27 +699,27 @@ export const SafetyOfficerDashboard = () => {
 
         <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
           <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'S'}
+            {displayName(user).charAt(0).toUpperCase()}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
-            <p className="text-sm font-mono text-emerald-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
-            <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
+            <p className="text-sm font-mono text-emerald-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.user_type)}</p>
+            <p className="text-xs text-slate-400 mt-1">{user?.organization}</p>
           </div>
         </div>
 
         <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Officer Badge</span>
-            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.badgeNumber}</span>
+            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{user?.badgeNumber}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Assigned Mine</span>
-            <span className="text-white">{currentUser?.mineAssigned}</span>
+            <span className="text-white">{user?.mineAssigned}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Department</span>
-            <span className="text-white bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded">{currentUser?.department}</span>
+            <span className="text-white bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded">{user?.department}</span>
           </div>
         </div>
       </div>

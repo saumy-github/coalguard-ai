@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { api } from '../lib/api'
+import type { UserType } from '../lib/userTypes'
 
 export interface CurrentUser {
   id: string
@@ -33,6 +34,7 @@ interface AuthState {
   hasHydrated: boolean
   login: (identifier: string, password: string) => Promise<void>
   loginWithGoogle: (idToken: string) => Promise<void>
+  loginAsGuest: (userType: UserType) => Promise<void>
   logout: () => Promise<void>
   fetchCurrentUser: () => Promise<void>
   setHasHydrated: (value: boolean) => void
@@ -74,6 +76,20 @@ export const useAuthStore = create<AuthState>()(
           await get().fetchCurrentUser()
         } catch (err) {
           set({ error: errorMessage(err, 'Google sign-in failed') })
+          throw err
+        } finally {
+          set({ isLoading: false })
+        }
+      },
+
+      loginAsGuest: async (userType) => {
+        set({ isLoading: true, error: null })
+        try {
+          const { data } = await api.post('/auth/guest', { user_type: userType })
+          set({ token: data.access_token })
+          await get().fetchCurrentUser()
+        } catch (err) {
+          set({ error: errorMessage(err, 'Guest login failed') })
           throw err
         } finally {
           set({ isLoading: false })

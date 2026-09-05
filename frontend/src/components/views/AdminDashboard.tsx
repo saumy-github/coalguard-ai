@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useAuthStore } from '../../store/authStore';
+import { useDashboardDataStore } from '../../store/dashboardDataStore';
+import { useUIStore } from '../../store/uiStore';
+import { displayName, userTypeLabel } from '../../lib/userDisplay';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -22,7 +25,9 @@ import {
 } from 'lucide-react';
 
 export const AdminDashboard = () => {
-  const { currentUser, activeSubTab, setActiveSubTab, auditTrail, addToast } = useApp();
+  const user = useAuthStore((state) => state.user);
+  const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
+  const { auditTrail } = useDashboardDataStore();
 
   const [newUserName, setNewUserName] = useState('');
   const [newUserRole, setNewUserRole] = useState('field_worker');
@@ -445,19 +450,19 @@ export const AdminDashboard = () => {
 
         <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
           <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.2)]">
-            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
+            {displayName(user).charAt(0).toUpperCase()}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
-            <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
-            <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
+            <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.user_type)}</p>
+            <p className="text-xs text-slate-400 mt-1">{user?.organization}</p>
           </div>
         </div>
 
         <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Admin Security ID</span>
-            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.employeeId}</span>
+            <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{user?.employeeId}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-white/5">
             <span className="text-slate-500 uppercase text-xs tracking-wider">Access Level</span>

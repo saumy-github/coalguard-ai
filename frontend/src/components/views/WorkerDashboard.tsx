@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useAuthStore } from '../../store/authStore';
+import { useDashboardDataStore } from '../../store/dashboardDataStore';
+import { useUIStore } from '../../store/uiStore';
+import { displayName, userTypeLabel } from '../../lib/userDisplay';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -25,23 +28,15 @@ import {
 } from 'lucide-react';
 
 export const WorkerDashboard = () => {
-  const {
-    currentUser,
-    activeSubTab,
-    setActiveSubTab,
-    workerTasks,
-    markTaskComplete,
-    addTicket,
-    sensors,
-    notifications,
-    addToast
-  } = useApp();
+  const user = useAuthStore((state) => state.user);
+  const { activeSubTab, setActiveSubTab, addToast } = useUIStore();
+  const { workerTasks, markTaskComplete, addTicket, sensors, notifications } = useDashboardDataStore();
 
   // Problem Report Form State
   const [reportTitle, setReportTitle] = useState('');
   const [reportCategory, setReportCategory] = useState('Gas Leakage');
   const [reportLocation, setReportLocation] = useState('Face 4B South (Seam IV)');
-  const [reportSeverity, setReportSeverity] = useState('high');
+  const [reportSeverity, setReportSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('high');
   const [reportDesc, setReportDesc] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [hasPhoto, setHasPhoto] = useState(false);
@@ -74,7 +69,7 @@ export const WorkerDashboard = () => {
       category: reportCategory,
       severity: reportSeverity,
       location: reportLocation,
-      reportedBy: `${currentUser?.name || 'Worker'} (Field Team)`
+      reportedBy: `${displayName(user)} (Field Team)`
     });
 
     setReportTitle('');
@@ -124,7 +119,7 @@ export const WorkerDashboard = () => {
 
     return (
       <PageLayout
-        title={`Good Morning, ${currentUser?.name || 'Worker'}`}
+        title={`Good Morning, ${displayName(user)}`}
         subtitle="Your work schedule, task checklist, and safety overview for today."
         badge="Worker Dashboard"
         summaryCards={summaryCards}
@@ -407,7 +402,7 @@ export const WorkerDashboard = () => {
               <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Severity</label>
               <select
                 value={reportSeverity}
-                onChange={(e) => setReportSeverity(e.target.value)}
+                onChange={(e) => setReportSeverity(e.target.value as 'low' | 'medium' | 'high' | 'critical')}
                 className="w-full px-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 appearance-none custom-select"
               >
                 <option value="low">Low (Minor issue)</option>
@@ -616,31 +611,31 @@ export const WorkerDashboard = () => {
 
           <div className="flex items-center gap-5 pb-6 border-b border-white/10">
             <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'W'}
+              {displayName(user).charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">{currentUser?.name}</h3>
-              <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{currentUser?.roleTitle}</p>
-              <p className="text-xs text-slate-400 mt-1">{currentUser?.organization}</p>
+              <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
+              <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.user_type)}</p>
+              <p className="text-xs text-slate-400 mt-1">{user?.organization}</p>
             </div>
           </div>
 
           <div className="space-y-4 text-sm font-mono text-slate-300">
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Employee ID</span>
-              <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{currentUser?.employeeId}</span>
+              <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">{user?.employeeId}</span>
             </div>
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Badge Number</span>
-              <span className="text-white">{currentUser?.badgeNumber}</span>
+              <span className="text-white">{user?.badgeNumber}</span>
             </div>
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Assigned Mine</span>
-              <span className="text-white">{currentUser?.mineAssigned}</span>
+              <span className="text-white">{user?.mineAssigned}</span>
             </div>
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Shift Timing</span>
-              <span className="text-white bg-amber-500/10 text-amber-400 px-2 py-1 rounded">{currentUser?.shift}</span>
+              <span className="text-white bg-amber-500/10 text-amber-400 px-2 py-1 rounded">{user?.shift}</span>
             </div>
           </div>
         </div>
