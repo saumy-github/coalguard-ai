@@ -1,19 +1,31 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { StatusBadge } from './StatusBadge';
 
-export const SummaryCard = ({ 
-  title, 
-  value, 
-  subtext, 
-  icon, 
-  status, 
+export interface SummaryCardProps {
+  title: ReactNode;
+  value: ReactNode;
+  subtext?: ReactNode;
+  icon?: ReactNode;
+  status?: string;
+  statusLabel?: string;
+  trend?: ReactNode;
+  onClick?: () => void;
+  className?: string;
+}
+
+export const SummaryCard = ({
+  title,
+  value,
+  subtext,
+  icon,
+  status,
   statusLabel,
   trend,
   onClick,
-  className = '' 
-}) => {
+  className = '',
+}: SummaryCardProps) => {
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`glass-card rounded-xl p-4 sm:p-5 border border-[#51443d]/50 flex flex-col justify-between transition-all ${
         onClick ? 'cursor-pointer hover:border-[#f6b994]/60 hover:bg-[#1f1e1e]' : ''

@@ -49,10 +49,10 @@ async def login_with_google(id_token_str: str) -> str:
     return _issue_token(user)
 
 
-async def login_as_guest(user_type: UserType) -> str:
-    user = await get_guest_user(user_type)
+async def login_as_guest(role: UserType) -> str:
+    user = await get_guest_user(role)
     if user is None:
-        raise AuthError(f"No guest account exists for user type '{user_type}'")
+        raise AuthError(f"No guest account exists for role '{role}'")
     return _issue_token(user)
 
 
@@ -60,8 +60,6 @@ def _issue_token(user: User) -> str:
     return create_access_token(
         {
             "sub": str(user.id),
-            "user_type": user.user_type,
-            "mine_id": str(user.mine_id) if user.mine_id else None,
-            "subsidiary_id": str(user.subsidiary_id) if user.subsidiary_id else None,
+            "role": user.role,
         }
     )

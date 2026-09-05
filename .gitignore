@@ -242,3 +242,5 @@ ai_engine/data/models/
 ._*
 .Spotlight-V100
 .Trashes
+
+.vscode

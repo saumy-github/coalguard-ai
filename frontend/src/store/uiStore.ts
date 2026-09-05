@@ -9,36 +9,20 @@ export interface Toast {
 
 interface UIState {
   isSidebarOpen: boolean
-  isSearchOpen: boolean
-  isNotificationsOpen: boolean
-  isOfflineMode: boolean
-  activeSubTab: string
   toasts: Toast[]
 
   setIsSidebarOpen: (value: boolean) => void
   toggleSidebar: () => void
-  setSearchOpen: (value: boolean) => void
-  setNotificationsOpen: (value: boolean) => void
-  setIsOfflineMode: (value: boolean) => void
-  setActiveSubTab: (tab: string) => void
   addToast: (type: Toast['type'], title: string, message?: string) => void
   removeToast: (id: string) => void
 }
 
 export const useUIStore = create<UIState>()((set, get) => ({
   isSidebarOpen: false,
-  isSearchOpen: false,
-  isNotificationsOpen: false,
-  isOfflineMode: false,
-  activeSubTab: 'overview',
   toasts: [],
 
   setIsSidebarOpen: (value) => set({ isSidebarOpen: value }),
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-  setSearchOpen: (value) => set({ isSearchOpen: value }),
-  setNotificationsOpen: (value) => set({ isNotificationsOpen: value }),
-  setIsOfflineMode: (value) => set({ isOfflineMode: value }),
-  setActiveSubTab: (tab) => set({ activeSubTab: tab }),
 
   addToast: (type, title, message) => {
     const id = 'toast_' + Math.random().toString(36).substring(2, 9)

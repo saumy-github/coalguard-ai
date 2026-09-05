@@ -15,6 +15,17 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undef
 // email (contains "@"); phone numbers go through untouched, no format enforced.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// Mirrors backend/scripts/seed_users.py exactly — update both together if the
+// seed data ever changes. Dev/test credentials only, never real accounts.
+const DEMO_ACCOUNTS = [
+  { role: 'Worker', identifier: '9990000001' },
+  { role: 'Mine Safety Officer', identifier: 'officer@example.com' },
+  { role: 'Corporate Management', identifier: 'corporate@example.com' },
+  { role: 'Regulatory Authority', identifier: 'regulator@example.com' },
+  { role: 'Admin', identifier: 'admin@example.com' },
+]
+const DEMO_PASSWORD = 'test123'
+
 export const Login = () => {
   const navigate = useNavigate()
   const { login, loginWithGoogle, isLoading, error } = useAuthStore()
@@ -105,6 +116,21 @@ export const Login = () => {
             </GoogleOAuthProvider>
           </div>
         )}
+
+        <div className="mt-6 pt-6 border-t border-slate-800">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Demo accounts (seeded)</p>
+          <ul className="space-y-1 text-xs text-slate-400 font-mono">
+            {DEMO_ACCOUNTS.map((account) => (
+              <li key={account.identifier} className="flex justify-between gap-3">
+                <span className="text-slate-500">{account.role}</span>
+                <span className="text-slate-300">{account.identifier}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-slate-500 mt-2">
+            Password for all of the above: <span className="text-slate-300 font-mono">{DEMO_PASSWORD}</span>
+          </p>
+        </div>
       </div>
     </div>
   )
