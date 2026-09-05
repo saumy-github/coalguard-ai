@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 
-export const SectionHeader = ({ title, subtitle, badge, action }: { title?: any; subtitle?: any; badge?: any; action?: any }) => {
+export interface SectionHeaderProps {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  badge?: ReactNode;
+  action?: ReactNode;
+}
+
+export const SectionHeader = ({ title, subtitle, badge, action }: SectionHeaderProps) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#353534]/60">
       <div>

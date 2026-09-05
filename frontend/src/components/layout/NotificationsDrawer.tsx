@@ -1,7 +1,7 @@
 import React from 'react';
-import { useUIStore } from '../../store/uiStore';
 import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { X, Bell, AlertTriangle, Info, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { useUIStore } from '../../store/uiStore';
+import { X, Bell, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
 
 export const NotificationsDrawer = () => {
   const { isNotificationsOpen, setNotificationsOpen } = useUIStore();

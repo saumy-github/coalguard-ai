@@ -1,19 +1,21 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { ShieldCheck } from 'lucide-react';
+
+export interface EmptyStateProps {
+  icon?: ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  actionLabel?: ReactNode;
+  onAction?: () => void;
+}
 
 export const EmptyState = ({
   icon,
   title = 'No records found',
   description = 'Everything is currently up to date.',
   actionLabel,
-  onAction
-}: {
-  icon?: any;
-  title?: any;
-  description?: any;
-  actionLabel?: any;
-  onAction?: any;
-}) => {
+  onAction,
+}: EmptyStateProps) => {
   return (
     <div className="glass-card rounded-2xl p-8 sm:p-12 text-center border border-[#51443d]/40 flex flex-col items-center justify-center my-4">
       <div className="w-12 h-12 rounded-xl bg-[#252423] border border-[#51443d]/60 flex items-center justify-center text-[#f6b994] mb-3">

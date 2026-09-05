@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { useUIStore } from '../../store/uiStore';
 import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { displayName, userTypeLabel } from '../../lib/userDisplay';
-import { api } from '../../lib/api';
+import { useUIStore } from '../../store/uiStore';
+import { displayName, userTypeLabel } from '../../utils/userDisplay';
+import { api } from '../../utils/api';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
@@ -19,7 +19,6 @@ import {
   Activity,
   CheckCircle2,
   Send,
-  Mic,
   User,
   HardHat,
   Bell,
@@ -45,7 +44,6 @@ export const WorkerDashboard = () => {
   const [reportSection, setReportSection] = useState(1);
   const [reportSeverity, setReportSeverity] = useState('WARNING');
   const [reportDesc, setReportDesc] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
   const [hasPhoto, setHasPhoto] = useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
@@ -75,15 +73,6 @@ export const WorkerDashboard = () => {
   useEffect(() => {
     fetchSiteIssues();
   }, []);
-
-  const handleVoiceRecord = () => {
-    setIsRecording(true);
-    setTimeout(() => {
-      setIsRecording(false);
-      setReportDesc('Voice note transcribed: Unusual gas smell detected near Face 4B auxiliary fan.');
-      addToast('info', 'Voice Transcribed', 'Speech converted to report text.');
-    }, 1500);
-  };
 
   const handlePhotoUpload = () => {
     setHasPhoto(true);
@@ -164,7 +153,7 @@ export const WorkerDashboard = () => {
 
     return (
       <PageLayout
-        title={`Good Morning, ${displayName(user) || 'Worker'}`}
+        title={`Good Morning, ${displayName(user)}`}
         subtitle="Your work schedule, task checklist, and safety overview for today."
         badge="Worker Dashboard"
         summaryCards={summaryCards}
@@ -495,20 +484,8 @@ export const WorkerDashboard = () => {
             />
           </div>
 
-          {/* Quick Voice / Photo Helpers */}
+          {/* Quick Photo Helper */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={handleVoiceRecord}
-              className={`px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 border transition-all ${isRecording
-                  ? 'bg-red-500/20 text-red-400 animate-pulse border-red-500/50'
-                  : 'bg-white/5 text-slate-300 hover:text-white border-white/10 hover:border-white/20'
-                }`}
-            >
-              <Mic className={`w-4 h-4 ${isRecording ? 'text-red-400' : 'text-slate-400'}`} />
-              <span>{isRecording ? 'Listening...' : 'Voice Input'}</span>
-            </button>
-
             <button
               type="button"
               onClick={handlePhotoUpload}

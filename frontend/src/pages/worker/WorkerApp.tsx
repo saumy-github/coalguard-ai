@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { ObservationForm } from './ObservationForm';
 import { useSyncManager } from '../../hooks/useSyncManager';
-import { getPendingObservations } from '../../lib/db';
+import { getPendingObservations } from '../../utils/db';
 import { Wifi, WifiOff, RefreshCw, HardHat } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const WorkerApp = () => {
+  // Called once here, not again in ObservationForm — it's a hook, so two call
+  // sites mounted together would each get independent state and each fire
+  // their own sync attempt concurrently against the same IndexedDB queue.
   const { isOnline, isSyncing, syncObservations } = useSyncManager();
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -15,7 +18,7 @@ export const WorkerApp = () => {
       const pending = await getPendingObservations();
       setPendingCount(pending.length);
     };
-    
+
     fetchPending();
     const interval = setInterval(fetchPending, 2000);
     return () => clearInterval(interval);
@@ -53,9 +56,9 @@ export const WorkerApp = () => {
             <p>You are offline. Observations will be saved locally and synced when connection is restored.</p>
           </div>
         )}
-        
-        <ObservationForm />
-        
+
+        <ObservationForm isOnline={isOnline} syncObservations={syncObservations} />
+
         <div className="mt-8 text-center">
           <Link to="/" className="text-sm text-blue-400 hover:underline">
             Return to Command Center
@@ -65,4 +68,3 @@ export const WorkerApp = () => {
     </div>
   );
 };
-

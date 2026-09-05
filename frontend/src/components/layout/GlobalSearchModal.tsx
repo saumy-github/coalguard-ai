@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { useUIStore } from '../../store/uiStore';
+import { useNavigate } from 'react-router-dom';
 import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { Search, X, ShieldAlert, FileText, Activity, MapPin, Sparkles, ArrowRight } from 'lucide-react';
+import { useUIStore } from '../../store/uiStore';
+import { Search, X, ShieldAlert, MapPin, Sparkles, ArrowRight } from 'lucide-react';
 import { AI_KNOWLEDGE_BASE } from '../../data/mockData';
 
 export const GlobalSearchModal = () => {
+  const navigate = useNavigate();
   const { isSearchOpen, setSearchOpen, setActiveSubTab } = useUIStore();
-  const { tickets, sensors, mines } = useDashboardDataStore();
+  const { tickets, mines } = useDashboardDataStore();
   const [query, setQuery] = useState('');
 
   if (!isSearchOpen) return null;
@@ -115,6 +117,7 @@ export const GlobalSearchModal = () => {
                   onClick={() => {
                     setActiveSubTab('incidents');
                     setSearchOpen(false);
+                    navigate('/dashboard');
                   }}
                   className="p-3 rounded-xl bg-[#1a1919] border border-[#353534] hover:border-amber-500/50 cursor-pointer transition-all flex items-center justify-between"
                 >
@@ -140,6 +143,7 @@ export const GlobalSearchModal = () => {
                   onClick={() => {
                     setActiveSubTab('my_mines');
                     setSearchOpen(false);
+                    navigate('/dashboard');
                   }}
                   className="p-3 rounded-xl bg-[#1a1919] border border-[#353534] hover:border-lime-500/50 cursor-pointer transition-all flex items-center justify-between"
                 >

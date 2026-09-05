@@ -14,9 +14,10 @@ from __future__ import annotations
 import asyncio
 
 from src.auth.security import hash_password
-from src.models.mine import Mine, Subsidiary
+from src.models.mine import Mine
 from src.models.mine_level import MineLevel
 from src.models.user import User
+from src.services.org_service import ensure_placeholder_org
 
 # Dev/test credential only — never use this in a real deployment.
 TEST_PASSWORD = "test123"
@@ -37,30 +38,16 @@ SEED_USERS = [
 ]
 
 
-async def ensure_placeholder_org() -> tuple[Subsidiary, Mine]:
-    """Mine/Subsidiary CRUD (research/lld.md §7b) doesn't exist yet — create one
-    placeholder pair if none exist, just enough for seeded users to reference.
-    """
-    subsidiary = await Subsidiary.find_one()
-    if subsidiary is None:
-        subsidiary = await Subsidiary(name="Test Subsidiary", code="TEST").insert()
-        print(f"Created placeholder Subsidiary: {subsidiary.name} ({subsidiary.id})")
-
-    mine = await Mine.find_one(Mine.subsidiary_id == subsidiary.id)
-    if mine is None:
-        mine = await Mine(subsidiary_id=subsidiary.id, name="Test Mine").insert()
-        print(f"Created placeholder Mine: {mine.name} ({mine.id})")
-
+async def ensure_mine_levels_seeded(mine: Mine) -> None:
     if await MineLevel.find_one(MineLevel.mine_id == mine.id) is None:
         for level in DEMO_MINE_LEVELS:
             await MineLevel(mine_id=mine.id, **level).insert()
         print(f"Seeded {len(DEMO_MINE_LEVELS)} MineLevel rows for {mine.name}")
 
-    return subsidiary, mine
-
 
 async def seed_users() -> None:
     subsidiary, mine = await ensure_placeholder_org()
+    await ensure_mine_levels_seeded(mine)
 
     print("\nSeeded test users (password for all of them below):\n")
     for seed in SEED_USERS:

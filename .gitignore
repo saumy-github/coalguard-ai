@@ -236,4 +236,11 @@ ai_engine/yolov8n.pt
 ai_engine/.env
 ai_engine/data/models/
 
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
 .vscode

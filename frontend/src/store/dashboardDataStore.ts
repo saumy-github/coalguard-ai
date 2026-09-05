@@ -11,7 +11,7 @@ import {
 } from '../data/mockData'
 import { useAuthStore } from './authStore'
 import { useUIStore } from './uiStore'
-import { displayName, userTypeLabel } from '../lib/userDisplay'
+import { displayName, userTypeLabel } from '../utils/userDisplay'
 
 interface DashboardDataState {
   mines: typeof OPERATING_MINES

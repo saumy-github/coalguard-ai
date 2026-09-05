@@ -5,12 +5,13 @@ keeping their own list — add a new collection once, in this file, and it's
 registered everywhere automatically.
 """
 
+from .inspection import Inspection
 from .mine import Mine, Subsidiary
 from .mine_level import MineLevel
 from .person_issue import PersonIssue
 from .site_issue import SiteIssue
 from .user import User
 
-ALL_MODELS = [User, Mine, Subsidiary, MineLevel, PersonIssue, SiteIssue]
+ALL_MODELS = [User, Mine, Subsidiary, MineLevel, PersonIssue, SiteIssue, Inspection]
 
-__all__ = ["User", "Mine", "Subsidiary", "MineLevel", "PersonIssue", "SiteIssue", "ALL_MODELS"]
+__all__ = ["User", "Mine", "Subsidiary", "MineLevel", "PersonIssue", "SiteIssue", "Inspection", "ALL_MODELS"]

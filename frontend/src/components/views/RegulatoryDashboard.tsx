@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { useUIStore } from '../../store/uiStore';
 import { useDashboardDataStore } from '../../store/dashboardDataStore';
-import { displayName, userTypeLabel } from '../../lib/userDisplay';
+import { useUIStore } from '../../store/uiStore';
+import { displayName, userTypeLabel } from '../../utils/userDisplay';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
