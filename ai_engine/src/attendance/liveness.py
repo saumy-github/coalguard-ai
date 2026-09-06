@@ -134,10 +134,11 @@ def detect_blink(frames_bytes: List[bytes]) -> tuple[bool, str]:
             logger.warning("Frame %d could not be decoded — skipping.", idx + 1)
             continue
 
-        # Resize very large frames to speed up inference
+        # Resize large frames before EAR inference — _avg_ear_for_frame will further
+        # resize to 480px, but capping here reduces decode/copy overhead on CPU.
         h, w = frame.shape[:2]
-        if max(h, w) > 1280:
-            scale = 1280 / max(h, w)
+        if max(h, w) > 640:
+            scale = 640 / max(h, w)
             frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
 
         ear = _avg_ear_for_frame(frame)

@@ -225,15 +225,15 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
     setCaptureProgress(10);
 
     const capturedBlobs: Blob[] = [];
-    const totalFrames = 4;
+    const totalFrames = 3;
 
     try {
-      // Capture 4 frames across 1.2s to capture natural blink motion
+      // Capture 3 frames across ~600ms to capture natural blink motion
       for (let i = 0; i < totalFrames; i++) {
         const blob = await captureFrameBlob();
         capturedBlobs.push(blob);
         setCaptureProgress(Math.round(((i + 1) / totalFrames) * 100));
-        await new Promise((r) => setTimeout(r, 280));
+        await new Promise((r) => setTimeout(r, 200));
       }
 
       // Step: Verifying via Backend & AI Engine
@@ -257,7 +257,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
 
       const response = await api.post('/attendance/mark', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 90000,
+        timeout: 120000,
       });
 
 

@@ -235,6 +235,10 @@ ai_engine/data/chroma_db/
 ai_engine/yolov8n.pt
 ai_engine/.env
 ai_engine/data/models/
+ai_engine/data/attendance/temp_selfies/*
+!ai_engine/data/attendance/temp_selfies/.gitkeep
+ai_engine/data/attendance/registered_faces/*
+!ai_engine/data/attendance/registered_faces/.gitkeep
 
 # macOS
 .DS_Store
