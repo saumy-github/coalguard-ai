@@ -116,8 +116,9 @@ async def mark_attendance(
 
     ai_url = f"{settings.ai_engine_url.rstrip('/')}/api/attendance/mark"
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             resp = await client.post(ai_url, data=form_data, files=multipart_files)
+
     except httpx.RequestError as exc:
         logger.error("Failed to connect to AI Engine at %s: %s", ai_url, exc)
         raise HTTPException(

@@ -161,7 +161,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
     };
   }, [isOpen]);
 
-  // Capture single frame as Blob
+  // Capture single frame as Blob (optimized to max 640px for fast upload and inference)
   const captureFrameBlob = (): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const video = videoRef.current;
@@ -171,15 +171,26 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
         return;
       }
 
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
+      const vw = video.videoWidth || 640;
+      const vh = video.videoHeight || 480;
+      const maxDim = 640;
+      let targetW = vw;
+      let targetH = vh;
+      if (Math.max(vw, vh) > maxDim) {
+        const scale = maxDim / Math.max(vw, vh);
+        targetW = Math.round(vw * scale);
+        targetH = Math.round(vh * scale);
+      }
+
+      canvas.width = targetW;
+      canvas.height = targetH;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         reject(new Error('Failed to get 2D canvas context'));
         return;
       }
 
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, targetW, targetH);
       canvas.toBlob(
         (blob) => {
           if (blob) {
@@ -189,7 +200,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
           }
         },
         'image/jpeg',
-        0.92
+        0.85
       );
     });
   };
@@ -244,8 +255,9 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
 
       const response = await api.post('/attendance/mark', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 45000,
+        timeout: 90000,
       });
+
 
       const data = response.data;
       setAttendanceResult(data);

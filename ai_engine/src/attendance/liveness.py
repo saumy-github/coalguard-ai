@@ -94,6 +94,12 @@ def _avg_ear_for_frame(image_bgr: np.ndarray) -> float | None:
     Returns None if no face is detected.
     """
     rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+    h, w = rgb.shape[:2]
+    max_dim = max(h, w)
+    if max_dim > 480:
+        scale = 480.0 / max_dim
+        rgb = cv2.resize(rgb, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
     results = _face_mesh.process(rgb)
     if not results.multi_face_landmarks:
         return None
@@ -102,6 +108,7 @@ def _avg_ear_for_frame(image_bgr: np.ndarray) -> float | None:
     left_ear  = _eye_aspect_ratio(lms, LEFT_EYE_IDX)
     right_ear = _eye_aspect_ratio(lms, RIGHT_EYE_IDX)
     return (left_ear + right_ear) / 2.0
+
 
 
 def detect_blink(frames_bytes: List[bytes]) -> tuple[bool, str]:

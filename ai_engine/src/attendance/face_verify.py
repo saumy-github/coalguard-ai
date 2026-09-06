@@ -90,40 +90,61 @@ def verify_identity(
             "Please ask HR to upload your reference photo.",
         )
 
-    live_frame = _sharpest_frame(frames_bytes)
+    # Score all decodable frames by sharpness (Laplacian variance)
+    scored_frames = []
+    for raw in frames_bytes:
+        arr = np.frombuffer(raw, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            continue
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        scored_frames.append((score, img))
 
-    # Write live frame to a temp path so DeepFace can accept it as a file path
-    tmp_live = TEMP_SELFIES_DIR / f"__live_{worker_id}_{int(time.time())}.jpg"
-    cv2.imwrite(str(tmp_live), live_frame)
+    if not scored_frames:
+        return False, "No decodable frames found in the burst."
 
-    try:
-        result = DeepFace.verify(
-            img1_path=str(tmp_live),
-            img2_path=str(ref_path),
-            model_name=FACE_MODEL,
-            enforce_detection=True,
-            detector_backend="opencv",
-        )
-        verified: bool = result.get("verified", False)
-        distance: float = round(result.get("distance", 1.0), 4)
+    # Sort descending by sharpness
+    scored_frames.sort(key=lambda x: x[0], reverse=True)
+    # Test up to top 2 candidate frames (avoids picking only the frame with closed eyes)
+    candidates_to_test = [f[1] for f in scored_frames[:2]]
 
-        logger.info(
-            "Identity check — worker=%s  verified=%s  distance=%.4f",
-            worker_id, verified, distance,
-        )
-        if verified:
-            return True, f"Identity verified (distance={distance})."
-        else:
-            return False, f"Face mismatch — identity could not be confirmed (distance={distance})."
+    best_distance = 1.0
+    verified_flag = False
 
-    except Exception as exc:
-        logger.warning("DeepFace verification error: %s", exc)
-        return False, f"Face verification error: {exc}"
+    for idx, frame in enumerate(candidates_to_test):
+        tmp_live = TEMP_SELFIES_DIR / f"__live_{worker_id}_{int(time.time())}_{idx}.jpg"
+        cv2.imwrite(str(tmp_live), frame)
+        try:
+            result = DeepFace.verify(
+                img1_path=str(tmp_live),
+                img2_path=str(ref_path),
+                model_name=FACE_MODEL,
+                enforce_detection=False,
+                detector_backend="opencv",
+            )
+            v = result.get("verified", False)
+            dist = round(result.get("distance", 1.0), 4)
+            if dist < best_distance:
+                best_distance = dist
+            if v or dist <= 0.40:
+                verified_flag = True
+                break
+        except Exception as exc:
+            logger.warning("DeepFace frame %d error: %s", idx, exc)
+        finally:
+            if tmp_live.exists():
+                tmp_live.unlink()
 
-    finally:
-        # Always clean up the ephemeral comparison file
-        if tmp_live.exists():
-            tmp_live.unlink()
+    logger.info(
+        "Identity check — worker=%s  verified=%s  best_distance=%.4f",
+        worker_id, verified_flag, best_distance,
+    )
+    if verified_flag:
+        return True, f"Identity verified (distance={best_distance})."
+    else:
+        return False, f"Face mismatch — identity could not be confirmed (distance={best_distance})."
+
 
 
 def save_verified_selfie(worker_id: str, frames_bytes: List[bytes]) -> Path:
