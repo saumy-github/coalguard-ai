@@ -17,6 +17,6 @@ async def list_all_mines() -> list[Mine]:
 
 
 async def create_mine(*, name: str, lat: Optional[float], lng: Optional[float]) -> Mine:
-    mine = Mine(subsidiary_id=None, name=name, lat=lat, lng=lng)
+    mine = Mine(name=name, lat=lat, lng=lng)
     await mine.insert()
     return mine

@@ -3,8 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 
-from ..models.mine_assignment import MineAssignment
-from ..models.user import User, UserType
+from ..models.user import User, UserType, get_profile
 from .security import decode_access_token
 
 bearer_scheme = HTTPBearer()
@@ -53,38 +52,25 @@ def require_role(*roles: UserType):
 
 
 async def accessible_mine_ids(user: User) -> list[PydanticObjectId]:
-    """Every mine the user has an active MineAssignment for. Empty for a user
-    with none — callers must treat that as "no access", never "see everything".
-
-    Regulator is the one exception: it has no MineAssignment of its own.
-    Decision #13's "Regulator scope" note (research/saumy/09-changes-5-sep.md)
-    simplifies to exactly one Regulatory Authority account for now, under
-    which a regulator's scope is derived — every mine with an active
-    Corporate Management assignment, full stop. This breaks the moment a
-    second regulator exists (both would trivially see the same set); the real
-    fix is a `regulator_assignments` collection, deferred until then.
-    """
-    if user.role == "regulator":
-        assignments = await MineAssignment.find(
-            MineAssignment.role == "corporate_manager", MineAssignment.active == True  # noqa: E712
-        ).to_list()
-    else:
-        assignments = await MineAssignment.find(
-            MineAssignment.user_id == user.id, MineAssignment.active == True  # noqa: E712
-        ).to_list()
-    return list({a.mine_id for a in assignments})
+    """Every mine the user's own profile scopes them to. Empty means no
+    access — callers must never treat that as "see everything"."""
+    profile = get_profile(user)
+    mine = getattr(profile, "mine", None)
+    if mine is not None:
+        return [mine]
+    mines = getattr(profile, "mines", None)
+    if mines:
+        return list(mines)
+    return []
 
 
 async def require_mine_assignment(user: User) -> PydanticObjectId:
-    """For today's single-mine-scoped callers (Worker, Safety Officer): their
-    one active mine assignment. Replaces the old require_mine_scope, which read
-    User.mine_id directly — that field is unused/legacy now (see models/user.py).
-    Raises rather than silently proceeding with no scope.
-    """
+    """The caller's one assigned mine (worker/officer). Raises rather than
+    silently proceeding with no scope."""
     mine_ids = await accessible_mine_ids(user)
     if not mine_ids:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has no active mine assignment",
+            detail="User has no assigned mine",
         )
     return mine_ids[0]

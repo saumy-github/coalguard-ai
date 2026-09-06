@@ -14,10 +14,6 @@ class GoogleLoginRequest(BaseModel):
     id_token: str
 
 
-class GuestLoginRequest(BaseModel):
-    role: UserType
-
-
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -29,7 +25,6 @@ class CurrentUserResponse(BaseModel):
     phone: Optional[str] = None
     role: UserType
     full_name: Optional[str] = None
-    is_guest: bool
-    # Active MineAssignment mine IDs (Decision #12) — replaces the old bare
-    # mine_id/subsidiary_id, which only ever supported a single mine anyway.
-    mine_ids: list[str] = []
+    # Mine scope exactly as stored — mirrors UserResponse (schemas/users.py).
+    mine: Optional[str] = None
+    mines: list[str] = []

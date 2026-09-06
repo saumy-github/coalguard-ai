@@ -6,11 +6,10 @@ from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 import httpx
 
-from ..auth.dependencies import get_current_user
+from ..auth.dependencies import accessible_mine_ids, get_current_user
 from ..config import settings
 from ..models.attendance import AttendanceRecord
 from ..models.mine import Mine
-from ..models.mine_assignment import MineAssignment
 from ..models.user import User
 from ..services.org_service import ECL_MINE_LAT, ECL_MINE_LNG, ECL_MINE_NAME
 
@@ -76,15 +75,9 @@ async def mark_attendance(
             target_mine = None
 
     if not target_mine:
-        # Check user's active mine assignment
-        assignment = await MineAssignment.find_one(
-            MineAssignment.user_id == user.id, MineAssignment.active == True  # noqa: E712
-        )
-        if assignment and assignment.mine_id:
-            target_mine = await Mine.get(assignment.mine_id)
-
-    if not target_mine and user.mine_id:
-        target_mine = await Mine.get(user.mine_id)
+        mine_ids = await accessible_mine_ids(user)
+        if mine_ids:
+            target_mine = await Mine.get(mine_ids[0])
 
     if target_mine:
         resolved_mine_id = target_mine.id

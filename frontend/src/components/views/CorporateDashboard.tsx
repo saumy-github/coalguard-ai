@@ -286,9 +286,6 @@ export const CorporateProfilePage = () => {
             <div>
               <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
               <p className="text-sm font-mono text-orange-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
-              {user?.is_guest && (
-                <p className="text-xs text-slate-400 mt-1">Guest session</p>
-              )}
             </div>
           </div>
 
@@ -303,7 +300,7 @@ export const CorporateProfilePage = () => {
             </div>
             <div className="flex justify-between items-center py-2 border-b border-white/5">
               <span className="text-slate-500 uppercase text-xs tracking-wider">Assigned Mine(s)</span>
-              <span className="text-white">{user?.mine_ids?.length ? `${user.mine_ids.length} assigned` : 'None assigned'}</span>
+              <span className="text-white">{user?.mines?.length ? `${user.mines.length} assigned` : 'None assigned'}</span>
             </div>
           </div>
         </div>

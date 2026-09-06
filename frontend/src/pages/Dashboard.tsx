@@ -4,11 +4,10 @@ import { useAuthStore } from '../store/authStore';
 // research/saumy/09-changes-5-sep.md Decision #16: `/dashboard` is only ever
 // a shared authenticated landing point that redirects to a role's own real
 // route tree — as of Phase 8 (the last role to migrate), nothing renders
-// directly here anymore for any role. Not using utils/userTypes.ts's
-// DASHBOARD_PATH_BY_ROLE here deliberately: that map sends `worker` to
-// `/worker` (the guest-login landing convention, WorkerApp's separate
-// offline-inspection flow) — arriving at this shared `/dashboard` URL always
-// means the tab-dashboard tree instead, so the mapping has to differ here.
+// directly here anymore for any role. A worker landing on this shared
+// `/dashboard` URL always goes to the tab-dashboard tree (`/dashboard/worker`)
+// — `/worker` (WorkerApp's separate offline-inspection flow) is a distinct
+// route, never reached from here.
 export const Dashboard = () => {
   const role = useAuthStore((state) => state.user?.role);
 

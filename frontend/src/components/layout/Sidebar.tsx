@@ -15,7 +15,6 @@ import {
   FileCheck,
   Layers,
   Users,
-  ListTree,
   ArrowRight,
   LogOut
 } from 'lucide-react';
@@ -59,7 +58,6 @@ const NAV_ITEMS_BY_ROLE: Record<UserType, () => NavItem[]> = {
   admin: () => [
     { id: 'users', label: 'Users', icon: <Users className="w-4 h-4" />, path: '/dashboard/admin/users' },
     { id: 'mines', label: 'Mines', icon: <Layers className="w-4 h-4" />, path: '/dashboard/admin/mines' },
-    { id: 'access', label: 'Access', icon: <ListTree className="w-4 h-4" />, path: '/dashboard/admin/access' },
     { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, path: '/dashboard/admin/profile' }
   ]
 };

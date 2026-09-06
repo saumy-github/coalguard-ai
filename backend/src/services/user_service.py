@@ -1,9 +1,7 @@
 from typing import Optional
 
-from beanie import PydanticObjectId
-
 from ..auth.security import hash_password
-from ..models.user import User, UserType
+from ..models.user import User, UserType, empty_profile_for_role, set_profile
 
 
 async def create_user(
@@ -12,23 +10,17 @@ async def create_user(
     phone: Optional[str],
     password: str,
     role: UserType,
-    mine_id: Optional[str],
-    subsidiary_id: Optional[str],
     full_name: Optional[str],
-    role_title: Optional[str],
 ) -> User:
     user = User(
         email=email,
         phone=phone,
         password_hash=hash_password(password),
         role=role,
-        mine_id=PydanticObjectId(mine_id) if mine_id else None,
-        subsidiary_id=PydanticObjectId(subsidiary_id) if subsidiary_id else None,
         full_name=full_name,
-        role_title=role_title,
-        is_guest=False,
         active=True,
     )
+    set_profile(user, empty_profile_for_role(role))
     await user.insert()
     return user
 

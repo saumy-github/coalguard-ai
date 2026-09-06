@@ -7,8 +7,7 @@ registered everywhere automatically.
 
 from .attendance import AttendanceRecord
 from .inspection import Inspection
-from .mine import Mine, Subsidiary
-from .mine_assignment import MineAssignment
+from .mine import Mine
 from .mine_level import MineLevel
 from .person_issue import PersonIssue
 from .regulatory_report import RegulatoryReport
@@ -18,8 +17,6 @@ from .user import User
 ALL_MODELS = [
     User,
     Mine,
-    Subsidiary,
-    MineAssignment,
     MineLevel,
     PersonIssue,
     SiteIssue,
@@ -31,8 +28,6 @@ ALL_MODELS = [
 __all__ = [
     "User",
     "Mine",
-    "Subsidiary",
-    "MineAssignment",
     "MineLevel",
     "PersonIssue",
     "SiteIssue",
@@ -41,4 +36,3 @@ __all__ = [
     "AttendanceRecord",
     "ALL_MODELS",
 ]
-

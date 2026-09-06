@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { api } from '../utils/api'
-import type { UserType } from '../utils/userTypes'
 
 export interface CurrentUser {
   id: string
@@ -9,8 +8,10 @@ export interface CurrentUser {
   phone: string | null
   role: string
   full_name: string | null
-  is_guest: boolean
-  mine_ids: string[]
+  // Mine scope exactly as stored — mirrors backend UserResponse/CurrentUserResponse.
+  // `mine` is populated for worker/officer, `mines` for corporate/regulator.
+  mine: string | null
+  mines: string[]
   // Cosmetic profile fields the backend doesn't provide yet — kept optional so
   // surviving dashboard/profile JSX (organization, badge number, etc.) still
   // compiles without redesign. Always undefined until the backend adds them.
@@ -33,7 +34,6 @@ interface AuthState {
   hasHydrated: boolean
   login: (identifier: string, password: string) => Promise<void>
   loginWithGoogle: (idToken: string) => Promise<void>
-  loginAsGuest: (userType: UserType) => Promise<void>
   logout: () => Promise<void>
   fetchCurrentUser: () => Promise<void>
   setHasHydrated: (value: boolean) => void
@@ -75,20 +75,6 @@ export const useAuthStore = create<AuthState>()(
           await get().fetchCurrentUser()
         } catch (err) {
           set({ error: errorMessage(err, 'Google sign-in failed') })
-          throw err
-        } finally {
-          set({ isLoading: false })
-        }
-      },
-
-      loginAsGuest: async (userType) => {
-        set({ isLoading: true, error: null })
-        try {
-          const { data } = await api.post('/auth/guest', { role: userType })
-          set({ token: data.access_token })
-          await get().fetchCurrentUser()
-        } catch (err) {
-          set({ error: errorMessage(err, 'Guest login failed') })
           throw err
         } finally {
           set({ isLoading: false })

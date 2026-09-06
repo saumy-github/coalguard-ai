@@ -1,9 +1,7 @@
 """
 Seed a handful of real, password-set test users — one per user type.
 
-Distinct from guest accounts (`auth/guest.py`): these have real passwords and are
-meant for the team to actually log in and test with during development, not for
-demo/guest login. Idempotent — safe to re-run, skips anything that already exists.
+Idempotent — safe to re-run, skips anything that already exists.
 
 Exposes `seed_users()` for `scripts/index.py` to call, and can also run standalone:
     docker compose exec backend python -m scripts.seed_users
@@ -16,27 +14,22 @@ import asyncio
 from src.auth.security import hash_password
 from src.models.mine import Mine
 from src.models.mine_level import MineLevel
-from src.models.user import User
-from src.services.mine_assignment_service import ensure_mine_assignment
-from src.services.org_service import ensure_placeholder_org, ensure_second_demo_mine
+from src.models.user import User, empty_profile_for_role, set_profile
+from src.services.org_service import ensure_placeholder_mine, ensure_second_demo_mine
 
 # Dev/test credential only — never use this in a real deployment.
 TEST_PASSWORD = "test123"
 
-# research/saumy/06-maps-plan.md's confirmed demo layout, applied to every demo mine.
 DEMO_MINE_LEVELS = [
     {"level": "A", "section_count": 20},
     {"level": "B", "section_count": 15},
     {"level": "C", "section_count": 10},
 ]
 
-# `mine` picks which demo mine a seed user is assigned to — "primary" (ECL
-# Sector 7G, the original placeholder) unless marked "secondary" (BCCL
-# Moonidih, added in Phase 7 so the Regulator has more than one mine to
-# aggregate across — research/saumy/09-changes-5-sep.md Decision #13's
-# "Regulator scope" note).
+# `mine: "secondary"` puts that seed user on the second demo mine (BCCL)
+# instead of the default primary one (ECL).
 SEED_USERS = [
-    {"role": "worker", "phone": "9990000001", "full_name": "Test Worker", "role_title": "Worker"},
+    {"role": "worker", "phone": "9990000001", "full_name": "Test Worker"},
     {"role": "safety_officer", "email": "officer@example.com", "full_name": "Test Mine Safety Officer"},
     {"role": "corporate_manager", "email": "corporate@example.com", "full_name": "Test Corporate Manager (ECL)"},
     {
@@ -58,7 +51,7 @@ async def ensure_mine_levels_seeded(mine: Mine) -> None:
 
 
 async def seed_users() -> None:
-    subsidiary, primary_mine = await ensure_placeholder_org()
+    primary_mine = await ensure_placeholder_mine()
     secondary_mine = await ensure_second_demo_mine()
     await ensure_mine_levels_seeded(primary_mine)
     await ensure_mine_levels_seeded(secondary_mine)
@@ -77,38 +70,29 @@ async def seed_users() -> None:
         if seed.get("phone"):
             conditions.append({"phone": seed["phone"]})
 
-        # Scope per Decision #12/#11: Worker, Safety Officer, and Corporate
-        # Management are all mine-scoped via a real MineAssignment (Decision
-        # #11 explicitly rejects subsidiary-based scoping — the legacy
-        # subsidiary_id below is unused by any route, kept only until
-        # deleted). Regulator and Admin get neither: Regulator's scope is
-        # derived, not assigned (Decision #13's "Regulator scope" note —
-        # every mine with an active Corporate Management assignment), and
-        # Admin is genuinely global.
-        is_mine_scoped = seed["role"] in ("worker", "safety_officer", "corporate_manager")
-        is_subsidiary_scoped = seed["role"] == "corporate_manager"
-
         existing = await User.find_one({"$or": conditions}) if conditions else None
         if existing:
             print(f"  [skip] {seed['role']:<22} {identifier} (already exists)")
-            user = existing
-        else:
-            user = await User(
-                email=seed.get("email"),
-                phone=seed.get("phone"),
-                password_hash=hash_password(TEST_PASSWORD),
-                role=seed["role"],
-                mine_id=mine.id if is_mine_scoped else None,
-                subsidiary_id=subsidiary.id if is_subsidiary_scoped else None,
-                full_name=seed.get("full_name"),
-                role_title=seed.get("role_title"),
-                is_guest=False,
-                active=True,
-            ).insert()
-            print(f"  [new]  {seed['role']:<22} {identifier}")
+            continue
 
-        if is_mine_scoped:
-            await ensure_mine_assignment(user, mine.id)
+        user = User(
+            email=seed.get("email"),
+            phone=seed.get("phone"),
+            password_hash=hash_password(TEST_PASSWORD),
+            role=seed["role"],
+            full_name=seed.get("full_name"),
+            active=True,
+        )
+
+        profile = empty_profile_for_role(seed["role"])
+        if seed["role"] in ("worker", "safety_officer"):
+            profile.mine = mine.id
+        elif seed["role"] == "corporate_manager":
+            profile.mines = [mine.id]
+        set_profile(user, profile)
+
+        await user.insert()
+        print(f"  [new]  {seed['role']:<22} {identifier}")
 
     print(f"\nPassword for all seeded users: {TEST_PASSWORD}\n")
 

@@ -23,13 +23,3 @@ export const ROLES: RoleMeta[] = [
   { userType: 'regulator', title: 'Regulatory Authority', subtitle: 'DGMS / CPCB — read-only' },
   { userType: 'admin', title: 'Admin', subtitle: 'System & User Provisioning' },
 ]
-
-// Where each role lands after login. Kept here (not in a component) so both
-// the guest picker and the post-login redirect agree on the same mapping.
-export const DASHBOARD_PATH_BY_ROLE: Record<UserType, string> = {
-  worker: '/worker',
-  safety_officer: '/dashboard',
-  corporate_manager: '/dashboard',
-  regulator: '/dashboard',
-  admin: '/dashboard',
-}

@@ -5,7 +5,6 @@ from ..models.user import User
 from ..schemas.auth import (
     CurrentUserResponse,
     GoogleLoginRequest,
-    GuestLoginRequest,
     LoginRequest,
     TokenResponse,
 )
@@ -36,17 +35,6 @@ async def google_login(payload: GoogleLoginRequest) -> TokenResponse:
     return TokenResponse(access_token=token)
 
 
-@router.post("/guest", response_model=TokenResponse)
-async def guest_login(payload: GuestLoginRequest) -> TokenResponse:
-    try:
-        token = await auth_service.login_as_guest(payload.role)
-    except auth_service.AuthError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
-    return TokenResponse(access_token=token)
-
-
 @router.post("/logout")
 async def logout(user: User = Depends(get_current_user)) -> dict:
     # JWT is stateless — there's nothing to invalidate server-side. This exists so
@@ -58,12 +46,13 @@ async def logout(user: User = Depends(get_current_user)) -> dict:
 @router.get("/me", response_model=CurrentUserResponse)
 async def me(user: User = Depends(get_current_user)) -> CurrentUserResponse:
     mine_ids = await accessible_mine_ids(user)
+    is_single_mine_role = user.role in ("worker", "safety_officer")
     return CurrentUserResponse(
         id=str(user.id),
         email=user.email,
         phone=user.phone,
         role=user.role,
         full_name=user.full_name,
-        is_guest=user.is_guest,
-        mine_ids=[str(mine_id) for mine_id in mine_ids],
+        mine=str(mine_ids[0]) if is_single_mine_role and mine_ids else None,
+        mines=[str(mine_id) for mine_id in mine_ids] if not is_single_mine_role else [],
     )

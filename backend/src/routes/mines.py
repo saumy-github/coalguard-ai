@@ -2,10 +2,9 @@ from fastapi import APIRouter, Depends
 
 from ..auth.dependencies import accessible_mine_ids, require_role
 from ..models.mine import Mine
-from ..models.user import User
+from ..models.user import User, get_profile, set_profile
 from ..schemas.mines import CreateMineRequest, MineResponse
 from ..services import mine_service
-from ..services.mine_assignment_service import ensure_mine_assignment
 
 router = APIRouter(prefix="/mines", tags=["mines"])
 
@@ -32,7 +31,10 @@ async def create_mine(
 ) -> MineResponse:
     mine = await mine_service.create_mine(name=payload.name, lat=payload.lat, lng=payload.lng)
     if user.role == "corporate_manager":
-        # Decision #14, verbatim: creating a mine automatically grants the
-        # creator an active Corporate Management assignment to it.
-        await ensure_mine_assignment(user, mine.id)
+        # Creating a mine automatically grants the creator access to it.
+        profile = get_profile(user)
+        if mine.id not in profile.mines:
+            profile.mines.append(mine.id)
+            set_profile(user, profile)
+            await user.save()
     return _to_response(mine)

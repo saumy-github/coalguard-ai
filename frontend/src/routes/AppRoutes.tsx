@@ -16,7 +16,7 @@ import {
   RegulatoryReportsPage,
   RegulatoryProfilePage,
 } from '../components/views/RegulatoryDashboard';
-import { AdminUsersPage, AdminMinesPage, AdminAccessPage, AdminProfilePage } from '../components/views/AdminDashboard';
+import { AdminUsersPage, AdminMinesPage, AdminProfilePage } from '../components/views/AdminDashboard';
 
 // research/saumy/09-changes-5-sep.md Decision #16's route tree, built out one
 // role at a time as each gets real (non-mock) pages to route to — see
@@ -90,7 +90,6 @@ export const AppRoutes = () => (
         reader anywhere in the app (deleted in Phase 9). */}
     <Route path="/dashboard/admin/users" element={<RequireRole role="admin"><AdminUsersPage /></RequireRole>} />
     <Route path="/dashboard/admin/mines" element={<RequireRole role="admin"><AdminMinesPage /></RequireRole>} />
-    <Route path="/dashboard/admin/access" element={<RequireRole role="admin"><AdminAccessPage /></RequireRole>} />
     <Route path="/dashboard/admin/profile" element={<RequireRole role="admin"><AdminProfilePage /></RequireRole>} />
 
     <Route path="*" element={<Navigate to="/" replace />} />

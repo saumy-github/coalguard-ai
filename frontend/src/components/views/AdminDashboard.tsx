@@ -17,22 +17,24 @@ interface AdminUser {
   phone: string | null;
   role: UserType;
   full_name: string | null;
-  is_guest: boolean;
   active: boolean;
-  mine_ids: string[];
+  mine: string | null;
+  mines: string[];
 }
 
-interface MineAssignment {
-  id: string;
-  user_id: string;
-  mine_id: string;
-  role: string;
-  active: boolean;
-}
+const SINGLE_MINE_ROLES: UserType[] = ['worker', 'safety_officer'];
+const MULTI_MINE_ROLES: UserType[] = ['corporate_manager', 'regulator'];
 
-// Only these roles are mine-scoped via a real MineAssignment (Decision #12) —
-// Regulator's scope is derived (Phase 7), Admin's is global.
-const MINE_SCOPED_ROLES: UserType[] = ['worker', 'safety_officer', 'corporate_manager'];
+function mineSummary(u: AdminUser, mines: Mine[]): string {
+  if (SINGLE_MINE_ROLES.includes(u.role)) {
+    const mine = mines.find((m) => m.id === u.mine);
+    return u.mine ? mine?.name ?? 'Assigned' : 'No mine assigned';
+  }
+  if (MULTI_MINE_ROLES.includes(u.role)) {
+    return `${u.mines.length} mine(s)`;
+  }
+  return '—';
+}
 
 function useAdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -71,7 +73,8 @@ function useAdminMines() {
   return { mines, reload };
 }
 
-// 1. Users — /dashboard/admin/users — real directory + provisioning form.
+// Users — /dashboard/admin/users — directory, provisioning, role changes,
+// and mine assignment. New accounts start mine-less; assign a mine after.
 export const AdminUsersPage = () => {
   const { users, reload: reloadUsers } = useAdminUsers();
   const { mines } = useAdminMines();
@@ -80,19 +83,20 @@ export const AdminUsersPage = () => {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserType>('worker');
-  const [newUserMineId, setNewUserMineId] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  const isMineScoped = MINE_SCOPED_ROLES.includes(newUserRole);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [roleDraft, setRoleDraft] = useState<UserType>('worker');
+  const [mineDraft, setMineDraft] = useState('');
+  const [minesDraft, setMinesDraft] = useState<string[]>([]);
+  const [manageError, setManageError] = useState<string | null>(null);
+
+  const selectedUser = users.find((u) => u.id === selectedUserId);
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setCreateError(null);
     if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) return;
-    if (isMineScoped && !newUserMineId) {
-      setError('Select a mine for this role.');
-      return;
-    }
 
     try {
       await api.post('/users', {
@@ -100,7 +104,6 @@ export const AdminUsersPage = () => {
         email: newUserEmail,
         password: newUserPassword,
         role: newUserRole,
-        mine_id: isMineScoped ? newUserMineId : undefined,
       });
       await reloadUsers();
       setNewUserName('');
@@ -108,7 +111,63 @@ export const AdminUsersPage = () => {
       setNewUserPassword('');
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(detail || 'Could not create the user.');
+      setCreateError(detail || 'Could not create the user.');
+    }
+  };
+
+  const selectUser = (userId: string) => {
+    setSelectedUserId(userId);
+    setManageError(null);
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      setRoleDraft(user.role);
+      setMineDraft(user.mine ?? '');
+      setMinesDraft(user.mines);
+    }
+  };
+
+  const handleChangeRole = async () => {
+    if (!selectedUserId) return;
+    setManageError(null);
+    try {
+      await api.patch(`/users/${selectedUserId}/role`, { role: roleDraft });
+      await reloadUsers();
+      // Backend resets the profile on role change — mirror that locally.
+      setMineDraft('');
+      setMinesDraft([]);
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setManageError(detail || 'Could not change role.');
+    }
+  };
+
+  const handleSaveMine = async () => {
+    if (!selectedUserId) return;
+    setManageError(null);
+    try {
+      await api.patch(`/users/${selectedUserId}/mine`, { mine_id: mineDraft || null });
+      await reloadUsers();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setManageError(detail || 'Could not update mine.');
+    }
+  };
+
+  const toggleMine = (mineId: string) => {
+    setMinesDraft((current) =>
+      current.includes(mineId) ? current.filter((id) => id !== mineId) : [...current, mineId]
+    );
+  };
+
+  const handleSaveMines = async () => {
+    if (!selectedUserId) return;
+    setManageError(null);
+    try {
+      await api.patch(`/users/${selectedUserId}/mines`, { mine_ids: minesDraft });
+      await reloadUsers();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setManageError(detail || 'Could not update mines.');
     }
   };
 
@@ -116,7 +175,7 @@ export const AdminUsersPage = () => {
     <DashboardLayout>
       <PageLayout
         title="Users & Provisioning"
-        subtitle="Create accounts through the same delegated hierarchy every role uses — Admin may create any role."
+        subtitle="Create accounts through the same delegated hierarchy every role uses — Admin may create any role. New accounts start mine-less; assign a mine below afterward."
         badge="User Management"
       >
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4">
@@ -145,18 +204,6 @@ export const AdminUsersPage = () => {
                 />
               </div>
 
-              {isMineScoped && (
-                <div>
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Mine</label>
-                  <Dropdown
-                    value={newUserMineId}
-                    onChange={setNewUserMineId}
-                    options={mines.map((mine) => ({ value: mine.id, label: mine.name }))}
-                    placeholder="Select a mine..."
-                  />
-                </div>
-              )}
-
               <div>
                 <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Email</label>
                 <input
@@ -180,7 +227,7 @@ export const AdminUsersPage = () => {
                 />
               </div>
 
-              {error && <p className="text-sm text-rose-400">{error}</p>}
+              {createError && <p className="text-sm text-rose-400">{createError}</p>}
 
               <button
                 type="submit"
@@ -193,21 +240,93 @@ export const AdminUsersPage = () => {
           </div>
 
           <div className="md:col-span-7 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
-            <SectionHeader title="Authorized Operator Directory" subtitle="Every registered user and their mine assignments." />
+            <SectionHeader title="Authorized Operator Directory" subtitle="Click a user to manage their role and mine(s)." />
             <div className="space-y-3">
               {users.map((u) => (
-                <div key={u.id} className="glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono">
+                <button
+                  key={u.id}
+                  onClick={() => selectUser(u.id)}
+                  className={`w-full text-left glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono transition-colors ${
+                    selectedUserId === u.id ? 'border border-orange-500/40' : ''
+                  }`}
+                >
                   <div>
                     <h4 className="font-bold text-white tracking-wide text-base">{u.full_name || u.email || u.phone || 'Unnamed'}</h4>
                     <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-                      {userTypeLabel(u.role)} • {u.email || u.phone || 'no contact'} • {u.mine_ids.length} mine(s)
+                      {userTypeLabel(u.role)} • {u.email || u.phone || 'no contact'} • {mineSummary(u, mines)}
                     </p>
                   </div>
                   <StatusBadge status={u.active ? 'safe' : 'critical'} label={u.active ? 'ACTIVE' : 'INACTIVE'} />
-                </div>
+                </button>
               ))}
             </div>
           </div>
+
+          {selectedUser && (
+            <div className="md:col-span-12 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
+              <SectionHeader
+                title={`Manage ${selectedUser.full_name || selectedUser.email || 'User'}`}
+                subtitle="Role and mine scope for this account."
+              />
+
+              <div className="space-y-3">
+                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Role</label>
+                <div className="flex items-center gap-3">
+                  <Dropdown
+                    value={roleDraft}
+                    onChange={(v) => setRoleDraft(v as UserType)}
+                    options={ROLES.map((role) => ({ value: role.userType, label: role.title }))}
+                    className="flex-1"
+                  />
+                  <button onClick={handleChangeRole} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0">
+                    Update Role
+                  </button>
+                </div>
+              </div>
+
+              {SINGLE_MINE_ROLES.includes(selectedUser.role) && (
+                <div className="space-y-3 pt-4 border-t border-white/10">
+                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Mine</label>
+                  <div className="flex items-center gap-3">
+                    <Dropdown
+                      value={mineDraft}
+                      onChange={setMineDraft}
+                      options={mines.map((mine) => ({ value: mine.id, label: mine.name }))}
+                      placeholder="No mine assigned"
+                      className="flex-1"
+                    />
+                    <button onClick={handleSaveMine} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0">
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {MULTI_MINE_ROLES.includes(selectedUser.role) && (
+                <div className="space-y-3 pt-4 border-t border-white/10">
+                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Mines</label>
+                  <div className="space-y-2">
+                    {mines.map((mine) => (
+                      <label key={mine.id} className="flex items-center gap-3 text-sm text-slate-300 font-mono">
+                        <input
+                          type="checkbox"
+                          checked={minesDraft.includes(mine.id)}
+                          onChange={() => toggleMine(mine.id)}
+                          className="accent-orange-500"
+                        />
+                        {mine.name}
+                      </label>
+                    ))}
+                  </div>
+                  <button onClick={handleSaveMines} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold">
+                    Save Mines
+                  </button>
+                </div>
+              )}
+
+              {manageError && <p className="text-sm text-rose-400">{manageError}</p>}
+            </div>
+          )}
         </div>
       </PageLayout>
     </DashboardLayout>
@@ -299,145 +418,7 @@ export const AdminMinesPage = () => {
   );
 };
 
-// 3. Access — /dashboard/admin/access — role changes + mine assignment management.
-export const AdminAccessPage = () => {
-  const { users, reload: reloadUsers } = useAdminUsers();
-  const { mines } = useAdminMines();
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [roleDraft, setRoleDraft] = useState<UserType>('worker');
-  const [assignMineId, setAssignMineId] = useState('');
-  const [assignments, setAssignments] = useState<MineAssignment[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  const selectedUser = users.find((u) => u.id === selectedUserId);
-
-  const loadAssignments = async (userId: string) => {
-    if (!userId) {
-      setAssignments([]);
-      return;
-    }
-    const { data } = await api.get<MineAssignment[]>('/mine-assignments', { params: { user_id: userId } });
-    setAssignments(data);
-  };
-
-  const selectUser = async (userId: string) => {
-    setSelectedUserId(userId);
-    setError(null);
-    const user = users.find((u) => u.id === userId);
-    if (user) setRoleDraft(user.role);
-    await loadAssignments(userId);
-  };
-
-  const handleChangeRole = async () => {
-    if (!selectedUserId) return;
-    setError(null);
-    try {
-      await api.patch(`/users/${selectedUserId}/role`, { role: roleDraft });
-      await reloadUsers();
-    } catch (err) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(detail || 'Could not change role.');
-    }
-  };
-
-  const handleAddAssignment = async () => {
-    if (!selectedUserId || !assignMineId) return;
-    await api.post('/mine-assignments', { user_id: selectedUserId, mine_id: assignMineId });
-    setAssignMineId('');
-    await Promise.all([loadAssignments(selectedUserId), reloadUsers()]);
-  };
-
-  const handleRevoke = async (assignmentId: string) => {
-    await api.delete(`/mine-assignments/${assignmentId}`);
-    await Promise.all([loadAssignments(selectedUserId), reloadUsers()]);
-  };
-
-  return (
-    <DashboardLayout>
-      <PageLayout
-        title="Access Management"
-        subtitle="Change a user's role, or grant/revoke their mine assignments directly."
-        badge="Access"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4">
-          <div className="md:col-span-5 glass-panel rounded-3xl p-6 sm:p-8 space-y-4">
-            <SectionHeader title="Select a User" />
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {users.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => selectUser(u.id)}
-                  className={`w-full text-left p-3 rounded-xl text-sm font-mono transition-colors ${
-                    selectedUserId === u.id ? 'bg-orange-500/20 border border-orange-500/40 text-white' : 'bg-black/20 border border-white/5 text-slate-300 hover:border-white/20'
-                  }`}
-                >
-                  {u.full_name || u.email || u.phone} — <span className="text-slate-500">{userTypeLabel(u.role)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="md:col-span-7 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
-            {!selectedUser ? (
-              <p className="text-sm text-slate-400">Select a user to manage their role and mine assignments.</p>
-            ) : (
-              <>
-                <SectionHeader title={selectedUser.full_name || selectedUser.email || 'User'} subtitle="Role and mine assignments" />
-
-                <div className="space-y-3">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Role</label>
-                  <div className="flex items-center gap-3">
-                    <Dropdown
-                      value={roleDraft}
-                      onChange={(v) => setRoleDraft(v as UserType)}
-                      options={ROLES.map((role) => ({ value: role.userType, label: role.title }))}
-                      className="flex-1"
-                    />
-                    <button onClick={handleChangeRole} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0">
-                      Update
-                    </button>
-                  </div>
-                  {error && <p className="text-sm text-rose-400">{error}</p>}
-                </div>
-
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Mine Assignments</label>
-                  {assignments.length === 0 && <p className="text-sm text-slate-500">No active mine assignments.</p>}
-                  {assignments.map((a) => {
-                    const mine = mines.find((m) => m.id === a.mine_id);
-                    return (
-                      <div key={a.id} className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 text-sm font-mono">
-                        <span className="text-slate-300">{mine?.name ?? a.mine_id}</span>
-                        <button onClick={() => handleRevoke(a.id)} className="text-xs text-rose-400 hover:text-rose-300 font-bold">
-                          Revoke
-                        </button>
-                      </div>
-                    );
-                  })}
-
-                  <div className="flex items-center gap-3 pt-2">
-                    <Dropdown
-                      value={assignMineId}
-                      onChange={setAssignMineId}
-                      options={mines.map((mine) => ({ value: mine.id, label: mine.name }))}
-                      placeholder="Select a mine to assign..."
-                      className="flex-1"
-                    />
-                    <button onClick={handleAddAssignment} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0">
-                      Assign
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </PageLayout>
-    </DashboardLayout>
-  );
-};
-
-// 4. Profile — /dashboard/admin/profile — read-only, sourced only from
+// 3. Profile — /dashboard/admin/profile — read-only, sourced only from
 // GET /auth/me's real fields, same treatment as every other role.
 export const AdminProfilePage = () => {
   const user = useAuthStore((state) => state.user);
@@ -457,7 +438,6 @@ export const AdminProfilePage = () => {
             <div>
               <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
               <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
-              {user?.is_guest && <p className="text-xs text-slate-400 mt-1">Guest session</p>}
             </div>
           </div>
 

@@ -10,10 +10,7 @@ class CreateUserRequest(BaseModel):
     phone: Optional[str] = None
     password: str
     role: UserType
-    mine_id: Optional[str] = None
-    subsidiary_id: Optional[str] = None
     full_name: Optional[str] = None
-    role_title: Optional[str] = None
 
     @model_validator(mode="after")
     def require_email_or_phone(self) -> "CreateUserRequest":
@@ -28,11 +25,21 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     role: UserType
     full_name: Optional[str] = None
-    role_title: Optional[str] = None
-    is_guest: bool
     active: bool
-    mine_ids: list[str] = []
+    # Mine scope exactly as stored — mine (worker/officer) or mines
+    # (corporate/regulator) is populated depending on role, never both, never
+    # a synthetic flattened list invented for display convenience.
+    mine: Optional[str] = None
+    mines: list[str] = []
 
 
 class ChangeRoleRequest(BaseModel):
     role: UserType
+
+
+class UpdateUserMineRequest(BaseModel):
+    mine_id: Optional[str] = None
+
+
+class UpdateUserMinesRequest(BaseModel):
+    mine_ids: list[str] = []

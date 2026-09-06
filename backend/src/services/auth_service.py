@@ -1,7 +1,6 @@
 from ..auth.google import verify_google_token
-from ..auth.guest import get_guest_user
 from ..auth.security import create_access_token, verify_password
-from ..models.user import User, UserType
+from ..models.user import User
 
 
 class AuthError(Exception):
@@ -46,13 +45,6 @@ async def login_with_google(id_token_str: str) -> str:
         user.google_id = google_id
         await user.save()
 
-    return _issue_token(user)
-
-
-async def login_as_guest(role: UserType) -> str:
-    user = await get_guest_user(role)
-    if user is None:
-        raise AuthError(f"No guest account exists for role '{role}'")
     return _issue_token(user)
 
 
