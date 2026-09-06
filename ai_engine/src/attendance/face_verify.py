@@ -75,8 +75,15 @@ def verify_identity(
     Returns:
         Tuple of (verified: bool, message: str).
     """
-    ref_path = REGISTERED_DIR / f"{worker_id}.jpg"
-    if not ref_path.exists():
+    # Accept .jpg, .jpeg, or .png — whichever was uploaded by HR
+    ref_path = None
+    for ext in (".jpg", ".jpeg", ".png"):
+        candidate = REGISTERED_DIR / f"{worker_id}{ext}"
+        if candidate.exists():
+            ref_path = candidate
+            break
+
+    if ref_path is None:
         return (
             False,
             f"No registered face on file for worker '{worker_id}'. "
