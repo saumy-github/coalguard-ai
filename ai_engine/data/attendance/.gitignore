@@ -1,0 +1,5 @@
+# Ignore all image files in registered_faces and temp_selfies to prevent accidental leak of biometric data
+registered_faces/*
+!registered_faces/.gitkeep
+temp_selfies/*
+!temp_selfies/.gitkeep
