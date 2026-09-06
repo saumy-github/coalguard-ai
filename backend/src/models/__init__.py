@@ -5,6 +5,7 @@ keeping their own list — add a new collection once, in this file, and it's
 registered everywhere automatically.
 """
 
+from .attendance import AttendanceRecord
 from .inspection import Inspection
 from .mine import Mine, Subsidiary
 from .mine_assignment import MineAssignment
@@ -24,6 +25,7 @@ ALL_MODELS = [
     SiteIssue,
     Inspection,
     RegulatoryReport,
+    AttendanceRecord,
 ]
 
 __all__ = [
@@ -36,5 +38,7 @@ __all__ = [
     "SiteIssue",
     "Inspection",
     "RegulatoryReport",
+    "AttendanceRecord",
     "ALL_MODELS",
 ]
+

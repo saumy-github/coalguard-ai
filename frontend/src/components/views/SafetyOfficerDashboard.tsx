@@ -12,8 +12,14 @@ import {
   AlertTriangle,
   ShieldAlert,
   HardHat,
-  ChevronRight
+  ChevronRight,
+  Users,
+  CheckCircle2,
+  MapPin,
+  Clock
 } from 'lucide-react';
+import { api } from '../../utils/api';
+
 
 function useCombinedIssues() {
   const [issues, setIssues] = useState<UnifiedIssue[]>([]);
@@ -35,6 +41,22 @@ function useCombinedIssues() {
 // 1. Dashboard Overview — /dashboard/safety
 export const SafetyOverviewPage = () => {
   const issues = useCombinedIssues();
+  const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadAttendance = async () => {
+      try {
+        const { data } = await api.get<any[]>('/attendance/today');
+        if (Array.isArray(data)) {
+          setTodayAttendance(data);
+        }
+      } catch {
+        // Non-critical
+      }
+    };
+    loadAttendance();
+  }, []);
+
   const openIssues = issues.filter((issue) => issue.status === 'open');
   const openSiteCount = openIssues.filter((issue) => issue.kind === 'Site').length;
   const openPersonCount = openIssues.filter((issue) => issue.kind === 'Person').length;
@@ -57,6 +79,14 @@ export const SafetyOverviewPage = () => {
       icon: <HardHat className="w-5 h-5" />,
       status: openPersonCount > 0 ? 'warning' : 'safe',
       statusLabel: openPersonCount > 0 ? 'ATTENTION' : 'CLEAR',
+    },
+    {
+      title: 'Workers On-Site Today',
+      value: `${todayAttendance.length}`,
+      subtext: 'Biometric & geofence verified',
+      icon: <Users className="w-5 h-5" />,
+      status: 'safe',
+      statusLabel: 'VERIFIED',
     },
   ];
 
@@ -92,7 +122,8 @@ export const SafetyOverviewPage = () => {
           ) : undefined
         }
       >
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
+        {/* Recent Unresolved Issues */}
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 mb-8">
           <SectionHeader
             title="Recent Unresolved Issues"
             subtitle="Most severe and most recent open items."
@@ -115,10 +146,66 @@ export const SafetyOverviewPage = () => {
             ))}
           </div>
         </div>
+
+        {/* Live On-Site Attendance Panel */}
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
+          <SectionHeader
+            title="On-Site Shift Attendance"
+            subtitle="Workers physically verified on-site via facial recognition and GPS geofence."
+          />
+          {todayAttendance.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-sm">
+              <Users className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+              <p>No workers have clocked in on-site yet today.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-800/80">
+              {todayAttendance.map((record) => (
+                <div key={record.id} className="py-3.5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-400 font-bold text-xs uppercase">
+                      {record.worker_name?.slice(0, 2) || 'WK'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{record.worker_name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">
+                          ID: {record.worker_id}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-amber-400" />
+                          <span>{record.mine_name || 'ECL Sector 7G'}</span>
+                        </span>
+                        <span className="text-slate-500">•</span>
+                        <span className="flex items-center gap-1 font-mono">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>{new Date(record.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] font-mono text-green-400 bg-green-950/60 border border-green-700/60 px-2 py-1 rounded-lg">
+                      {record.distance_from_site_m ?? 0}m (Geofence OK)
+                    </span>
+                    <span className="px-2 py-1 rounded-lg text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/40 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Verified</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </PageLayout>
     </DashboardLayout>
   );
 };
+
 
 // 2. Safety Issues — /dashboard/safety/issues — full combined queue
 export const SafetyIssuesPage = () => {

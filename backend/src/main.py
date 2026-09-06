@@ -16,6 +16,7 @@ from .routes.regulatory_reports import router as regulatory_reports_router
 from .routes.site_issues import router as site_issues_router
 from .routes.inspections import router as inspections_router
 from .routes.users import router as users_router
+from .routes.attendance import router as attendance_router
 
 
 @asynccontextmanager
@@ -47,6 +48,7 @@ app.include_router(person_issues_router)
 app.include_router(regulatory_reports_router)
 app.include_router(site_issues_router)
 app.include_router(inspections_router)
+app.include_router(attendance_router)
 
 
 @app.get("/health")

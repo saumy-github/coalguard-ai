@@ -357,3 +357,41 @@ async def attendance_mark(
         "selfie_saved": selfie_path.name,
         "message": "Attendance marked successfully.",
     }
+
+
+@app.post("/api/attendance/register-face", tags=["Attendance"])
+async def register_face(
+    worker_id: str = Form(..., description="Unique worker ID (e.g. 'saumy', 'worker_001')."),
+    file: UploadFile = File(..., description="Reference face photo (.jpg, .jpeg, .png)."),
+) -> Dict[str, Any]:
+    """Upload and register a worker's reference facial photo."""
+    from src.attendance.face_verify import REGISTERED_DIR
+
+    clean_id = worker_id.strip().lower()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="Worker ID cannot be empty.")
+
+    # Determine file extension
+    filename = file.filename or ""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png"]:
+        ext = ".jpg"
+
+    target_path = REGISTERED_DIR / f"{clean_id}{ext}"
+    try:
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+        with open(target_path, "wb") as f:
+            f.write(content)
+        logger.info("Registered face photo for worker=%s saved to %s", clean_id, target_path)
+    except Exception as exc:
+        logger.error("Failed to save reference photo for %s: %s", clean_id, exc)
+        raise HTTPException(status_code=500, detail=f"Failed to save reference photo: {exc}")
+
+    return {
+        "status": "success",
+        "worker_id": clean_id,
+        "filename": target_path.name,
+        "message": f"Reference face photo registered for worker '{clean_id}'.",
+    }
