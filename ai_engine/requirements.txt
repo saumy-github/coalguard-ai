@@ -22,3 +22,8 @@ langchain-groq==0.1.5
 chromadb==0.5.0
 sentence-transformers==3.0.0
 pypdf==4.2.0
+
+# ── Attendance: Liveness + Face Verification ─────────────
+mediapipe==0.10.14
+deepface==0.0.93
+tf-keras==2.18.0
