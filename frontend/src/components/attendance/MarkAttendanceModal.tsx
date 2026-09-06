@@ -11,8 +11,10 @@ import {
   Crosshair,
   UserCheck,
   Navigation,
-  Sparkles
+  Sparkles,
+  ArrowLeft
 } from 'lucide-react';
+
 import { api } from '../../utils/api';
 import { useAuthStore } from '../../store/authStore';
 
@@ -289,7 +291,15 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
         
         {/* Header */}
         <div className="p-4 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center space-x-1 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition text-xs font-bold mr-1"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
             <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
               <Crosshair className="w-5 h-5 animate-pulse" />
             </div>
@@ -303,10 +313,12 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition"
+            title="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+
 
         {/* Viewfinder Section */}
         <div className="relative aspect-4/3 w-full bg-black overflow-hidden flex items-center justify-center">
@@ -504,26 +516,47 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
           {/* Action Buttons */}
           <div className="flex items-center space-x-3 pt-1">
             {scanState === 'idle' && (
-              <button
-                type="button"
-                onClick={startBiometricSequence}
-                className="flex-1 btn-primary-earth py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
-              >
-                <Camera className="w-5 h-5" />
-                <span>Mark Attendance Now</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn-glass px-5 py-3 rounded-xl text-sm font-bold text-slate-300 hover:text-white flex items-center justify-center space-x-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={startBiometricSequence}
+                  className="flex-1 btn-primary-earth py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>Mark Attendance Now</span>
+                </button>
+              </>
             )}
 
             {scanState === 'error' && (
-              <button
-                type="button"
-                onClick={startBiometricSequence}
-                className="flex-1 btn-primary-earth py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>Retry Verification</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn-glass px-5 py-3 rounded-xl text-sm font-bold text-slate-300 hover:text-white flex items-center justify-center space-x-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={startBiometricSequence}
+                  className="flex-1 btn-primary-earth py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Retry Verification</span>
+                </button>
+              </>
             )}
+
 
             {scanState === 'success' && (
               <button

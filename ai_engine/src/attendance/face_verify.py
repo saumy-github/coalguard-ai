@@ -113,28 +113,36 @@ def verify_identity(
     verified_flag = False
 
     for idx, frame in enumerate(candidates_to_test):
-        tmp_live = TEMP_SELFIES_DIR / f"__live_{worker_id}_{int(time.time())}_{idx}.jpg"
-        cv2.imwrite(str(tmp_live), frame)
-        try:
-            result = DeepFace.verify(
-                img1_path=str(tmp_live),
-                img2_path=str(ref_path),
-                model_name=FACE_MODEL,
-                enforce_detection=False,
-                detector_backend="opencv",
-            )
-            v = result.get("verified", False)
-            dist = round(result.get("distance", 1.0), 4)
-            if dist < best_distance:
-                best_distance = dist
-            if v or dist <= 0.40:
-                verified_flag = True
-                break
-        except Exception as exc:
-            logger.warning("DeepFace frame %d error: %s", idx, exc)
-        finally:
-            if tmp_live.exists():
-                tmp_live.unlink()
+        # Test both original and horizontally mirrored orientations to handle webcam mirroring
+        orientations = [frame, cv2.flip(frame, 1)]
+        for o_idx, test_img in enumerate(orientations):
+            tmp_live = TEMP_SELFIES_DIR / f"__live_{worker_id}_{int(time.time())}_{idx}_{o_idx}.jpg"
+            cv2.imwrite(str(tmp_live), test_img)
+            try:
+                result = DeepFace.verify(
+                    img1_path=str(tmp_live),
+                    img2_path=str(ref_path),
+                    model_name=FACE_MODEL,
+                    enforce_detection=False,
+                    detector_backend="opencv",
+                )
+                v = result.get("verified", False)
+                dist = round(result.get("distance", 1.0), 4)
+                if dist < best_distance:
+                    best_distance = dist
+                # Accept if DeepFace says verified or cosine distance <= 0.58 (handles webcam/phone cross-sensor differences)
+                if v or dist <= 0.58:
+                    verified_flag = True
+                    break
+            except Exception as exc:
+                logger.warning("DeepFace frame %d_%d error: %s", idx, o_idx, exc)
+            finally:
+                if tmp_live.exists():
+                    tmp_live.unlink()
+
+        if verified_flag:
+            break
+
 
     logger.info(
         "Identity check — worker=%s  verified=%s  best_distance=%.4f",

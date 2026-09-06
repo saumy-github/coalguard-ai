@@ -24,15 +24,18 @@ api.interceptors.request.use(async (config) => {
   return config
 })
 
-// A 401 means the token is invalid/expired — clear the session so the route
-// guard redirects to /login instead of the app looping on failed requests.
+// A 401 on regular routes means the token is invalid/expired — clear the session
+// so the route guard redirects to /login.
+// EXCEPTION: Attendance verification rejections should NEVER log the user out!
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error?.response?.status === 401) {
+    const isAttendanceCall = error?.config?.url?.includes('/attendance')
+    if (error?.response?.status === 401 && !isAttendanceCall) {
       const { useAuthStore } = await import('../store/authStore')
       useAuthStore.setState({ token: null, user: null })
     }
     return Promise.reject(error)
   }
 )
+

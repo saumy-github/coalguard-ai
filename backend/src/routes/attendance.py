@@ -133,7 +133,14 @@ async def mark_attendance(
             error_detail = err_json.get("detail", error_detail)
         except Exception:
             error_detail = resp.text or error_detail
-        raise HTTPException(status_code=resp.status_code, detail=error_detail)
+        # Use 400 Bad Request for biometric/geofence failures so frontend auth session remains intact
+        rejection_status = (
+            status.HTTP_400_BAD_REQUEST
+            if resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+            else resp.status_code
+        )
+        raise HTTPException(status_code=rejection_status, detail=error_detail)
+
 
     ai_result = resp.json()
 
