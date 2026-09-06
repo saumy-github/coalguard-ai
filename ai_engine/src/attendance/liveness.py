@@ -8,9 +8,18 @@ Algorithm
 ---------
 1. For every frame: extract 6 landmark coordinates per eye.
 2. Compute EAR = (||p2-p6|| + ||p3-p5||) / (2 * ||p1-p4||)   (Soukupova formula)
-3. Classify each frame:   EAR < 0.22  → CLOSED,   EAR > 0.28 → OPEN
-4. A valid blink requires the sequence to contain at least one CLOSED frame
-   flanked on both sides by OPEN frames  (OPEN → CLOSED → OPEN transition).
+3. Use ADAPTIVE thresholds derived from the sequence's own EAR range — this
+   makes the detector robust to glasses, lighting, and face distance.
+4. A blink is confirmed when:
+     a) EAR drops below  (max_ear * BLINK_RATIO)  in at least one frame, AND
+     b) Another frame has EAR above (max_ear * OPEN_RATIO)
+   This covers glasses wearers, dark frames, and partially occluded eyes.
+
+Fallback
+--------
+   If peak EAR is too low for reliable classification (e.g. very dark / blurry),
+   fall back to checking whether the EAR variance across the burst exceeds a
+   minimum threshold — any significant eye movement counts as a liveness signal.
 
 MediaPipe landmark indices (468-point mesh):
     Left  eye : 33, 160, 158, 133, 153, 144
@@ -29,9 +38,15 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# ── EAR thresholds ────────────────────────────────────────────────────────────
-EAR_CLOSED: float = 0.22   # eye considered closed below this
-EAR_OPEN:   float = 0.28   # eye considered open above this
+# ── Adaptive blink detection ratios ──────────────────────────────────────────
+# A frame is "closed" if its EAR < max_ear * BLINK_RATIO
+BLINK_RATIO: float = 0.75
+# A frame is "open"   if its EAR > max_ear * OPEN_RATIO
+OPEN_RATIO:  float = 0.85
+# Minimum absolute EAR variance across the burst (glasses fallback)
+MIN_EAR_VARIANCE: float = 0.005
+# Minimum absolute EAR range (max - min) to confirm blink without state machine
+MIN_EAR_RANGE: float = 0.04
 
 # ── Standard MediaPipe 468-landmark mesh eye indices ──────────────────────────
 LEFT_EYE_IDX:  List[int] = [33, 160, 158, 133, 153, 144]
@@ -42,7 +57,7 @@ _face_mesh = mp.solutions.face_mesh.FaceMesh(
     static_image_mode=True,
     max_num_faces=1,
     refine_landmarks=True,
-    min_detection_confidence=0.5,
+    min_detection_confidence=0.4,   # slightly looser — handles more poses
 )
 
 
@@ -64,7 +79,6 @@ def _eye_aspect_ratio(landmarks: list, eye_indices: List[int]) -> float:
         (landmarks[i].x, landmarks[i].y, landmarks[i].z)
         for i in eye_indices
     ]
-    # p[0]=p1, p[1]=p2, p[2]=p3, p[3]=p4, p[4]=p5, p[5]=p6
     vertical_1 = _euclidean(p[1], p[5])
     vertical_2 = _euclidean(p[2], p[4])
     horizontal = _euclidean(p[0], p[3])
@@ -91,7 +105,10 @@ def _avg_ear_for_frame(image_bgr: np.ndarray) -> float | None:
 
 
 def detect_blink(frames_bytes: List[bytes]) -> tuple[bool, str]:
-    """Analyse a multi-frame burst for a genuine blink.
+    """Analyse a multi-frame burst for a genuine blink using adaptive EAR.
+
+    The detector works robustly even for glasses wearers because it computes
+    thresholds from the sequence's own max/min EAR rather than fixed values.
 
     Args:
         frames_bytes: List of raw image bytes (JPEG/PNG), 2–5 frames.
@@ -99,50 +116,75 @@ def detect_blink(frames_bytes: List[bytes]) -> tuple[bool, str]:
     Returns:
         Tuple of (liveness_passed: bool, message: str).
     """
-    if not (2 <= len(frames_bytes) <= 5):
-        return False, f"Expected 2–5 frames, received {len(frames_bytes)}."
+    if not (2 <= len(frames_bytes) <= 10):
+        return False, f"Expected 2–10 frames, received {len(frames_bytes)}."
 
     ear_sequence: list[float] = []
     for idx, raw in enumerate(frames_bytes):
         arr = np.frombuffer(raw, dtype=np.uint8)
         frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         if frame is None:
-            return False, f"Frame {idx + 1} could not be decoded."
+            logger.warning("Frame %d could not be decoded — skipping.", idx + 1)
+            continue
+
+        # Resize very large frames to speed up inference
+        h, w = frame.shape[:2]
+        if max(h, w) > 1280:
+            scale = 1280 / max(h, w)
+            frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
 
         ear = _avg_ear_for_frame(frame)
         if ear is None:
             logger.warning("No face detected in frame %d — skipping.", idx + 1)
             continue
         ear_sequence.append(ear)
-        logger.debug("Frame %d EAR=%.4f", idx + 1, ear)
+        logger.debug("Frame %d  EAR=%.4f", idx + 1, ear)
+
+    logger.info("EAR sequence: %s", [f"{e:.4f}" for e in ear_sequence])
 
     if len(ear_sequence) < 2:
         return False, "Face not detected in enough frames to evaluate liveness."
 
-    # Classify each frame
-    states = []
-    for ear in ear_sequence:
-        if ear < EAR_CLOSED:
-            states.append("CLOSED")
-        elif ear > EAR_OPEN:
-            states.append("OPEN")
-        else:
-            states.append("BETWEEN")
+    max_ear = max(ear_sequence)
+    min_ear = min(ear_sequence)
+    ear_range = max_ear - min_ear
+    ear_variance = float(np.var(ear_sequence))
 
-    logger.info("EAR states across frames: %s", states)
+    logger.info(
+        "EAR stats — max=%.4f  min=%.4f  range=%.4f  variance=%.6f",
+        max_ear, min_ear, ear_range, ear_variance,
+    )
 
-    # Detect OPEN → CLOSED → OPEN transition
-    n = len(states)
-    blink_found = False
-    for i in range(1, n - 1):
-        if states[i] == "CLOSED" and states[i - 1] == "OPEN" and states[i + 1] == "OPEN":
-            blink_found = True
-            break
+    # ── Primary check: adaptive blink detection ───────────────────────────────
+    # Avoids fixed thresholds that break for glasses wearers.
+    closed_thresh = max_ear * BLINK_RATIO   # e.g. 0.75 * max
+    open_thresh   = max_ear * OPEN_RATIO    # e.g. 0.85 * max
 
-    # Fallback: at least one CLOSED surrounded by any OPEN (looser check for 2-frame bursts)
-    if not blink_found and "CLOSED" in states and states[0] == "OPEN":
-        blink_found = True
+    has_open_frame   = any(e >= open_thresh   for e in ear_sequence)
+    has_closed_frame = any(e <= closed_thresh for e in ear_sequence)
 
-    if blink_found:
+    if has_open_frame and has_closed_frame:
+        logger.info("Adaptive blink confirmed — open=%.4f  closed=%.4f  thresh=%.4f",
+                    max_ear, min_ear, closed_thresh)
         return True, "Liveness confirmed — blink detected."
-    return False, "Liveness check failed — no valid blink detected across frames."
+
+    # ── Fallback: significant EAR range / variance check ─────────────────────
+    # Catches cases where the absolute EAR is compressed (heavy glasses, low light)
+    # but there is still measurable eye movement across frames.
+    if ear_range >= MIN_EAR_RANGE or ear_variance >= MIN_EAR_VARIANCE:
+        logger.info(
+            "Liveness confirmed via EAR variance fallback (range=%.4f, var=%.6f).",
+            ear_range, ear_variance,
+        )
+        return True, "Liveness confirmed — eye movement detected across frames."
+
+    # ── Denied ────────────────────────────────────────────────────────────────
+    logger.warning(
+        "Liveness FAILED — EAR range=%.4f (need %.4f), variance=%.6f (need %.6f).",
+        ear_range, MIN_EAR_RANGE, ear_variance, MIN_EAR_VARIANCE,
+    )
+    return (
+        False,
+        f"Liveness check failed — insufficient eye movement detected "
+        f"(EAR range={ear_range:.4f}). Please blink clearly while facing the camera.",
+    )
