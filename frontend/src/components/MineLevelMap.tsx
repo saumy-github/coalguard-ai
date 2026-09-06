@@ -1,21 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../utils/api';
+import { useAuthStore } from '../store/authStore';
+import { fetchMines, type Mine } from '../utils/regulatoryReports';
 import { PageLayout } from './common/PageLayout';
+import { Dropdown } from './common/Dropdown';
+
+interface SectionLayout {
+  section: number;
+  polygon: [number, number][];
+  centroid: [number, number];
+}
 
 interface MineLevelData {
   level: string;
   section_count: number;
+  boundary: [number, number][];
+  view_box: [number, number, number, number];
+  sections: SectionLayout[];
 }
 
 interface LocatedIssue {
+  mine_id: string;
   level: string;
   section: number;
   status: string;
-}
-
-interface Point {
-  x: number;
-  y: number;
 }
 
 interface Cell {
@@ -38,141 +46,24 @@ const STATUS_COLORS = {
 const CARD_W = 700;
 const CARD_H = 400;
 
-// Deterministic pseudo-random, seeded by level + index — shapes stay stable across
-// re-renders/reloads instead of reshuffling every time (a real "saved layout" would
-// eventually persist these seeds/positions server-side; see backend discussion).
-const rand = (seed: number) => {
-  const x = Math.sin(seed * 99991 + 12345) * 43758.5453;
-  return x - Math.floor(x);
-};
+const MULTI_MINE_ROLES = ['corporate_manager', 'regulator', 'admin'];
 
-const hullOf = (pts: Point[]): Point[] => {
-  const s = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y);
-  const cross = (o: Point, a: Point, b: Point) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const lower: Point[] = [];
-  for (const p of s) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper: Point[] = [];
-  for (let k = s.length - 1; k >= 0; k--) {
-    const p = s[k];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-  lower.pop();
-  upper.pop();
-  return lower.concat(upper);
-};
+const pointsToPath = (points: [number, number][]): string =>
+  points.length ? 'M' + points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L') + 'Z' : '';
 
-const clipHalfPlane = (poly: Point[], dist: (p: Point) => number): Point[] => {
-  const out: Point[] = [];
-  for (let k = 0; k < poly.length; k++) {
-    const curr = poly[k];
-    const prev = poly[(k - 1 + poly.length) % poly.length];
-    const dCurr = dist(curr);
-    const dPrev = dist(prev);
-    const currIn = dCurr <= 0;
-    const prevIn = dPrev <= 0;
-    if (currIn !== prevIn) {
-      const t = dPrev / (dPrev - dCurr);
-      out.push({ x: prev.x + t * (curr.x - prev.x), y: prev.y + t * (curr.y - prev.y) });
-    }
-    if (currIn) out.push(curr);
-  }
-  return out;
-};
+function buildRenderLayout(level: MineLevelData, openSections: Set<number>) {
+  const [viewMinX, viewMinY, viewWidth, viewHeight] = level.view_box;
+  const boundaryPath = pointsToPath(level.boundary);
 
-const polyCentroid = (poly: Point[]): Point => {
-  let area = 0, cx = 0, cy = 0;
-  for (let k = 0; k < poly.length; k++) {
-    const p1 = poly[k], p2 = poly[(k + 1) % poly.length];
-    const cr = p1.x * p2.y - p2.x * p1.y;
-    area += cr;
-    cx += (p1.x + p2.x) * cr;
-    cy += (p1.y + p2.y) * cr;
-  }
-  area *= 0.5;
-  if (Math.abs(area) < 1e-6) {
-    const n = poly.length || 1;
-    return { x: poly.reduce((a, p) => a + p.x, 0) / n, y: poly.reduce((a, p) => a + p.y, 0) / n };
-  }
-  return { x: cx / (6 * area), y: cy / (6 * area) };
-};
-
-// Jitter/shape irregularity — fixed here since there's no tweak panel in the real app.
-// Raise toward 1 for a rougher "real mine" look, lower toward 0 for a tidier grid feel.
-const JITTER = 0.6;
-
-function buildLayout(level: string, count: number, openSections: Set<number>) {
-  const cols = Math.max(3, Math.round(Math.sqrt(count * 1.7)));
-  const spacingX = 96, spacingY = 88, pad = 56;
-
-  const sites: { i: number; cx: number; cy: number; seed: number }[] = [];
-  for (let i = 0; i < count; i++) {
-    const row = Math.floor(i / cols);
-    const idxInRow = i % cols;
-    const col = row % 2 === 0 ? idxInRow : cols - 1 - idxInRow;
-    const seed = level.charCodeAt(0) * 1000 + i * 7;
-    const rx = (rand(seed) - 0.5) * spacingX * 0.55 * JITTER;
-    const ry = (rand(seed + 1) - 0.5) * spacingY * 0.55 * JITTER;
-    sites.push({ i, cx: col * spacingX + pad + rx, cy: row * spacingY + pad + ry, seed });
-  }
-
-  const hull = hullOf(sites.map((s) => ({ x: s.cx, y: s.cy })));
-  const hcx = hull.reduce((a, p) => a + p.x, 0) / hull.length;
-  const hcy = hull.reduce((a, p) => a + p.y, 0) / hull.length;
-  const margin = ((spacingX + spacingY) / 2) * 0.55;
-
-  const segPerEdge = 3;
-  const ring: Point[] = [];
-  for (let e = 0; e < hull.length; e++) {
-    const a = hull[e], b = hull[(e + 1) % hull.length];
-    for (let t = 0; t < segPerEdge; t++) ring.push({ x: a.x + (b.x - a.x) * (t / segPerEdge), y: a.y + (b.y - a.y) * (t / segPerEdge) });
-  }
-  const boundary = ring.map((p, idx) => {
-    const dx = p.x - hcx, dy = p.y - hcy;
-    const dist = Math.hypot(dx, dy) || 1;
-    const ux = dx / dist, uy = dy / dist;
-    const bSeed = level.charCodeAt(0) * 97 + idx * 31;
-    const extra = margin * (0.5 + rand(bSeed) * 0.9) * Math.max(JITTER, 0.25);
-    const outDist = dist + margin * 0.4 + extra;
-    return { x: hcx + ux * outDist, y: hcy + uy * outDist };
-  });
-
-  const viewMinX = Math.min(...boundary.map((p) => p.x)) - 8;
-  const viewMinY = Math.min(...boundary.map((p) => p.y)) - 8;
-  const viewMaxX = Math.max(...boundary.map((p) => p.x)) + 8;
-  const viewMaxY = Math.max(...boundary.map((p) => p.y)) + 8;
-  const viewWidth = viewMaxX - viewMinX;
-  const viewHeight = viewMaxY - viewMinY;
-  const boundaryPath = 'M' + boundary.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('L') + 'Z';
-
-  const voronoiCell = (site: { i: number; cx: number; cy: number }) => {
-    let poly: Point[] = boundary;
-    for (const other of sites) {
-      if (other.i === site.i) continue;
-      const midx = (site.cx + other.cx) / 2, midy = (site.cy + other.cy) / 2;
-      const dx = other.cx - site.cx, dy = other.cy - site.cy;
-      poly = clipHalfPlane(poly, (p) => (p.x - midx) * dx + (p.y - midy) * dy);
-      if (poly.length === 0) break;
-    }
-    return poly;
-  };
-
-  const cells: Cell[] = sites.map((site) => {
-    const poly = voronoiCell(site);
-    const pathD = poly.length ? 'M' + poly.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('L') + 'Z' : '';
-    const label = poly.length ? polyCentroid(poly) : { x: site.cx, y: site.cy };
-    const num = site.i + 1;
-    const status = openSections.has(num) ? 'open' : 'clear';
+  const cells: Cell[] = level.sections.map((section) => {
+    const status = openSections.has(section.section) ? 'open' : 'clear';
     const colors = STATUS_COLORS[status];
     return {
-      key: `${level}-${num}`,
-      num,
-      pathD,
-      leftPct: (((label.x - viewMinX) / viewWidth) * 100).toFixed(2) + '%',
-      topPct: (((label.y - viewMinY) / viewHeight) * 100).toFixed(2) + '%',
+      key: `${level.level}-${section.section}`,
+      num: section.section,
+      pathD: pointsToPath(section.polygon),
+      leftPct: (((section.centroid[0] - viewMinX) / viewWidth) * 100).toFixed(2) + '%',
+      topPct: (((section.centroid[1] - viewMinY) / viewHeight) * 100).toFixed(2) + '%',
       fill: colors.fill,
       stroke: colors.stroke,
       strokeWidth: 1.5,
@@ -181,7 +72,8 @@ function buildLayout(level: string, count: number, openSections: Set<number>) {
   });
 
   const containScale = Math.min(CARD_W / viewWidth, CARD_H / viewHeight);
-  const fitW = viewWidth * containScale, fitH = viewHeight * containScale;
+  const fitW = viewWidth * containScale;
+  const fitH = viewHeight * containScale;
 
   return {
     cells,
@@ -193,6 +85,11 @@ function buildLayout(level: string, count: number, openSections: Set<number>) {
 }
 
 export const MineLevelMap = () => {
+  const user = useAuthStore((state) => state.user);
+  const needsMinePicker = user?.role ? MULTI_MINE_ROLES.includes(user.role) : false;
+
+  const [mines, setMines] = useState<Mine[]>([]);
+  const [selectedMineId, setSelectedMineId] = useState('');
   const [levels, setLevels] = useState<MineLevelData[]>([]);
   const [openLocations, setOpenLocations] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -205,10 +102,26 @@ export const MineLevelMap = () => {
     dragging: false, startX: 0, startY: 0, panX: 0, panY: 0,
   });
 
+  // Multi-mine roles pick a mine first; single-mine roles skip this entirely.
   useEffect(() => {
+    if (!needsMinePicker) return;
+    fetchMines()
+      .then((data) => {
+        setMines(data);
+        setSelectedMineId((current) => current || data[0]?.id || '');
+      })
+      .catch(() => setMines([]));
+  }, [needsMinePicker]);
+
+  useEffect(() => {
+    if (needsMinePicker && !selectedMineId) return;
+
+    const params = needsMinePicker ? { mine_id: selectedMineId } : undefined;
+
     const loadLevels = async () => {
+      setIsLoading(true);
       try {
-        const { data } = await api.get<MineLevelData[]>('/mine-levels');
+        const { data } = await api.get<MineLevelData[]>('/mine-levels', { params });
         setLevels(data);
         if (data.length) setSelectedLevel([...data].sort((a, b) => a.level.localeCompare(b.level))[0].level);
       } finally {
@@ -223,7 +136,10 @@ export const MineLevelMap = () => {
         ]);
         const open = new Set<string>();
         for (const issue of [...personIssues.data, ...siteIssues.data]) {
-          if (issue.status === 'open') open.add(`${issue.level}-${issue.section}`);
+          // Keyed by mine too — level+section numbers can repeat across
+          // different mines, so this must not collapse issues from other
+          // mines onto whichever mine is currently selected.
+          if (issue.status === 'open') open.add(`${issue.mine_id}-${issue.level}-${issue.section}`);
         }
         setOpenLocations(open);
       } catch {
@@ -232,7 +148,7 @@ export const MineLevelMap = () => {
     };
     loadLevels();
     loadOpenIssues();
-  }, []);
+  }, [needsMinePicker, selectedMineId]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -257,17 +173,19 @@ export const MineLevelMap = () => {
 
   const openSectionsForLevel = useMemo(() => {
     const set = new Set<number>();
-    if (!selectedLevel) return set;
+    if (!selectedLevel || (needsMinePicker && !selectedMineId)) return set;
+    const mineId = needsMinePicker ? selectedMineId : null;
     for (const key of openLocations) {
-      const [lvl, sec] = key.split('-');
+      const [keyMineId, lvl, sec] = key.split('-');
+      if (mineId && keyMineId !== mineId) continue;
       if (lvl === selectedLevel) set.add(Number(sec));
     }
     return set;
-  }, [openLocations, selectedLevel]);
+  }, [openLocations, selectedLevel, selectedMineId, needsMinePicker]);
 
   const layout = useMemo(() => {
     if (!activeLevel) return null;
-    return buildLayout(activeLevel.level, activeLevel.section_count, openSectionsForLevel);
+    return buildRenderLayout(activeLevel, openSectionsForLevel);
   }, [activeLevel, openSectionsForLevel]);
 
   const selectedCell = layout?.cells.find((c) => c.key === selectedKey) || null;
@@ -275,6 +193,17 @@ export const MineLevelMap = () => {
   return (
     <PageLayout title="Mine Level Map" subtitle="Underground layout by level and section" badge="Live Layout">
       <div className="space-y-4 mt-4">
+        {needsMinePicker && (
+          <div className="max-w-xs">
+            <Dropdown
+              value={selectedMineId}
+              onChange={(v) => { setSelectedMineId(v); setSelectedLevel(null); setSelectedKey(null); }}
+              options={mines.map((mine) => ({ value: mine.id, label: mine.name }))}
+              placeholder="Select a mine..."
+            />
+          </div>
+        )}
+
         {isLoading && <p className="text-sm font-mono text-slate-400">Loading mine layout…</p>}
         {!isLoading && sortedLevels.length === 0 && (
           <p className="text-sm font-mono text-slate-400">No levels configured for this mine yet.</p>

@@ -118,7 +118,7 @@ All 6 sections below are now complete. Section 0 is the standing list of problem
 
 ---
 
-## 2. Mine / Levels / Map / Geolocation
+## 2. Mine / Levels / Map / Geolocation — Changes Planned items 1–4, 6, 7 DONE (2026-09-07); item 5 blocked
 
 ### 2a. Mine Management
 **Backend** — `Mine` model is deliberately minimal: `name, lat?, lng?` (+ dead legacy `subsidiary_id`). `GET/POST /mines` — admin sees all, corporate_manager/regulator see only their scoped mines; a corporate_manager creating a mine auto-grants themselves a `MineAssignment` to it. No update/delete endpoints. No boundary/geometry fields exist. Matches `lld.md` exactly (doc header claims 2026-09-06 reconciliation, and it held up on inspection).
@@ -152,6 +152,27 @@ A **second, entirely separate** lat/lng capture exists for Attendance (`Attendan
 5. Both geolocation capture points (Inspection, Attendance) are single-snapshot, coordinate-only, not level/section-aware, no history retained.
 6. `LocationPing`/live tracking: confirmed fully unbuilt.
 7. `Subsidiary`/`subsidiary_id` dead legacy fields still present on `Mine`/`User`.
+
+### Changes Planned (discussed 2026-09-06/07 — not yet implemented)
+
+1. **Persist the mine-level diagram server-side instead of generating it client-side every render.** The same Voronoi computation (`MineLevelMap.tsx` today) runs once and its *result* — each section's actual polygon coordinates — gets stored (on `MineLevel` or a related structure) and returned by `GET /mine-levels`. The frontend stops computing shapes at all; it just renders whatever polygons it's given. This makes the diagram real, stable, per-mine data instead of a reproducible-but-fake client computation, and is a genuine architecture improvement, not just a variant of what's there today.
+
+2. **Widen mine/level visibility beyond worker/safety_officer.** `GET /mine-levels` gains a `mine_id` parameter (it currently has none, since it only ever resolves the caller's one implicit mine): worker/officer keep using their single mine as today; `corporate_manager`/`regulator` must supply a `mine_id` that's present in their own `profile.mines`; `admin` may supply any `mine_id`, unrestricted (matching how `/mines` already treats admin). `require_role` widens accordingly. Frontend `MineMapPage` gains a mine-picker for the three roles that don't have one implicit mine.
+   - **Confirmed fix required alongside this (2026-09-07)**: `MineLevelMap.tsx` currently colors a section red by matching an issue's `${level}-${section}` key, with no `mine_id` involved at all — harmless today since only single-mine roles use it, but wrong the moment a multi-mine role can pick between mines (two different mines can both have a "Level A, Section 3"). `PersonIssue`/`SiteIssue` already carry a real `mine_id` field, so this is a frontend-only fix: match on `${mine_id}-${level}-${section}` and filter fetched issues down to the selected mine first. No backend change needed.
+
+3. **New public, unauthenticated endpoint** returning only `{id, name, lat, lng}` per mine — deliberately minimal, no issue data, no scope data, nothing sensitive — so the landing page can show mine locations before login.
+
+4. **Landing page gets a real Leaflet map of India**, plotting every mine from the new public endpoint. This is the first real use of `leaflet`/`react-leaflet` (installed since before this audit, confirmed dead until now).
+   - **Confirmed (2026-09-07)**: built as its own standalone component, `frontend/src/components/IndiaMineMap.tsx`, not inline in `LandingPage.tsx` — so it can be reused or moved to a dedicated page later without duplicating code.
+
+5. **In-mine worker/officer location is modeled as a checkpoint — `current_level` + `current_section` — never GPS.** GPS does not function underground; this is a physical constraint, not a design shortcut. Reuses the same `level`/`section` fields `PersonIssue`/`SiteIssue` already carry. Full reasoning (offline-sync mechanics via the existing Inspections IndexedDB pattern, why Attendance doesn't need this, the verified current geolocation mechanism, PWA status) is written up separately in `research/location-and-pwa-notes-7-sep.md` — not duplicated here.
+   - **Open, deliberately deferred — not decided**: who performs the check-in (the worker themselves, or their Safety Officer setting it for them). Nothing in this item can be phased into concrete steps until this is answered.
+   - Once built, `WorkerReportPage`'s level/section fields should pre-fill from this checkpoint (still editable), instead of requiring manual entry every time.
+   - A demo-only animated "worker moving between sections" visualization is explicitly separate from this real feature — cosmetic, not to be conflated with the actual checkpoint mechanism when either gets built.
+
+6. **Attendance requires no change.** Confirmed: its existing GPS+Haversine geofence check happens at the surface (clock-in), a different, correctly-scoped concern from in-mine section tracking. Not a gap — a verified non-issue.
+
+7. **`MineLevel` creation stays seed-script-only for now — confirmed deliberate, not an oversight (2026-09-07).** The goal right now is only to demonstrate that a real map exists and works, not to build a general "create new mine maps" admin capability. Revisit later if/when adding new mines becomes a real product need.
 
 ---
 
@@ -200,6 +221,14 @@ Does not call ai_engine at all (no CV, no predictive, no RAG) — confirmed via 
 ### Summary — dead backend endpoints across this whole cluster
 `POST /person-issues`, `POST /person-issues/detect`, `POST /site-issues/detect` — all fully implemented, all zero-caller from the frontend. No status/resolve endpoint exists for Person or Site Issues at all (never built, not merely unused).
 
+### Changes Planned (discussed 2026-09-07 — implemented)
+
+1. **Real seed data added for Site/Person Issues — `backend/scripts/seed_issues.py`.** While checking the DB's actual contents (prompted by Section 2's map testing), found `site_issues`(4)/`person_issues`(1)/`regulatory_reports`(3) already populated with leftover manual/undocumented data — not produced by any seed script. Two concrete bugs found in that leftover data: an exact duplicate `SiteIssue` (same mine/level/section/type/severity, twice), and a `SiteIssue` referencing Level B/Section 74 — Level B only has 15 sections, a live example of the already-documented "`MineLevel.section_count` and issue `section` are uncoupled" gap (Section 2).
+   - **Confirmed**: keep the same counts (4 site issues, 1 person issue) but replace the leftover data with a real, idempotent seed script, following the established one-file-per-collection convention (`scripts/index.py`'s own docstring). Neither bug above was reproduced — the new seed data has no duplicate and stays within each level's real `section_count`, and is spread across both demo mines (3 on ECL, 1 on BCCL) rather than all on one mine, so multi-mine viewing (Section 2, Phase 2) has real data to show on both.
+   - The seeded `PersonIssue` is linked to the real seeded worker's `worker_id` (not left null), so the worker's own personal-issue banner (`GET /person-issues/me`) has something real to show in a fresh demo.
+   - **Confirmed not in scope**: `RegulatoryReport` seeding. The leftover 3 regulatory-report documents were dropped and **not replaced** — that model's structure is expected to be rebuilt from scratch when Section 4 gets a real planning pass, so seeding it now would just be thrown away later. See Section 4 below.
+   - Verified live: worker's `GET /person-issues/me` returns their seeded issue; worker's `GET /site-issues` correctly returns only their own mine's 3 (not BCCL's 1); the Section 2 mine-matching fix was independently verified against a synthetic same-level-and-section-but-different-mine collision case (one mine open, the other resolved) and correctly did not cross-contaminate.
+
 ---
 
 ## 4. Regulatory Reports
@@ -213,6 +242,10 @@ Does not call ai_engine at all (no CV, no predictive, no RAG) — confirmed via 
 **Verified gaps**: `reporting_period` is free text — no normalization, so "Sept 2026" vs "September 2026" silently creates two unlinked threads instead of one. Nothing prevents duplicate open submissions for the same mine+period. Regulator's mine-scope is sitewide by design (self-documented in code) — 2+ regulator accounts would see identical data, no per-regulator boundary exists.
 
 **Doc check**: `cleanup-plan.md`'s claim that these dashboards "need a data-layer rework" is stale — they're already fully real. `lld.md`'s description of this feature checked out accurately line-by-line.
+
+### Changes Planned
+
+1. **Seed data deferred, deliberately (confirmed 2026-09-07).** The 3 leftover `RegulatoryReport` documents found in the DB (see Section 3's entry) were dropped and not replaced — this model's structure is expected to be rebuilt from scratch once this section gets a real planning pass, so seeding it now would only be thrown away later. No decisions yet on what that rebuild looks like.
 
 ---
 

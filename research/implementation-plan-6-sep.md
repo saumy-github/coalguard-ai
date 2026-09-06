@@ -120,11 +120,89 @@ Going forward, refer to this whole feature as **"User & Role Management"**, not 
 
 ---
 
-## 2. Mine / Levels / Map / Geolocation — no confirmed decisions yet
+## 2. Mine / Levels / Map / Geolocation — Phases 1–3 DONE (2026-09-07), Phase 4 blocked
 
-## 3. Person Issues / Site Issues / Inspections — no confirmed decisions yet
+### Phase 1 — Persist mine-level diagrams server-side
 
-## 4. Regulatory Reports — no confirmed decisions yet
+**Goal**: `MineLevel` carries real, stored per-section polygon data; the frontend renders it directly instead of generating it.
+
+1. Extend `MineLevel` with the computed layout — e.g. `sections: list[{section: int, polygon: list[tuple[float, float]]}]`.
+2. Port the existing Voronoi generation (seeded points → convex hull → cells) from `MineLevelMap.tsx` into a one-time backend/script computation, run once per `MineLevel` row (existing rows backfilled, new rows generated at creation).
+3. `GET /mine-levels` response includes each level's `sections` polygon data.
+4. `frontend/src/components/MineLevelMap.tsx` — delete the client-side PRNG/convex-hull/Voronoi generation code entirely; render directly from the polygons the API returns.
+
+**Checkpoint**: the map renders identically (or intentionally differently, if layouts get customized later) purely from backend data — no generation logic left in the frontend.
+
+**Confirmed (2026-09-07)**: `MineLevel` creation stays seed-script-only for now, deliberately — no `POST /mine-levels` in this phase. The goal is only to show a real map works, not to build general mine-map-creation tooling yet.
+
+**DONE (2026-09-07)** — the Voronoi generation (seeded jitter → convex hull → half-plane-clipped cells) was ported line-for-line from `MineLevelMap.tsx` into a new `backend/src/services/mine_layout_service.py::generate_level_layout(level, count)`, returning `boundary`, `view_box`, and per-section `polygon`/`centroid`. `MineLevel` gained `boundary`, `view_box`, `sections: list[SectionLayout]`; `MineLevelResponse` mirrors it. `seed_users.py::ensure_mine_levels_seeded` now calls the generator at creation time and stores the result. `MineLevelMap.tsx` had all its generation code (`rand`, `hullOf`, `clipHalfPlane`, `polyCentroid`, `buildLayout`) deleted — it now just converts the returned polygons to SVG `d=` path strings and positions labels from the given centroids (pure display formatting, confirmed no leftover generation logic via grep). `mine_levels` collection dropped and reseeded. Verified live: `GET /mine-levels` returns real per-section polygon/centroid/boundary data for both demo mines' 3 levels each.
+
+---
+
+### Phase 2 — Widen mine/level visibility to all roles
+
+**Goal**: corporate, regulator, and admin can view any mine in their scope, not just worker/officer's one implicit mine.
+
+1. `backend/src/routes/mine_levels.py` — accept a `mine_id` query parameter.
+2. Scope check per role: worker/officer unchanged (their one mine); corporate_manager/regulator must supply a `mine_id` present in their own `profile.mines` (403 otherwise); admin may supply any `mine_id`.
+3. Widen `require_role(...)` on this route to include `corporate_manager`, `regulator`, `admin`.
+4. Frontend `MineMapPage` — add a mine-picker (fetch `GET /mines` first) for the three roles that don't have one implicit mine; worker/officer see no picker, unchanged.
+5. **`MineLevelMap.tsx` fix (confirmed, required for this phase to be correct)**: change the issue-matching key from `${level}-${section}` to `${mine_id}-${level}-${section}`, and filter the fetched `person-issues`/`site-issues` down to the currently-selected mine before matching. `PersonIssue`/`SiteIssue` already carry `mine_id` — no backend change needed, frontend-only.
+
+**Checkpoint**: a corporate/regulator/admin account can select any mine in their scope and see its real level/section map, with issue coloring correctly scoped to that one mine only (verify with two mines that share a level+section number, if seed data allows).
+
+**DONE (2026-09-07)** — `GET /mine-levels` now takes an optional `mine_id` query param: worker/officer unchanged (their one implicit mine via `require_mine_assignment`), corporate/regulator require `mine_id` and get 403 if it's not in their own `accessible_mine_ids`, admin requires `mine_id` with no scope check. `MineLevelMap.tsx` gained a mine-picker (via the shared `fetchMines()` helper) shown only for `corporate_manager`/`regulator`/`admin`; worker/officer see no picker, unchanged. The confirmed issue-matching fix landed as designed — key changed from `${level}-${section}` to `${mine_id}-${level}-${section}`, filtered to the selected mine for multi-mine roles (no filter needed for single-mine roles, since their fetched issues already belong to only their one mine). No backend change was needed for this fix, confirmed — `PersonIssueResponse`/`SiteIssueResponse` already returned `mine_id`. Verified live: worker's `/mine-levels` unchanged (200, no param needed); admin without `mine_id` → 400; admin with a real `mine_id` → 200 with that mine's 3 levels.
+
+---
+
+### Phase 3 — Public mines endpoint + Landing page map
+
+**Goal**: the landing page shows a real map of India with every mine plotted, before login.
+
+1. New unauthenticated route, e.g. `GET /mines/public` — returns only `{id, name, lat, lng}` per mine, nothing else.
+2. `LandingPage.tsx` — add a Leaflet map (first real use of the already-installed `leaflet`/`react-leaflet`), fetch `/mines/public`, plot one marker per mine.
+
+**Checkpoint**: landing page (pre-login) shows a real India map with markers matching the actual mines in the DB.
+
+**DONE (2026-09-07)** — `GET /mines/public` added (no auth dependency at all), reusing the existing `MineResponse` schema. `LandingPage.tsx` gained a "Where We Operate" section with a real `react-leaflet` `MapContainer` centered on India, fetching `/mines/public` and plotting a marker per mine (OpenStreetMap tiles). Needed the standard Leaflet-under-a-bundler fix — re-pointing `L.Icon.Default`'s marker image URLs at Vite-resolved imports, since the default asset paths break under any bundler otherwise. Verified: backend `curl` confirms `/mines/public` returns both demo mines with no Authorization header sent; `tsc --noEmit` and `vite build` both clean; started the dev server and confirmed it serves the page and resolves `react-leaflet`/`leaflet` imports with no console/startup errors. **Not verified**: actual visual rendering in a browser — no browser tooling was available this session, so the map's on-screen appearance itself wasn't eyeballed, only its build/serve correctness.
+
+**Follow-up, DONE (2026-09-07)**: extracted the map into its own standalone component, `frontend/src/components/IndiaMineMap.tsx` (props: `height`, `zoom`), rather than leaving it inline in `LandingPage.tsx` — so it can be reused or moved to a dedicated page later without duplicating the Leaflet setup/icon-fix code. `LandingPage.tsx` now just renders `<IndiaMineMap />`. `tsc --noEmit` clean after the extraction.
+
+**Phase 4 remains blocked**, unchanged — still waiting on who performs the section check-in (worker vs. officer), per the earlier decision to solve this later.
+
+---
+
+### Phase 4 — In-mine checkpoint location — blocked, not yet phased
+
+**Blocked on one open decision**: who performs the section check-in — the worker themselves, or their Safety Officer. No concrete steps until this is answered (see `feature-audit-6-sep.md` Section 2, Changes Planned item 5).
+
+Once answered, this phase covers: adding `current_level`/`current_section` to the appropriate profile, a write endpoint scoped to whoever performs the check-in, rendering a worker's position on the map at their current section, pre-filling `WorkerReportPage`'s level/section from it, and reusing the existing Inspections IndexedDB/`useSyncManager` pattern for offline capture. Full reasoning already written up in `research/location-and-pwa-notes-7-sep.md`.
+
+---
+
+### Note — not a phase (confirmed no-op)
+
+Attendance needs no changes for any of the above — its existing GPS+geofence check is a separate, correctly-scoped concern (surface clock-in, not in-mine section tracking).
+
+## 3. Person Issues / Site Issues / Inspections — seed data DONE (2026-09-07), rest not yet planned
+
+### Phase 1 — Real seed data for Site/Person Issues
+
+**Goal**: replace leftover, undocumented manual data in `site_issues`/`person_issues` with a real, idempotent seed script.
+
+1. New `backend/scripts/seed_issues.py` (`seed_issues()`), following the established one-file-per-collection convention — 4 `SiteIssue` (3 on ECL, 1 on BCCL, spanning Levels A/B/C, mixed WARNING/CRITICAL) + 1 `PersonIssue` (ECL, `no_helmet`, linked to the real seeded worker's `worker_id`). Idempotent — skips entirely if any `SiteIssue`/`PersonIssue` already exists.
+2. Wired into `scripts/index.py` after `seed_users()`.
+3. Dropped the leftover `site_issues`(4)/`person_issues`(1)/`regulatory_reports`(3) collections (the first two had a duplicate and an out-of-range section — see `feature-audit-6-sep.md` Section 3 for detail) and reseeded from clean.
+
+**Checkpoint**: worker's `GET /person-issues/me` shows their own seeded issue; worker's `GET /site-issues` shows only their own mine's 3 (not BCCL's); no duplicate or out-of-range data remains.
+
+**DONE (2026-09-07)** — executed exactly as scoped. Verified live: worker login → `/person-issues/me` returns the seeded issue with the correct `worker_id`; `/site-issues` returns exactly 3 (ECL's) not 4; final DB counts confirmed via direct query (`site_issues: 4`, `person_issues: 1`, `regulatory_reports: 0` — not reseeded, deliberately, see Section 4). The Section 2 mine-matching fix was independently re-verified against a synthetic collision scenario at the same time (same level+section on two mines, one open one resolved) — correctly did not cross-contaminate.
+
+Nothing else in this section (Inspections removal/migration, the rest of Person/Site Issues' dead endpoints) has been planned yet.
+
+## 4. Regulatory Reports — seeding explicitly deferred, rest not yet planned
+
+**Confirmed (2026-09-07)**: no seed data for this section yet, deliberately — the leftover 3 `RegulatoryReport` documents found in the DB were dropped, not replaced (see Section 3's Phase 1 above). This model's structure is expected to be rebuilt from scratch once this section gets a real planning pass; seeding it against the current structure would only be thrown away later. Nothing else in this section has been planned.
 
 ## 5. Attendance / Face Verification / Liveness — no confirmed decisions yet
 

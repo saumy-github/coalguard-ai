@@ -15,6 +15,7 @@ from src.auth.security import hash_password
 from src.models.mine import Mine
 from src.models.mine_level import MineLevel
 from src.models.user import User, empty_profile_for_role, set_profile
+from src.services.mine_layout_service import generate_level_layout
 from src.services.org_service import ensure_placeholder_mine, ensure_second_demo_mine
 
 # Dev/test credential only — never use this in a real deployment.
@@ -46,7 +47,8 @@ SEED_USERS = [
 async def ensure_mine_levels_seeded(mine: Mine) -> None:
     if await MineLevel.find_one(MineLevel.mine_id == mine.id) is None:
         for level in DEMO_MINE_LEVELS:
-            await MineLevel(mine_id=mine.id, **level).insert()
+            layout = generate_level_layout(level["level"], level["section_count"])
+            await MineLevel(mine_id=mine.id, **level, **layout).insert()
         print(f"Seeded {len(DEMO_MINE_LEVELS)} MineLevel rows for {mine.name}")
 
 

@@ -13,6 +13,13 @@ def _to_response(mine: Mine) -> MineResponse:
     return MineResponse(id=str(mine.id), name=mine.name, lat=mine.lat, lng=mine.lng)
 
 
+@router.get("/public", response_model=list[MineResponse])
+async def list_mines_public() -> list[MineResponse]:
+    """Unauthenticated — name/coordinates only, for the pre-login landing page."""
+    mines = await mine_service.list_all_mines()
+    return [_to_response(mine) for mine in mines]
+
+
 @router.get("", response_model=list[MineResponse])
 async def list_mines(
     user: User = Depends(require_role("corporate_manager", "regulator", "admin")),

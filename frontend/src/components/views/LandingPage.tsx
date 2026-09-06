@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { IndiaMineMap } from '../IndiaMineMap';
 import {
   Sparkles,
   Activity,
@@ -124,6 +125,15 @@ export const LandingPage = () => {
           </p>
         </div>
 
+      </div>
+
+      {/* Where We Operate */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Where We Operate</h2>
+          <p className="text-sm text-slate-400 mt-1">Live across multiple mines, monitored from one platform.</p>
+        </div>
+        <IndiaMineMap />
       </div>
 
     </div>
