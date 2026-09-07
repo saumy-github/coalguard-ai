@@ -43,7 +43,7 @@ export const IndiaMineMap = ({ height = 420, zoom = 5 }: IndiaMineMapProps) => {
   }, []);
 
   return (
-    <div className="glass-panel rounded-3xl overflow-hidden border border-white/10" style={{ height }}>
+    <div className="glass-panel overflow-hidden" style={{ height }}>
       <MapContainer center={INDIA_CENTER} zoom={zoom} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

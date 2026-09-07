@@ -109,12 +109,12 @@ export const SafetyOverviewPage = () => {
         attentionAlert={
           hasSevereOpenIssue ? (
             <div className="flex items-start gap-4">
-              <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 shrink-0 border border-rose-500/30">
+              <div className="p-3 rounded-2xl bg-chalk/20 text-chalk shrink-0">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-rose-100 tracking-tight">High/critical severity issue open</h4>
-                <p className="text-sm text-rose-200/80 mt-1.5 leading-relaxed">
+                <h4 className="text-lg font-display text-chalk tracking-tight">High/critical severity issue open</h4>
+                <p className="text-sm text-chalk/80 mt-1.5 leading-relaxed">
                   At least one open issue needs immediate attention — see the Safety Issues queue for details.
                 </p>
               </div>
@@ -130,7 +130,7 @@ export const SafetyOverviewPage = () => {
             action={
               <Link
                 to="/dashboard/safety/issues"
-                className="text-sm text-amber-400 hover:text-emerald-300 font-bold flex items-center gap-1.5 transition-colors"
+                className="text-sm text-ember hover:text-obsidian/70 font-bold flex items-center gap-1.5 transition-colors"
               >
                 <span>View Full Queue</span>
                 <ChevronRight className="w-4 h-4" />
@@ -139,7 +139,7 @@ export const SafetyOverviewPage = () => {
           />
           <div className="space-y-4">
             {recentOpen.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-6">No open issues right now.</p>
+              <p className="text-sm text-obsidian/60 text-center py-6">No open issues right now.</p>
             )}
             {recentOpen.map((issue) => (
               <IssueRow key={`${issue.kind}-${issue.id}`} issue={issue} />
@@ -154,33 +154,33 @@ export const SafetyOverviewPage = () => {
             subtitle="Workers physically verified on-site via facial recognition and GPS geofence."
           />
           {todayAttendance.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-sm">
-              <Users className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+            <div className="text-center py-8 text-obsidian/50 text-sm">
+              <Users className="w-8 h-8 mx-auto text-obsidian/40 mb-2" />
               <p>No workers have clocked in on-site yet today.</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-800/80">
+            <div className="divide-y divide-obsidian/10">
               {todayAttendance.map((record) => (
                 <div key={record.id} className="py-3.5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-400 font-bold text-xs uppercase">
+                    <div className="w-9 h-9 rounded-xl bg-obsidian/10 border border-obsidian/30 flex items-center justify-center text-obsidian font-bold text-xs uppercase">
                       {record.worker_name?.slice(0, 2) || 'WK'}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{record.worker_name}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">
+                        <span className="text-sm font-bold text-obsidian">{record.worker_name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-limestone text-obsidian/70">
                           ID: {record.worker_id}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                      <div className="flex items-center gap-3 text-xs text-obsidian/60 mt-0.5">
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-amber-400" />
+                          <MapPin className="w-3 h-3 text-ember" />
                           <span>{record.mine_name || 'ECL Sector 7G'}</span>
                         </span>
-                        <span className="text-slate-500">•</span>
+                        <span className="text-obsidian/50">•</span>
                         <span className="flex items-center gap-1 font-mono">
-                          <Clock className="w-3 h-3 text-slate-400" />
+                          <Clock className="w-3 h-3 text-obsidian/60" />
                           <span>{new Date(record.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </span>
                       </div>
@@ -188,10 +188,10 @@ export const SafetyOverviewPage = () => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] font-mono text-green-400 bg-green-950/60 border border-green-700/60 px-2 py-1 rounded-lg">
+                    <span className="text-[11px] font-mono text-obsidian bg-obsidian/60 border border-obsidian/60 px-2 py-1 rounded-lg">
                       {record.distance_from_site_m ?? 0}m (Geofence OK)
                     </span>
-                    <span className="px-2 py-1 rounded-lg text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/40 flex items-center gap-1">
+                    <span className="px-2 py-1 rounded-lg text-xs font-bold bg-obsidian/20 text-obsidian border border-obsidian/40 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Verified</span>
                     </span>
@@ -220,7 +220,7 @@ export const SafetyIssuesPage = () => {
       >
         <div className="space-y-4 mt-4">
           {issues.length === 0 && (
-            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-slate-400">
+            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-obsidian/60">
               No safety issues reported yet.
             </div>
           )}
@@ -247,32 +247,32 @@ export const SafetyProfilePage = () => {
         badge="Officer Record"
       >
         <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 max-w-xl mx-auto mt-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[80px]"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-obsidian/5 rounded-full blur-[80px]"></div>
 
           <SectionHeader title="Account Details" />
 
-          <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
-            <div className="w-20 h-20 rounded-[1.25rem] bg-linear-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+          <div className="flex items-center gap-5 pb-6 border-b border-obsidian/10 relative z-10">
+            <div className="w-20 h-20 rounded-full bg-ember flex items-center justify-center text-chalk text-3xl font-display">
               {displayName(user).charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
-              <p className="text-sm font-mono text-emerald-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
+              <h3 className="text-xl font-bold text-obsidian tracking-tight">{displayName(user)}</h3>
+              <p className="text-sm font-mono text-obsidian mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
             </div>
           </div>
 
-          <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-slate-500 uppercase text-xs tracking-wider">Email</span>
-              <span className="text-white">{user?.email || '—'}</span>
+          <div className="space-y-4 text-sm font-mono text-obsidian/70 relative z-10">
+            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
+              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Email</span>
+              <span className="text-obsidian">{user?.email || '—'}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-slate-500 uppercase text-xs tracking-wider">Phone</span>
-              <span className="text-white">{user?.phone || '—'}</span>
+            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
+              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Phone</span>
+              <span className="text-obsidian">{user?.phone || '—'}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-slate-500 uppercase text-xs tracking-wider">Assigned Mine</span>
-              <span className="text-white">{user?.mine ? 'Assigned' : 'None assigned'}</span>
+            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
+              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Assigned Mine</span>
+              <span className="text-obsidian">{user?.mine ? 'Assigned' : 'None assigned'}</span>
             </div>
           </div>
         </div>

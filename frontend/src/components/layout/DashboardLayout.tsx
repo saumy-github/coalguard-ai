@@ -10,7 +10,7 @@ import { ToastContainer } from '../common/ToastContainer';
 // real notification/search backend ever justifies them.
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="min-h-screen bg-[#0f0c09] text-stone-300 flex flex-col font-sans selection:bg-amber-500/30">
+    <div className="min-h-screen bg-pumice text-obsidian flex flex-col font-sans selection:bg-ember selection:text-chalk">
       {/* Universal Top Header */}
       <Header />
 

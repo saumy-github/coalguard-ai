@@ -38,9 +38,11 @@ interface Cell {
   textColor: string;
 }
 
+// Caldera hex values directly, not Tailwind classes — these fill/stroke an
+// SVG polygon, which can't take a `bg-*`/`text-*` utility class.
 const STATUS_COLORS = {
-  open: { fill: 'rgba(220,38,38,0.32)', stroke: '#dc2626', text: '#fca5a5' },
-  clear: { fill: '#221b14', stroke: 'rgba(245,158,11,0.45)', text: '#c4bcae' },
+  open: { fill: 'rgba(252,80,0,0.35)', stroke: '#fc5000', text: '#fc5000' }, // Ember
+  clear: { fill: '#f7f6f2', stroke: 'rgba(7,6,7,0.15)', text: '#070607' }, // Limestone
 };
 
 const CARD_W = 700;
@@ -204,9 +206,9 @@ export const MineLevelMap = () => {
           </div>
         )}
 
-        {isLoading && <p className="text-sm font-mono text-slate-400">Loading mine layout…</p>}
+        {isLoading && <p className="text-sm font-mono text-obsidian/60">Loading mine layout…</p>}
         {!isLoading && sortedLevels.length === 0 && (
-          <p className="text-sm font-mono text-slate-400">No levels configured for this mine yet.</p>
+          <p className="text-sm font-mono text-obsidian/60">No levels configured for this mine yet.</p>
         )}
 
         <div className="flex gap-2 flex-wrap">
@@ -216,12 +218,9 @@ export const MineLevelMap = () => {
               <button
                 key={lvl.level}
                 onClick={() => { setSelectedLevel(lvl.level); setSelectedKey(null); setPan({ x: 0, y: 0 }); }}
-                className="cursor-pointer font-sora font-bold text-[11px] uppercase tracking-wide px-3.5 py-2 rounded-sm flex flex-col items-start gap-0.5"
-                style={{
-                  background: active ? '#f59e0b' : 'rgba(255,255,255,0.03)',
-                  color: active ? '#110d0a' : '#a1a1aa',
-                  border: active ? '1px solid #d97706' : '1px solid rgba(255,255,255,0.1)',
-                }}
+                className={`cursor-pointer font-bold text-[11px] uppercase tracking-wide px-4 py-2 rounded-pill flex flex-col items-start gap-0.5 transition-colors ${
+                  active ? 'bg-ember text-chalk' : 'bg-limestone text-obsidian/60 hover:bg-chalk'
+                }`}
               >
                 <span>LEVEL {lvl.level}</span>
                 <span className="font-mono font-medium text-[9px] opacity-75 normal-case tracking-normal">{lvl.section_count} sections</span>
@@ -233,21 +232,15 @@ export const MineLevelMap = () => {
         {layout && (
           <>
             <div className="flex justify-end gap-1.5">
-              <button onClick={() => setZoom((z) => Math.max(z - 25, 50))} className="cursor-pointer w-6.5 h-6.5 bg-white/3 border border-white/10 text-slate-400 font-mono font-bold text-sm rounded-sm hover:text-amber-500 hover:border-amber-500/50">–</button>
-              <span className="min-w-10.5 text-center font-mono text-[11px] text-stone-400 leading-6.5">{zoom}%</span>
-              <button onClick={() => setZoom((z) => Math.min(z + 25, 250))} className="cursor-pointer w-6.5 h-6.5 bg-white/3 border border-white/10 text-slate-400 font-mono font-bold text-sm rounded-sm hover:text-amber-500 hover:border-amber-500/50">+</button>
+              <button onClick={() => setZoom((z) => Math.max(z - 25, 50))} className="cursor-pointer w-6.5 h-6.5 bg-pumice border border-obsidian/10 text-obsidian/60 font-mono font-bold text-sm rounded-sm hover:text-ember hover:border-ember/50">–</button>
+              <span className="min-w-10.5 text-center font-mono text-[11px] text-obsidian/60 leading-6.5">{zoom}%</span>
+              <button onClick={() => setZoom((z) => Math.min(z + 25, 250))} className="cursor-pointer w-6.5 h-6.5 bg-pumice border border-obsidian/10 text-obsidian/60 font-mono font-bold text-sm rounded-sm hover:text-ember hover:border-ember/50">+</button>
             </div>
 
             <div
               onPointerDown={startPan}
-              className="relative w-full mx-auto overflow-hidden rounded cursor-grab active:cursor-grabbing select-none"
-              style={{
-                maxWidth: 700, aspectRatio: '700 / 400', touchAction: 'none',
-                background: 'linear-gradient(145deg, rgba(31,24,19,0.8), rgba(20,15,12,0.95))',
-                borderTop: '1px solid rgba(245,158,11,0.15)', borderLeft: '1px solid rgba(245,158,11,0.08)',
-                borderRight: '1px solid rgba(0,0,0,0.6)', borderBottom: '1px solid rgba(0,0,0,0.8)',
-                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.8)',
-              }}
+              className="relative w-full mx-auto overflow-hidden rounded-2xl cursor-grab active:cursor-grabbing select-none bg-limestone"
+              style={{ maxWidth: 700, aspectRatio: '700 / 400', touchAction: 'none' }}
             >
               <div
                 className="absolute top-1/2 left-1/2"
@@ -257,14 +250,14 @@ export const MineLevelMap = () => {
                   transformOrigin: 'center center',
                 }}
               >
-                <svg viewBox={layout.viewBox} className="absolute inset-0 w-full h-full block" style={{ filter: 'drop-shadow(0 16px 26px rgba(0,0,0,0.65))' }}>
-                  <path d={layout.boundaryPath} fill="#171310" stroke="#f59e0b" strokeWidth={3} strokeOpacity={0.85} />
+                <svg viewBox={layout.viewBox} className="absolute inset-0 w-full h-full block">
+                  <path d={layout.boundaryPath} fill="#e2e2df" stroke="#070607" strokeOpacity={0.15} strokeWidth={3} />
                   {layout.cells.map((cell) => (
                     <path
                       key={cell.key}
                       d={cell.pathD}
                       fill={cell.fill}
-                      stroke={selectedKey === cell.key ? '#f59e0b' : cell.stroke}
+                      stroke={selectedKey === cell.key ? '#fc5000' : cell.stroke}
                       strokeWidth={selectedKey === cell.key ? 4 : cell.strokeWidth}
                       className="cursor-pointer hover:brightness-125"
                       onClick={() => setSelectedKey(cell.key)}
@@ -286,21 +279,21 @@ export const MineLevelMap = () => {
           </>
         )}
 
-        <div className="flex gap-4 flex-wrap items-center font-mono text-[11px] text-stone-400 bg-white/3 border border-white/6 px-3.5 py-2.5 rounded">
-          <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block" />Open issue</span>
-          <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-white/20 inline-block" />Clear</span>
+        <div className="flex gap-4 flex-wrap items-center font-mono text-[11px] text-obsidian/60 bg-pumice border border-obsidian/10 px-3.5 py-2.5 rounded">
+          <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-ember inline-block" />Open issue</span>
+          <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-limestone border border-obsidian/15 inline-block" />Clear</span>
         </div>
 
-        <div className="bg-linear-to-br from-[rgba(31,24,19,0.8)] to-[rgba(20,15,12,0.95)] border border-white/6 rounded px-4.5 py-3.5 flex items-center gap-3">
+        <div className="bg-limestone rounded-2xl px-4.5 py-3.5 flex items-center gap-3">
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0 inline-block"
-            style={{ background: selectedCell ? selectedCell.stroke : 'rgba(255,255,255,0.2)' }}
+            style={{ background: selectedCell ? selectedCell.stroke : '#e2e2df' }}
           />
           <div>
-            <div className="font-sora font-bold text-xs tracking-wide text-[#f5f1ec]">
+            <div className="font-display text-xs tracking-wide text-obsidian">
               {selectedCell ? `LEVEL ${selectedLevel} · SECTION ${selectedCell.num}` : 'NO SECTION SELECTED'}
             </div>
-            <div className="text-xs text-zinc-400 mt-0.5">
+            <div className="text-xs text-obsidian/50 mt-0.5">
               {selectedCell
                 ? (openSectionsForLevel.has(selectedCell.num) ? 'Open issue reported at this section' : 'No issues reported')
                 : 'Click a section on the map to view its status.'}

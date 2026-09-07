@@ -184,19 +184,19 @@ export const AdminUsersPage = () => {
 
             <form onSubmit={handleAddUser} className="space-y-5">
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Full Name</label>
+                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest mb-2 block">Full Name</label>
                 <input
                   type="text"
                   required
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm font-mono focus:outline-none focus:border-ember/50"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Role</label>
+                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest mb-2 block">Role</label>
                 <Dropdown
                   value={newUserRole}
                   onChange={(v) => setNewUserRole(v as UserType)}
@@ -205,29 +205,29 @@ export const AdminUsersPage = () => {
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Email</label>
+                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest mb-2 block">Email</label>
                 <input
                   type="email"
                   required
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
                   placeholder="e.g. ramesh@example.com"
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm font-mono focus:outline-none focus:border-ember/50"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Password</label>
+                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest mb-2 block">Password</label>
                 <input
                   type="password"
                   required
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm font-mono focus:outline-none focus:border-ember/50"
                 />
               </div>
 
-              {createError && <p className="text-sm text-rose-400">{createError}</p>}
+              {createError && <p className="text-sm text-ember">{createError}</p>}
 
               <button
                 type="submit"
@@ -247,12 +247,12 @@ export const AdminUsersPage = () => {
                   key={u.id}
                   onClick={() => selectUser(u.id)}
                   className={`w-full text-left glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono transition-colors ${
-                    selectedUserId === u.id ? 'border border-orange-500/40' : ''
+                    selectedUserId === u.id ? 'border border-ember/40' : ''
                   }`}
                 >
                   <div>
-                    <h4 className="font-bold text-white tracking-wide text-base">{u.full_name || u.email || u.phone || 'Unnamed'}</h4>
-                    <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
+                    <h4 className="font-bold text-obsidian tracking-wide text-base">{u.full_name || u.email || u.phone || 'Unnamed'}</h4>
+                    <p className="text-xs text-obsidian/60 mt-1 uppercase tracking-widest">
                       {userTypeLabel(u.role)} • {u.email || u.phone || 'no contact'} • {mineSummary(u, mines)}
                     </p>
                   </div>
@@ -270,7 +270,7 @@ export const AdminUsersPage = () => {
               />
 
               <div className="space-y-3">
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Role</label>
+                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest block">Role</label>
                 <div className="flex items-center gap-3">
                   <Dropdown
                     value={roleDraft}
@@ -285,8 +285,8 @@ export const AdminUsersPage = () => {
               </div>
 
               {SINGLE_MINE_ROLES.includes(selectedUser.role) && (
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Mine</label>
+                <div className="space-y-3 pt-4 border-t border-obsidian/10">
+                  <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest block">Mine</label>
                   <div className="flex items-center gap-3">
                     <Dropdown
                       value={mineDraft}
@@ -303,11 +303,11 @@ export const AdminUsersPage = () => {
               )}
 
               {MULTI_MINE_ROLES.includes(selectedUser.role) && (
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Mines</label>
+                <div className="space-y-3 pt-4 border-t border-obsidian/10">
+                  <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest block">Mines</label>
                   <div className="space-y-2">
                     {mines.map((mine) => (
-                      <label key={mine.id} className="flex items-center gap-3 text-sm text-slate-300 font-mono">
+                      <label key={mine.id} className="flex items-center gap-3 text-sm text-obsidian/70 font-mono">
                         <input
                           type="checkbox"
                           checked={minesDraft.includes(mine.id)}
@@ -324,7 +324,7 @@ export const AdminUsersPage = () => {
                 </div>
               )}
 
-              {manageError && <p className="text-sm text-rose-400">{manageError}</p>}
+              {manageError && <p className="text-sm text-ember">{manageError}</p>}
             </div>
           )}
         </div>
@@ -362,34 +362,34 @@ export const AdminMinesPage = () => {
             <SectionHeader title="Register New Mine" />
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Mine Name</label>
+                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest mb-2 block">Mine Name</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm font-mono focus:outline-none focus:border-ember/50"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Latitude</label>
+                  <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest mb-2 block">Latitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={lat}
                     onChange={(e) => setLat(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                    className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm font-mono focus:outline-none focus:border-ember/50"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Longitude</label>
+                  <label className="text-xs font-mono text-obsidian/60 uppercase tracking-widest mb-2 block">Longitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={lng}
                     onChange={(e) => setLng(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                    className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm font-mono focus:outline-none focus:border-ember/50"
                   />
                 </div>
               </div>
@@ -403,9 +403,9 @@ export const AdminMinesPage = () => {
             <SectionHeader title="All Mines" />
             {mines.map((mine) => (
               <div key={mine.id} className="glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono">
-                <span className="font-bold text-white">{mine.name}</span>
+                <span className="font-bold text-obsidian">{mine.name}</span>
                 {mine.lat !== null && mine.lng !== null && (
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <span className="text-xs text-obsidian/60 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5" /> {mine.lat.toFixed(4)}, {mine.lng.toFixed(4)}
                   </span>
                 )}
@@ -427,28 +427,28 @@ export const AdminProfilePage = () => {
     <DashboardLayout>
       <PageLayout title="Admin Profile" subtitle="Your account identity, as recorded by the system." badge="Root Admin">
         <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 max-w-xl mx-auto mt-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-plasma-violet/10 rounded-full blur-[80px] pointer-events-none"></div>
 
           <SectionHeader title="Account Details" />
 
-          <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
-            <div className="w-20 h-20 rounded-[1.25rem] bg-linear-to-br from-purple-600/20 to-blue-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+          <div className="flex items-center gap-5 pb-6 border-b border-obsidian/10 relative z-10">
+            <div className="w-20 h-20 rounded-full bg-ember flex items-center justify-center text-chalk text-3xl font-display">
               {displayName(user).charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
-              <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
+              <h3 className="text-xl font-bold text-obsidian tracking-tight">{displayName(user)}</h3>
+              <p className="text-sm font-mono text-plasma-violet mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
             </div>
           </div>
 
-          <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-slate-500 uppercase text-xs tracking-wider">Email</span>
-              <span className="text-white">{user?.email || '—'}</span>
+          <div className="space-y-4 text-sm font-mono text-obsidian/70 relative z-10">
+            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
+              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Email</span>
+              <span className="text-obsidian">{user?.email || '—'}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-slate-500 uppercase text-xs tracking-wider">Phone</span>
-              <span className="text-white">{user?.phone || '—'}</span>
+            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
+              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Phone</span>
+              <span className="text-obsidian">{user?.phone || '—'}</span>
             </div>
           </div>
         </div>
