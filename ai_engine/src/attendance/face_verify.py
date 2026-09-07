@@ -117,13 +117,24 @@ def verify_identity(
     """
     clean_id = (worker_id or "").strip().lower()
 
-    # Accept .jpg, .jpeg, or .png — whichever was uploaded by HR
+    # Accept .jpg, .jpeg, or .png — search primary and shared upload directories
+    search_dirs = [REGISTERED_DIR]
+    shared_in_docker = Path("/app/uploads/registered_faces")
+    if shared_in_docker.exists() and shared_in_docker not in search_dirs:
+        search_dirs.append(shared_in_docker)
+    local_uploads = Path(__file__).resolve().parent.parent.parent.parent / "uploads" / "registered_faces"
+    if local_uploads.exists() and local_uploads not in search_dirs:
+        search_dirs.append(local_uploads)
+
     ref_path = None
-    for ext in (".jpg", ".jpeg", ".png"):
-        for wid in (clean_id, worker_id):
-            candidate = REGISTERED_DIR / f"{wid}{ext}"
-            if candidate.exists():
-                ref_path = candidate
+    for sdir in search_dirs:
+        for ext in (".jpg", ".jpeg", ".png"):
+            for wid in (clean_id, worker_id):
+                candidate = sdir / f"{wid}{ext}"
+                if candidate.exists():
+                    ref_path = candidate
+                    break
+            if ref_path is not None:
                 break
         if ref_path is not None:
             break
