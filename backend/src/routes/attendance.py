@@ -21,6 +21,7 @@ router = APIRouter(prefix="/attendance", tags=["attendance"])
 def _to_record_dict(record: AttendanceRecord) -> Dict[str, Any]:
     ts = record.timestamp or record.created_at
     ca = record.created_at or record.timestamp
+    selfie_url = f"/uploads/temp_selfies/{record.selfie_saved}" if record.selfie_saved else None
     return {
         "id": str(record.id),
         "user_id": str(record.user_id) if record.user_id else None,
@@ -35,6 +36,7 @@ def _to_record_dict(record: AttendanceRecord) -> Dict[str, Any]:
         "liveness": record.liveness,
         "identity": record.identity,
         "selfie_saved": record.selfie_saved,
+        "selfie_url": selfie_url,
         "timestamp": ts.isoformat() if ts else datetime.now(timezone.utc).isoformat(),
         "created_at": ca.isoformat() if ca else datetime.now(timezone.utc).isoformat(),
     }
@@ -52,6 +54,9 @@ async def mark_attendance(
     user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Validate geofence, liveness, and 1-to-1 face match via AI Engine, then record attendance."""
+    from pathlib import Path
+    from ..uploads import REGISTERED_FACES_DIR
+
     # Resolve worker identifier
     effective_worker_id = worker_id.strip().lower() if worker_id else ""
     if not effective_worker_id:
@@ -63,6 +68,35 @@ async def mark_attendance(
             effective_worker_id = str(user.id)
 
     worker_display_name = user.full_name or effective_worker_id.capitalize()
+
+    # Smart-resolve photo candidate in uploads/registered_faces:
+    # If the user has a photo uploaded by admin (e.g. {user_id}.jpg) or custom photo_url,
+    # match that file so AI engine can find the registered face.
+    photo_worker_id = effective_worker_id
+    candidates = [effective_worker_id]
+    profile = get_profile(user)
+    photo_url = getattr(profile, "photo_url", None)
+    if photo_url:
+        stem = Path(photo_url).stem
+        if stem and stem not in candidates:
+            candidates.append(stem)
+    if user.full_name:
+        fn_clean = user.full_name.strip().lower().replace(" ", "_")
+        if fn_clean and fn_clean not in candidates:
+            candidates.append(fn_clean)
+    candidates.append(str(user.id))
+
+    for cand in candidates:
+        if not cand:
+            continue
+        found = False
+        for ext in (".jpg", ".jpeg", ".png", ".webp", ".JPG", ".JPEG", ".PNG"):
+            if (REGISTERED_FACES_DIR / f"{cand}{ext}").is_file():
+                photo_worker_id = cand
+                found = True
+                break
+        if found:
+            break
 
     # Resolve Mine & Coordinates
     resolved_mine_id: Optional[PydanticObjectId] = None
@@ -78,7 +112,6 @@ async def mark_attendance(
             target_mine = None
 
     if not target_mine:
-        profile = get_profile(user)
         user_mine_id = getattr(profile, "mine", None)
         if user_mine_id:
             target_mine = await Mine.get(user_mine_id)
@@ -97,7 +130,7 @@ async def mark_attendance(
 
     # Prepare multipart files and data to proxy to AI Engine
     form_data = {
-        "worker_id": effective_worker_id,
+        "worker_id": photo_worker_id,
         "latitude": str(latitude),
         "longitude": str(longitude),
         "site_lat": str(resolved_site_lat),
@@ -156,10 +189,12 @@ async def mark_attendance(
         selfie_saved=ai_result.get("selfie_saved"),
     ).insert()
 
+    record_dict = _to_record_dict(record)
     return {
         "status": "success",
-        "attendance_record": _to_record_dict(record),
+        "attendance_record": record_dict,
         "ai_engine": ai_result,
+        "selfie_url": record_dict.get("selfie_url"),
         "worker_name": worker_display_name,
         "message": f"Attendance verified & recorded for {worker_display_name}.",
     }
@@ -247,5 +282,16 @@ async def register_face_proxy(
             pass
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
-    return resp.json()
+    res_json = resp.json()
+    try:
+        filename = res_json.get("filename")
+        if filename:
+            profile = get_profile(user)
+            profile.photo_url = f"/uploads/registered_faces/{filename}"
+            set_profile(user, profile)
+            await user.save()
+    except Exception as exc:
+        logger.warning("Could not update user profile photo_url: %s", exc)
+
+    return res_json
 

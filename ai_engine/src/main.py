@@ -356,6 +356,7 @@ async def attendance_mark(
         "liveness": liveness_msg,
         "identity": verify_msg,
         "selfie_saved": selfie_path.name,
+        "selfie_url": f"/uploads/temp_selfies/{selfie_path.name}",
         "message": "Attendance marked successfully.",
     }
 
@@ -365,8 +366,8 @@ async def register_face(
     worker_id: str = Form(..., description="Unique worker ID (e.g. 'saumy', 'worker_001')."),
     file: UploadFile = File(..., description="Reference face photo (.jpg, .jpeg, .png)."),
 ) -> Dict[str, Any]:
-    """Upload and register a worker's reference facial photo."""
-    from src.attendance.face_verify import REGISTERED_DIR
+    """Upload and register a worker's reference facial photo in uploads/registered_faces."""
+    from src.attendance.face_verify import DATA_REGISTERED_DIR, REGISTERED_DIR
 
     clean_id = worker_id.strip().lower()
     if not clean_id:
@@ -374,7 +375,7 @@ async def register_face(
 
     filename = file.filename or ""
     ext = os.path.splitext(filename)[1].lower()
-    if ext not in [".jpg", ".jpeg", ".png"]:
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         ext = ".jpg"
 
     target_path = REGISTERED_DIR / f"{clean_id}{ext}"
@@ -385,6 +386,16 @@ async def register_face(
         with open(target_path, "wb") as f:
             f.write(content)
         logger.info("Registered face photo for worker=%s saved to %s", clean_id, target_path)
+
+        # Also write a backup copy to DATA_REGISTERED_DIR if distinct
+        try:
+            if DATA_REGISTERED_DIR.resolve() != REGISTERED_DIR.resolve():
+                backup_path = DATA_REGISTERED_DIR / f"{clean_id}{ext}"
+                with open(backup_path, "wb") as bf:
+                    bf.write(content)
+        except Exception:
+            pass
+
     except Exception as exc:
         logger.error("Failed to save reference photo for %s: %s", clean_id, exc)
         raise HTTPException(status_code=500, detail=f"Failed to save reference photo: {exc}")
@@ -393,6 +404,7 @@ async def register_face(
         "status": "success",
         "worker_id": clean_id,
         "filename": target_path.name,
+        "photo_url": f"/uploads/registered_faces/{target_path.name}",
         "message": f"Reference face photo registered for worker '{clean_id}'.",
     }
 

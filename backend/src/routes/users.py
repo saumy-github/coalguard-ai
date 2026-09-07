@@ -123,10 +123,21 @@ async def upload_user_photo(user_id: str, file: UploadFile = File(...)) -> UserR
     from pathlib import Path
     ext = Path(file.filename or "").suffix or ".jpg"
     dest = REGISTERED_FACES_DIR / f"{user_id}{ext}"
-    dest.write_bytes(await file.read())
+    file_bytes = await file.read()
+    dest.write_bytes(file_bytes)
     photo_url = f"/uploads/registered_faces/{user_id}{ext}"
     profile = get_profile(target)
     profile.photo_url = photo_url
     set_profile(target, profile)
     await target.save()
+
+    # Also save alias copy under worker's name so 1-to-1 attendance matching can resolve by name
+    if target.full_name:
+        clean_alias = target.full_name.strip().lower().replace(" ", "_")
+        alias_dest = REGISTERED_FACES_DIR / f"{clean_alias}{ext}"
+        try:
+            alias_dest.write_bytes(file_bytes)
+        except Exception:
+            pass
+
     return _to_response(target)
