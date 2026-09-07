@@ -5,9 +5,7 @@ import { useAuthStore } from '../store/authStore';
 // a shared authenticated landing point that redirects to a role's own real
 // route tree — as of Phase 8 (the last role to migrate), nothing renders
 // directly here anymore for any role. A worker landing on this shared
-// `/dashboard` URL always goes to the tab-dashboard tree (`/dashboard/worker`)
-// — `/worker` (WorkerApp's separate offline-inspection flow) is a distinct
-// route, never reached from here.
+// `/dashboard` URL always goes to the tab-dashboard tree (`/dashboard/worker`).
 export const Dashboard = () => {
   const role = useAuthStore((state) => state.user?.role);
 

@@ -12,6 +12,7 @@ SiteIssueStatus = Literal["open", "resolved"]
 
 class SiteIssue(Document):
     mine_id: PydanticObjectId
+    source_id: Optional[str] = None  # reporter's own user id for a manual report; null for sensor-triggered
     level: str
     section: int
     issue_type: SiteIssueType
@@ -20,6 +21,7 @@ class SiteIssue(Document):
     sensor_reading_snapshot: Optional[list[dict[str, Any]]] = None
     severity: SiteIssueSeverity
     recommended_action: Optional[str] = None
+    photo_url: Optional[str] = None
     status: SiteIssueStatus = "open"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

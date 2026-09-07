@@ -6,10 +6,10 @@ registered everywhere automatically.
 """
 
 from .attendance import AttendanceRecord
-from .inspection import Inspection
 from .mine import Mine
 from .mine_level import MineLevel
 from .person_issue import PersonIssue
+from .raw_issue_report import RawIssueReport
 from .regulatory_report import RegulatoryReport
 from .site_issue import SiteIssue
 from .user import User
@@ -20,7 +20,7 @@ ALL_MODELS = [
     MineLevel,
     PersonIssue,
     SiteIssue,
-    Inspection,
+    RawIssueReport,
     RegulatoryReport,
     AttendanceRecord,
 ]
@@ -31,7 +31,7 @@ __all__ = [
     "MineLevel",
     "PersonIssue",
     "SiteIssue",
-    "Inspection",
+    "RawIssueReport",
     "RegulatoryReport",
     "AttendanceRecord",
     "ALL_MODELS",

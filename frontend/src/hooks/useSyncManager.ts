@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getPendingObservations, markObservationSynced } from '../utils/db';
+import { getPendingIssueReports, markIssueReportSynced } from '../utils/db';
 import { api } from '../utils/api';
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const response = await fetch(dataUrl);
+  return response.blob();
+}
 
 export const useSyncManager = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -9,7 +14,7 @@ export const useSyncManager = () => {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      syncObservations();
+      syncIssueReports();
     };
 
     const handleOffline = () => {
@@ -21,7 +26,7 @@ export const useSyncManager = () => {
 
     // Try syncing on mount if online
     if (navigator.onLine) {
-      syncObservations();
+      syncIssueReports();
     }
 
     return () => {
@@ -30,28 +35,36 @@ export const useSyncManager = () => {
     };
   }, []);
 
-  const syncObservations = async () => {
+  const syncIssueReports = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
 
     try {
-      const pending = await getPendingObservations();
+      const pending = await getPendingIssueReports();
 
-      for (const obs of pending) {
+      for (const report of pending) {
         try {
-          // id/synced are local IndexedDB bookkeeping only — not part of the
-          // wire schema (backend/src/schemas/inspections.py ObservationIn).
-          // `api` (axios, see lib/api.ts) attaches the Bearer token itself;
-          // this used to be a bare fetch with no auth header at all, against
-          // a path (/api/observations) the backend never had.
-          const { id, synced, ...payload } = obs;
-          await api.post('/inspections/observations', payload);
+          const formData = new FormData();
+          formData.append('observation', report.observation);
+          formData.append('level', report.level);
+          formData.append('section', String(report.section));
+          if (report.photo_data_url) {
+            const blob = await dataUrlToBlob(report.photo_data_url);
+            formData.append('photo', blob, 'photo.jpg');
+          }
 
-          if (obs.id) {
-            await markObservationSynced(obs.id);
+          // POST /issues (backend/src/routes/issues.py) — AI-routed, may
+          // return null if classification is still pending/failed; either
+          // way the report was received, so it's safe to mark synced.
+          await api.post('/issues', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+
+          if (report.id) {
+            await markIssueReportSynced(report.id);
           }
         } catch (err) {
-          console.error('Failed to sync observation:', obs.id, err);
+          console.error('Failed to sync issue report:', report.id, err);
           // If one fails, we might still want to try others, or break early.
           // For now, continue trying others.
         }
@@ -63,5 +76,5 @@ export const useSyncManager = () => {
     }
   };
 
-  return { isOnline, isSyncing, syncObservations };
+  return { isOnline, isSyncing, syncIssueReports };
 };

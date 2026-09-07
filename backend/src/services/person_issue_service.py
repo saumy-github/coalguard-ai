@@ -17,10 +17,12 @@ async def create_person_issue(
     observation: str,
     photo_url: Optional[str],
     severity: PersonIssueSeverity,
+    source_id: Optional[str] = None,
 ) -> PersonIssue:
     issue = PersonIssue(
         worker_id=worker_id,
         mine_id=mine_id,
+        source_id=source_id,
         level=level,
         section=section,
         issue_type=issue_type,
@@ -46,6 +48,11 @@ async def list_person_issues_for_mines(mine_ids: list[PydanticObjectId]) -> list
     return await PersonIssue.find(In(PersonIssue.mine_id, mine_ids)).to_list()
 
 
+async def list_all_person_issues() -> list[PersonIssue]:
+    """Admin scope — genuinely global, no mine filter at all."""
+    return await PersonIssue.find_all().to_list()
+
+
 async def list_person_issues_for_worker(
     *, mine_id: PydanticObjectId, worker_id: PydanticObjectId
 ) -> list[PersonIssue]:
@@ -55,6 +62,16 @@ async def list_person_issues_for_worker(
     """
     return await PersonIssue.find(
         PersonIssue.mine_id == mine_id, PersonIssue.worker_id == worker_id
+    ).to_list()
+
+
+async def list_person_issues_by_source(*, mine_id: PydanticObjectId, source_id: str) -> list[PersonIssue]:
+    """A worker's own submitted reports — filtered by `source_id` (the
+    reporter), not `worker_id` (the offender). Deliberately distinct from
+    `list_person_issues_for_worker` above; see routes/person_issues.py.
+    """
+    return await PersonIssue.find(
+        PersonIssue.mine_id == mine_id, PersonIssue.source_id == source_id
     ).to_list()
 
 

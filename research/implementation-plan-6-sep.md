@@ -184,7 +184,7 @@ Once answered, this phase covers: adding `current_level`/`current_section` to th
 
 Attendance needs no changes for any of the above — its existing GPS+geofence check is a separate, correctly-scoped concern (surface clock-in, not in-mine section tracking).
 
-## 3. Person Issues / Site Issues / Inspections — seed data DONE (2026-09-07), rest not yet planned
+## 3. Person Issues / Site Issues / Inspections — Phases 1–4 DONE (2026-09-07)
 
 ### Phase 1 — Real seed data for Site/Person Issues
 
@@ -198,7 +198,100 @@ Attendance needs no changes for any of the above — its existing GPS+geofence c
 
 **DONE (2026-09-07)** — executed exactly as scoped. Verified live: worker login → `/person-issues/me` returns the seeded issue with the correct `worker_id`; `/site-issues` returns exactly 3 (ECL's) not 4; final DB counts confirmed via direct query (`site_issues: 4`, `person_issues: 1`, `regulatory_reports: 0` — not reseeded, deliberately, see Section 4). The Section 2 mine-matching fix was independently re-verified against a synthetic collision scenario at the same time (same level+section on two mines, one open one resolved) — correctly did not cross-contaminate.
 
-Nothing else in this section (Inspections removal/migration, the rest of Person/Site Issues' dead endpoints) has been planned yet.
+---
+
+### Phase 2 — Unified, AI-routed issue reporting
+
+**Goal**: one endpoint replaces manual `SiteIssue`/`PersonIssue` creation; the human only supplies a description + optional photo, the AI decides the collection and type, and nothing is lost if the AI call fails.
+
+**Depends on**: the new ai_engine classifier endpoint (`research/ml-engineer-handoff-7-sep.md`, item 1) — until that exists, this phase's backend code can still be written and deployed, it just means every submission ends up `status: "failed"` in `raw_issue_reports` until the classifier ships. Not a reason to delay writing the backend code.
+
+1. `backend/src/models/person_issue.py` — add `source_id: Optional[str] = None`; narrow `PersonIssueType` to `Literal["no_helmet", "no_vest", "other"]` (drop `unsafe_practice`).
+2. `backend/src/models/site_issue.py` — add `source_id: Optional[str] = None` **and `photo_url: Optional[str] = None`** (confirmed 2026-09-07 — mirrors `PersonIssue`'s field exactly, so a photo attached to a report the AI classifies as a site issue isn't silently discarded).
+3. New `backend/src/models/raw_issue_report.py` — `RawIssueReport(Document)`: `source_id: str`, `mine_id: PydanticObjectId`, `level: str`, `section: int`, `observation: str`, `photo_path: Optional[str]`, `status: Literal["pending", "classified", "failed"]`, `created_at`, `updated_at` (the staleness marker Phase 3 relies on — added now since this collection is brand new, no separate migration needed later).
+4. `backend/src/models/__init__.py` — add `RawIssueReport` to the import and `ALL_MODELS`.
+5. `backend/src/services/ai_engine_client.py` — add `classify_issue(observation: str) -> dict`, calling the new ai_engine endpoint `POST /api/issues/classify` (exact path specified in `ml-engineer-handoff-7-sep.md` item 1) with the contract given there.
+6. New `backend/src/services/raw_issue_report_service.py` — the pipeline: save the photo (if any) to `uploads/pending/`, insert the `RawIssueReport`, call `classify_issue`, then branch:
+   - **Success**: create the real `SiteIssue`/`PersonIssue` via the existing `site_issue_service.create_site_issue`/`person_issue_service.create_person_issue` (reused as-is, `source="manual"`, `source_id=str(user.id)`, `photo_url` set on `SiteIssue` too now per step 2), move the photo from `uploads/pending/` to `uploads/site_issues/` or `uploads/person_issues/`, delete the `RawIssueReport`.
+   - **Failure**: leave the `RawIssueReport` as `status: "failed"`, photo stays in `uploads/pending/`.
+7. New `backend/src/schemas/issues.py` — `IssueCreateResponse`, the `{target, issue}` wrapper detailed in step 10 (`issue: SiteIssueResponse | PersonIssueResponse`, imported from the existing schema modules, not redefined).
+8. New `backend/src/routes/issues.py` — `POST /issues`, multipart (`observation: str = Form(...)`, `level: str = Form(...)`, `section: int = Form(...)`, `photo: Optional[UploadFile] = File(None)`), `mine_id` resolved via `require_mine_assignment(user)` same as today. **Role gating (confirmed 2026-09-07)**: `require_role("worker", "safety_officer")` — no restriction between the two; the AI decides the destination collection, not the caller's role, so a worker's submission is free to land in either.
+9. `backend/src/routes/site_issues.py` / `backend/src/routes/person_issues.py` — remove `POST /site-issues` and `POST /person-issues` (manual creation) entirely, fully unified into the one new endpoint from step 8. `/site-issues/detect` and `/person-issues/detect` (sensor/camera-triggered, a different mechanism entirely) are untouched.
+10. `backend/src/main.py` — register the new `issues_router`. **Response schema for `POST /issues` (confirmed 2026-09-07)**: `IssueCreateResponse` (step 7) returns `{"target": "site_issue" | "person_issue", "issue": SiteIssueResponse | PersonIssueResponse}`. The frontend always knows which shape `issue` is from `target`, no inference needed.
+11. **Read-access role gating (confirmed 2026-09-07, revised same day after checking "can a worker see reports they personally filed?")** — `backend/src/routes/site_issues.py::list_site_issues` and `backend/src/routes/person_issues.py::list_person_issues`:
+    - Both gain `regulator` and `admin` to their `require_role(...)` list (currently only `worker`/`safety_officer`/`corporate_manager` can call either).
+    - `SiteIssueResponse`/`PersonIssueResponse` both gain `source_id: Optional[str] = None`, mirroring the model field added in steps 1–2 — needed so the frontend can ever identify "reported by me" within a list. `SiteIssueResponse` additionally gains `photo_url: Optional[str] = None` (step 2's new model field).
+    - **`_to_response()` in both `routes/site_issues.py` and `routes/person_issues.py` must be updated too, not just the schema classes** — both currently construct their response object with every field explicitly named (verified by reading both), so a field added to the model/schema but not to this explicit constructor call would silently stay absent from every API response. This is the exact same bug class already found once in this codebase (`PersonIssue.photo_url` existing on the model with nothing ever populating it) — don't repeat it by adding fields to the schema and forgetting this step.
+    - `list_site_issues` branches three ways: `admin` → unscoped/global (matches `routes/mines.py`'s existing admin branch); `corporate_manager`/`regulator` → their own `accessible_mine_ids(user)`; `worker`/`safety_officer` → their one mine via `require_mine_assignment(user)`, unchanged, mine-wide (a worker's own site-issue reports are already visible within it, just not isolated — no finer per-worker scope is possible without Section 2 Phase 4's checkpoint location, still blocked).
+    - `list_person_issues` branches four ways: `admin`/`corporate_manager`/`regulator` as above (full/broad scope); `safety_officer` → their one mine, unchanged (mine-wide, unrestricted); **`worker` → scoped to `source_id == str(user.id)`** (their own submitted reports only), not denied outright. This still closes the original leak (a worker can no longer see every other worker's PPE violations via this endpoint) while actually answering "can I see the report I just filed" — which flatly locking `worker` out would not have. `GET /person-issues/me` (filtered by `worker_id`, the offender field) is unchanged and stays a separate, correct thing — issues *about* the worker, not issues *filed by* them.
+12. Frontend `WorkerDashboard.tsx` — remove the manual "ISSUE TYPE"/"SEVERITY" dropdowns from the report form; wire the "Add Photo" button to a real file input (currently fully mocked, `handlePhotoUpload` just flips a boolean); POST to the new `/issues` endpoint instead of `/site-issues`, read the `{target, issue}` response for the confirmation toast.
+13. `WorkerReportPage`'s "recent reports" list (confirmed 2026-09-07) — **dropped**, not migrated to merge both collections. `fetchSiteIssues`/`siteIssues` state and the list's JSX are removed from the page entirely; the step-12 toast (which collection/type it was filed as) is the only post-submit feedback going forward. Reporter-scoped filtering (`source_id`) isn't being added to either `GET` endpoint.
+
+**Checkpoint**: a worker/officer can submit a text description (+ optional photo) once; it ends up in the correct collection with the correct type/severity once the classifier responds; `POST /site-issues` and `POST /person-issues` both 404.
+
+**DONE (2026-09-07)** — executed exactly as scoped, plus several concrete pieces the plan named only as a decision, not a file: a new `backend/src/uploads.py` module (`save_pending_photo`/`move_to_final`) backing the `uploads/pending|site_issues|person_issues/` folders; `docker-compose.yml` gained a `./uploads:/app/uploads` bind mount (without it, "root-level uploads/ folder" would only have existed inside the container, not on the host — verified by writing a real photo through the API and confirming it landed in the host's `uploads/pending/`); `main.py` mounts `/uploads` via `StaticFiles` so `photo_url` values are actually servable, not just stored (the exact "field exists, nothing serves it" bug class flagged elsewhere in this plan); `.gitignore` ignores upload contents but keeps `.gitkeep` placeholders, matching the existing `ai_engine/data/attendance/` pattern.
+
+`_to_response` was renamed to `to_response` (un-prefixed) in both `routes/site_issues.py` and `routes/person_issues.py`, needed so `routes/issues.py` can import and reuse them rather than duplicating response-building logic. `POST /issues` returns `IssueCreateResponse | None` (not just `IssueCreateResponse`) — `None` on the classification-failed path, matching the existing `SiteIssueResponse | None` convention already used by `/detect`. Severity fallback when the AI gives a usable `target` but an out-of-vocab `severity`: `"WARNING"` (site) / `"medium"` (person) — the plan specified `issue_type` always falls back to `"other"` but didn't name a severity default, so these were chosen as the same kind of safe middle-ground default. New service functions needed for the read-access role-branch rewrite: `list_all_site_issues`, `list_all_person_issues`, `list_person_issues_by_source`.
+
+**Frontend refinement beyond the plan's literal steps**: `WorkerReportPage`'s submit handler tries a direct `POST /issues` first while online (not always via the offline queue) specifically so it can read the real `{target, issue}` response for the confirmation toast, per step 12's explicit requirement — only falls back to the IndexedDB queue on an actual network failure (no `err.response` at all), not on a server-side rejection (400/403), so a real validation error still surfaces as an error toast instead of being silently queued.
+
+Ripple effect from step 1's `PersonIssueType` narrowing, found via grep: `frontend/src/utils/safetyIssues.ts` and `WorkerDashboard.tsx` both had `unsafe_practice` entries in client-side display-label lookup maps — removed from both (dead keys otherwise, the type no longer produces that value).
+
+Verified live against the running backend: `GET /openapi.json` confirms `POST /issues` exists and `POST /site-issues`/`POST /person-issues` are gone; a real multipart submission (no ai_engine classifier deployed yet, by design) correctly returned `null` and left exactly one `RawIssueReport` at `status: "failed"` with the photo on disk in `uploads/pending/`, confirmed via direct Mongo query and `ls`; the success path was exercised by monkeypatching `ai_engine_client.classify_issue` in-process (no real classifier exists yet) — confirmed a real `SiteIssue` was created with `source_id`/`photo_url` populated, the photo moved into `uploads/site_issues/`, and the `RawIssueReport` count returned to its pre-test value (inserted then deleted, net zero); worker's `GET /site-issues` unchanged (mine-wide, 3 ECL issues); worker's `GET /person-issues` now correctly empty (source_id-scoped, no matches); admin's `GET /site-issues`/`GET /person-issues` went from 403 to 200 with global data. `tsc --noEmit` and `vite build` both clean.
+
+**Follow-up, DONE (2026-09-07)** — two issues surfaced from actually looking at `WorkerReportPage` running in the browser (a live screenshot, not just reading the code), both fixed:
+- **Stale subtitle.** `SectionHeader`'s subtitle still read "Fill in the details or use voice recording" — wrong even before this phase (voice recording was always `ObservationForm`/Inspections, a different component, never this one), and definitively wrong now that Inspections' voice capture was confirmed dropped, not migrated (Phase 4). Changed to "Describe the problem — our AI will classify the type and severity," which actually matches current behavior.
+- **Redundant two-field split.** The form had both a required "What is the problem?" input (`reportTitle`) and an optional "Description / Notes" textarea (`reportDesc`), concatenated into one string (`` `${reportTitle}: ${reportDesc}` ``) right before submission. Neither was ever used separately anywhere downstream — `RawIssueReport`/`SiteIssue`/`PersonIssue` all have exactly one `observation: str` field, and the classifier only ever sees the merged string. Consolidated to a single required `reportDescription` textarea; the "Description / Notes" field and the concatenation logic are gone entirely.
+
+Verified: `tsc --noEmit` and `vite build` both clean after the consolidation.
+
+---
+
+### Phase 3 — Failure-mode hardening for the Phase 2 pipeline
+
+**Goal**: a failure anywhere in the Phase 2 pipeline leaves a clean, retryable state — never an orphaned file, a dangling reference, or a wrongly-typed issue in the DB.
+
+1. `ai_engine_client.classify_issue` (or its caller in `raw_issue_report_service.py`) — strictly validate the response: `target` must be exactly `"site_issue"` or `"person_issue"`; `issue_type`/`severity` must exactly match their respective model's literal vocab. Anything else forces `issue_type = "other"` (keeping whichever `target` was given) rather than being written through as-is; if `target` itself is unparseable, treat the whole call as failed (there's no collection to write to without it). Same defensive-parsing spirit as `rag_engine.check_compliance` (`rag_engine.py:229`).
+2. `raw_issue_report_service.py` — enforce strict step ordering, each step only proceeding once the previous fully succeeds: photo write → `RawIssueReport` insert → classifier call → final doc create → photo move → `RawIssueReport` delete. An exception at any step leaves the still-intact `RawIssueReport` (and its photo, if saved) as the retryable state — no step is allowed to partially apply.
+3. `RawIssueReport.updated_at` — refreshed on every state transition, so a record's staleness is queryable later (the automatic sweep/retry itself is deferred — see Possible Future Issues in `feature-audit-6-sep.md` Section 3).
+
+**Checkpoint**: forcing the ai_engine call to fail (e.g. stop the ai_engine container) during a submission leaves exactly one `RawIssueReport` at `status: "failed"`, zero orphaned files in `uploads/pending/`, and zero partial writes to `site_issues`/`person_issues`; a deliberately malformed classifier response never produces an out-of-vocab `issue_type`/`severity` in either collection.
+
+**DONE (2026-09-07)** — implemented together with Phase 2's `raw_issue_report_service.py`, not as a separate retrofit pass — writing the pipeline once with the ordering discipline and validation built in from the start, rather than writing it naively and correcting it afterward. All three items landed exactly as scoped: strict `target`/`issue_type`/`severity` validation with fallback (step 1), the photo→raw-record→classify→final-doc→move→delete ordering with no step starting before the last one committed (step 2), `updated_at` refreshed on every state transition (step 3). Verified live via the same tests as Phase 2's DONE note — the failure path left no orphaned file and no partial write (the photo stayed in `uploads/pending/`, nothing was written to `site_issues`), and the success path's `RawIssueReport` count returned to net zero (inserted, then deleted) rather than leaking a stale row.
+
+---
+
+### Phase 4 — Remove Inspections; migrate its capture mechanism into the Phase 2 flow
+
+**Goal**: the dead-end `inspections` collection and its dependents are gone; the one thing worth keeping from it — real photo/voice capture plus a genuine IndexedDB offline queue — now feeds the new `POST /issues` endpoint instead.
+
+**Depends on**: Phase 2 (`POST /issues` must exist before anything can be pointed at it).
+
+**Backend:**
+1. Delete `backend/src/models/inspection.py`, `backend/src/services/inspection_service.py`, `backend/src/schemas/inspections.py`, `backend/src/routes/inspections.py`.
+2. `backend/src/models/__init__.py` — remove `Inspection` from the import and `ALL_MODELS`.
+3. `backend/src/main.py` — remove the `inspections_router` import and its `app.include_router(...)`.
+
+**Frontend:**
+4. `frontend/src/utils/db.ts` — replace the `Observation` schema/store with the new payload shape: drop `pillar` (no mapping onto `SiteIssueType`/`PersonIssueType`), drop `lat`/`lng` (neither Issue model has a coordinate field — location is `level`/`section`), change `photo_urls: string[]` to a single `photo_url`, add `level`/`section`. Bump the `openDB` schema version.
+5. `frontend/src/hooks/useSyncManager.ts` — change the sync POST target from `/inspections/observations` to `/issues`, update the payload mapping to match the new shape.
+6. Migrate `ObservationForm.tsx`'s capture logic (photo picker, offline-queue submit) into `WorkerDashboard.tsx`'s report form, on top of the real file-input wiring already done in Phase 2 step 12.
+7. Drop voice-note recording UI/logic entirely — not migrated (no consumer ever existed for it, confirmed in `feature-audit-6-sep.md` Section 3e; neither Issue model has a voice field).
+8. Delete `frontend/src/pages/worker/ObservationForm.tsx` and `frontend/src/pages/worker/WorkerApp.tsx`.
+9. `frontend/src/routes/AppRoutes.tsx` — remove the `/worker` route and its `WorkerApp` import.
+10. `frontend/src/hooks/useGeolocation.ts` — left in place, not deleted, even though this removes its only caller (cheap to keep for a possible future surface-level feature).
+
+**Checkpoint**: zero references to `inspection`/`Inspection`/`ObservationForm`/`WorkerApp` anywhere in backend or frontend source; a photo/description captured offline on `WorkerDashboard`'s report form syncs automatically once connectivity returns and lands as a real `SiteIssue`/`PersonIssue` once the classifier resolves it.
+
+**DONE (2026-09-07)** — executed exactly as scoped. Backend deletions confirmed clean via full grep sweep of `backend/src`/`backend/scripts` — zero hits for `inspection`/`Inspection`. `db.ts`'s IndexedDB rewrite went further than a schema swap: bumped to version 2 and added an explicit `upgrade()` migration step deleting the old v1 `observations` store on any existing user's browser (not just defining the new `issue_reports` store and leaving the stale one behind) — needed a type-level workaround (`as unknown as 'issue_reports'`) since the old store name isn't part of the new typed schema at all. `useSyncManager.ts` now builds real `multipart/form-data` (base64 data URL → `Blob` via `fetch(dataUrl).then(r => r.blob())`) instead of a JSON POST, since `/issues` takes an `UploadFile`, not a JSON photo field.
+
+`ObservationForm.tsx`'s capture logic was migrated into `WorkerReportPage` (`WorkerDashboard.tsx`), not copied verbatim — reused its `fileToDataUrl` pattern but for a single `File`/preview (not an array), since the new models take one photo. `useSyncManager()` is now called directly inside `WorkerReportPage` (its only remaining caller now that `WorkerApp` is gone) — the original double-instantiation warning this hook's call sites used to carry no longer applies. `pages/Dashboard.tsx`'s comment referencing `WorkerApp`'s "offline-inspection flow" was stale after this phase — updated.
+
+Deliberately **not done**: the `inspections` MongoDB collection's existing documents were left in place, untouched — this phase removes every code reference to them (confirmed by grep), but dropping historical data from a running database is a separate, more destructive action than a code refactor and wasn't asked for.
+
+Verified live: `tsc --noEmit` and `vite build` both clean; grep sweep of both `backend/src` and `frontend/src` (Inspections, `ObservationForm`, `WorkerApp`, the bare `/worker` route) all return zero hits outside of unrelated prose (a "regulatory inspection" marketing phrase on the landing page, an unrelated deferred-feature-name comment in `AppRoutes.tsx`) — neither refers to the removed model.
+
+---
 
 ## 4. Regulatory Reports — seeding explicitly deferred, rest not yet planned
 
@@ -206,4 +299,6 @@ Nothing else in this section (Inspections removal/migration, the rest of Person/
 
 ## 5. Attendance / Face Verification / Liveness — no confirmed decisions yet
 
-## 6. Computer Vision / Predictive Analytics / RAG Assistant — no confirmed decisions yet
+## 6. Computer Vision / Predictive Analytics / RAG Assistant — one confirmed decision, no phase (no code impact)
+
+**Confirmed (2026-09-07)**: `/api/rag/check-compliance` stays unused — considered wiring it into the Section 3 issue pipeline (attaching legal citations to a created issue), decided not to, no timeline. Nothing to execute; not a phase. Revisit as future work if picked up later (see `feature-audit-6-sep.md` Section 6).

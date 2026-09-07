@@ -3,16 +3,17 @@ from fastapi import APIRouter, Depends
 from ..auth.dependencies import accessible_mine_ids, require_mine_assignment, require_role
 from ..models.site_issue import SiteIssue
 from ..models.user import User
-from ..schemas.site_issues import CreateSiteIssueRequest, DetectSiteIssueRequest, SiteIssueResponse
+from ..schemas.site_issues import DetectSiteIssueRequest, SiteIssueResponse
 from ..services import site_issue_service
 
 router = APIRouter(prefix="/site-issues", tags=["site-issues"])
 
 
-def _to_response(issue: SiteIssue) -> SiteIssueResponse:
+def to_response(issue: SiteIssue) -> SiteIssueResponse:
     return SiteIssueResponse(
         id=str(issue.id),
         mine_id=str(issue.mine_id),
+        source_id=issue.source_id,
         level=issue.level,
         section=issue.section,
         issue_type=issue.issue_type,
@@ -21,37 +22,23 @@ def _to_response(issue: SiteIssue) -> SiteIssueResponse:
         sensor_reading_snapshot=issue.sensor_reading_snapshot,
         severity=issue.severity,
         recommended_action=issue.recommended_action,
+        photo_url=issue.photo_url,
         status=issue.status,
         created_at=issue.created_at,
     )
 
 
-@router.post("", response_model=SiteIssueResponse)
-async def create_site_issue(
-    payload: CreateSiteIssueRequest,
-    user: User = Depends(require_role("worker", "safety_officer")),
-) -> SiteIssueResponse:
-    issue = await site_issue_service.create_site_issue(
-        mine_id=await require_mine_assignment(user),
-        level=payload.level,
-        section=payload.section,
-        issue_type=payload.issue_type,
-        observation=payload.observation,
-        severity=payload.severity,
-        recommended_action=payload.recommended_action,
-    )
-    return _to_response(issue)
-
-
 @router.get("", response_model=list[SiteIssueResponse])
 async def list_site_issues(
-    user: User = Depends(require_role("worker", "safety_officer", "corporate_manager")),
+    user: User = Depends(require_role("worker", "safety_officer", "corporate_manager", "regulator", "admin")),
 ) -> list[SiteIssueResponse]:
-    if user.role == "corporate_manager":
+    if user.role == "admin":
+        issues = await site_issue_service.list_all_site_issues()
+    elif user.role in ("corporate_manager", "regulator"):
         issues = await site_issue_service.list_site_issues_for_mines(await accessible_mine_ids(user))
     else:
         issues = await site_issue_service.list_site_issues(await require_mine_assignment(user))
-    return [_to_response(issue) for issue in issues]
+    return [to_response(issue) for issue in issues]
 
 
 @router.post("/detect", response_model=SiteIssueResponse | None)
@@ -68,4 +55,4 @@ async def detect_site_issue(
         air_velocity=payload.air_velocity,
         temperature=payload.temperature,
     )
-    return _to_response(issue) if issue else None
+    return to_response(issue) if issue else None

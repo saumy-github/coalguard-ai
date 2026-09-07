@@ -28,3 +28,13 @@ async def check_anomaly(*, methane: float, co: float, air_velocity: float, tempe
         )
         response.raise_for_status()
         return response.json()
+
+
+async def classify_issue(observation: str) -> dict[str, Any]:
+    async with httpx.AsyncClient(base_url=settings.ai_engine_url, timeout=30.0) as client:
+        response = await client.post(
+            "/api/issues/classify",
+            json={"observation": observation},
+        )
+        response.raise_for_status()
+        return response.json()

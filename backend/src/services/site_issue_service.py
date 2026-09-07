@@ -32,9 +32,12 @@ async def create_site_issue(
     observation: str,
     severity: SiteIssueSeverity,
     recommended_action: Optional[str],
+    source_id: Optional[str] = None,
+    photo_url: Optional[str] = None,
 ) -> SiteIssue:
     issue = SiteIssue(
         mine_id=mine_id,
+        source_id=source_id,
         level=level,
         section=section,
         issue_type=issue_type,
@@ -42,6 +45,7 @@ async def create_site_issue(
         observation=observation,
         severity=severity,
         recommended_action=recommended_action,
+        photo_url=photo_url,
     )
     await issue.insert()
     return issue
@@ -59,6 +63,11 @@ async def list_site_issues_for_mines(mine_ids: list[PydanticObjectId]) -> list[S
     if not mine_ids:
         return []
     return await SiteIssue.find(In(SiteIssue.mine_id, mine_ids)).to_list()
+
+
+async def list_all_site_issues() -> list[SiteIssue]:
+    """Admin scope — genuinely global, no mine filter at all."""
+    return await SiteIssue.find_all().to_list()
 
 
 async def create_site_issue_from_reading(

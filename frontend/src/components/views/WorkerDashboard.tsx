@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { displayName, userTypeLabel } from '../../utils/userDisplay';
 import { api } from '../../utils/api';
+import { addIssueReport } from '../../utils/db';
+import { useSyncManager } from '../../hooks/useSyncManager';
 import { DashboardLayout } from '../layout/DashboardLayout';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
@@ -16,9 +18,19 @@ import {
   CheckCircle2,
   ShieldCheck,
   MapPin,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 import { MarkAttendanceModal } from '../attendance/MarkAttendanceModal';
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 
 // PersonIssue has no corrective-action/label field of its own (backend/src/
@@ -27,14 +39,12 @@ import { MarkAttendanceModal } from '../attendance/MarkAttendanceModal';
 const PERSON_ISSUE_LABEL: Record<string, string> = {
   no_helmet: 'No Helmet Detected',
   no_vest: 'No Safety Vest Detected',
-  unsafe_practice: 'Unsafe Practice Observed',
   other: 'Safety Issue',
 };
 
 const CORRECTIVE_ACTION_BY_ISSUE_TYPE: Record<string, string> = {
   no_helmet: 'Put on your safety helmet before continuing work.',
   no_vest: 'Put on your high-visibility safety vest before continuing work.',
-  unsafe_practice: 'Stop the unsafe practice immediately and follow standard procedure.',
   other: "Follow your Safety Officer's instructions for this issue.",
 };
 
@@ -43,18 +53,6 @@ interface PersonIssueRecord {
   level: string;
   section: number;
   issue_type: string;
-  observation: string;
-  severity: string;
-  status: string;
-  created_at: string;
-}
-
-interface SiteIssueRecord {
-  id: string;
-  level: string;
-  section: number;
-  issue_type: string;
-  source: string;
   observation: string;
   severity: string;
   status: string;
@@ -251,60 +249,88 @@ export const WorkerOverviewPage = () => {
 export const WorkerReportPage = () => {
   const { addToast } = useUIStore();
 
-  const [reportTitle, setReportTitle] = useState('');
-  const [reportIssueType, setReportIssueType] = useState('equipment_fault');
+  const [reportDescription, setReportDescription] = useState('');
   const [reportLevel, setReportLevel] = useState('A');
   const [reportSection, setReportSection] = useState(1);
-  const [reportSeverity, setReportSeverity] = useState('WARNING');
-  const [reportDesc, setReportDesc] = useState('');
-  const [hasPhoto, setHasPhoto] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
-  const [siteIssues, setSiteIssues] = useState<SiteIssueRecord[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchSiteIssues = async () => {
-    try {
-      const { data } = await api.get<SiteIssueRecord[]>('/site-issues');
-      setSiteIssues(data);
-    } catch {
-      // Non-critical for this page — the form still works without the list.
-    }
+  // isOnline/syncIssueReports were previously owned by WorkerApp (now
+  // removed) and passed down to ObservationForm — this page is the only
+  // remaining caller, so it owns the hook directly.
+  const { isOnline, syncIssueReports } = useSyncManager();
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreviewUrl(await fileToDataUrl(file));
+    e.target.value = '';
   };
 
-  useEffect(() => {
-    fetchSiteIssues();
-  }, []);
-
-  const handlePhotoUpload = () => {
-    setHasPhoto(true);
-    addToast('success', 'Photo Attached', 'Worksite photo attached to report.');
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
   };
 
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reportTitle.trim()) return;
+    if (!reportDescription.trim()) return;
 
-    const observation = reportDesc.trim() ? `${reportTitle}: ${reportDesc}` : reportTitle;
+    const observation = reportDescription.trim();
 
     setIsSubmittingReport(true);
     try {
-      await api.post('/site-issues', {
-        level: reportLevel,
-        section: reportSection,
-        issue_type: reportIssueType,
-        observation,
-        severity: reportSeverity,
+      if (!isOnline) throw { response: undefined };
+
+      const formData = new FormData();
+      formData.append('observation', observation);
+      formData.append('level', reportLevel);
+      formData.append('section', String(reportSection));
+      if (photoFile) formData.append('photo', photoFile);
+
+      const { data } = await api.post('/issues', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      addToast('success', 'Report Submitted', 'Your report has been logged to the Safety Officer.');
-      setReportTitle('');
-      setReportDesc('');
-      setHasPhoto(false);
-      await fetchSiteIssues();
-    } catch {
-      addToast('error', 'Submission Failed', 'Could not submit the report — please try again.');
-    } finally {
-      setIsSubmittingReport(false);
+      if (data) {
+        const kindLabel = data.target === 'site_issue' ? 'Site Issue' : 'Person Issue';
+        addToast(
+          'success',
+          'Report Filed',
+          `Classified as a ${kindLabel} (${data.issue.issue_type.replace(/_/g, ' ')}).`
+        );
+      } else {
+        addToast('success', 'Report Received', 'Your report was received and is being processed.');
+      }
+    } catch (err: any) {
+      if (err?.response) {
+        addToast('error', 'Submission Failed', 'Could not submit the report — please try again.');
+        setIsSubmittingReport(false);
+        return;
+      }
+      // Offline, or the request never reached the server — queue it locally
+      // so it syncs automatically once connectivity returns.
+      await addIssueReport({
+        observation,
+        level: reportLevel,
+        section: reportSection,
+        photo_data_url: photoPreviewUrl,
+        captured_at: new Date().toISOString(),
+        synced: 0,
+      });
+      addToast('success', 'Report Saved', 'Saved locally — will submit once you are back online.');
+      if (isOnline) {
+        syncIssueReports();
+      }
     }
+
+    setReportDescription('');
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    setIsSubmittingReport(false);
   };
 
   return (
@@ -320,7 +346,7 @@ export const WorkerReportPage = () => {
 
           <SectionHeader
             title="New Incident Report"
-            subtitle="Fill in the details or use voice recording."
+            subtitle="Describe the problem — our AI will classify the type and severity."
           />
 
           <form onSubmit={handleReportSubmit} className="space-y-5 relative z-10">
@@ -329,44 +355,14 @@ export const WorkerReportPage = () => {
               <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">
                 What is the problem?
               </label>
-              <input
-                type="text"
+              <textarea
                 required
-                value={reportTitle}
-                onChange={(e) => setReportTitle(e.target.value)}
+                rows={3}
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
                 placeholder="e.g. Unusual gas odor near Face 4B fan"
-                className="w-full px-5 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all placeholder:text-slate-600"
+                className="w-full px-5 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all placeholder:text-slate-600 resize-none"
               />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Issue Type</label>
-                <select
-                  value={reportIssueType}
-                  onChange={(e) => setReportIssueType(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 appearance-none custom-select"
-                >
-                  <option value="high_methane">Gas Leakage (Methane)</option>
-                  <option value="high_co">Gas Leakage (Carbon Monoxide)</option>
-                  <option value="low_ventilation">Ventilation Issue</option>
-                  <option value="high_temperature">High Temperature</option>
-                  <option value="equipment_fault">Equipment Fault</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Severity</label>
-                <select
-                  value={reportSeverity}
-                  onChange={(e) => setReportSeverity(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 appearance-none custom-select"
-                >
-                  <option value="WARNING">Warning (Requires check)</option>
-                  <option value="CRITICAL">Critical (Immediate danger)</option>
-                </select>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -396,30 +392,43 @@ export const WorkerReportPage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Description / Notes</label>
-              <textarea
-                rows={4}
-                value={reportDesc}
-                onChange={(e) => setReportDesc(e.target.value)}
-                placeholder="Provide any additional details or observations..."
-                className="w-full px-5 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-slate-600 resize-none"
-              />
-            </div>
-
-            {/* Quick Photo Helper */}
+            {/* Photo attachment */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 type="button"
-                onClick={handlePhotoUpload}
-                className={`px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 border transition-all ${hasPhoto
+                onClick={() => fileInputRef.current?.click()}
+                className={`px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 border transition-all ${photoFile
                     ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
                     : 'bg-white/5 text-slate-300 hover:text-white border-white/10 hover:border-white/20'
                   }`}
               >
-                <Camera className={`w-4 h-4 ${hasPhoto ? 'text-amber-400' : 'text-slate-400'}`} />
-                <span>{hasPhoto ? 'Photo Attached ✓' : 'Add Photo'}</span>
+                <Camera className={`w-4 h-4 ${photoFile ? 'text-amber-400' : 'text-slate-400'}`} />
+                <span>{photoFile ? 'Photo Attached ✓' : 'Add Photo'}</span>
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoSelect}
+                className="hidden"
+              />
+              {photoPreviewUrl && (
+                <div className="relative">
+                  <img
+                    src={photoPreviewUrl}
+                    alt="Attached"
+                    className="w-12 h-12 object-cover rounded-lg border border-white/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="absolute -top-1.5 -right-1.5 bg-slate-900 border border-slate-700 rounded-full p-0.5"
+                  >
+                    <X size={12} className="text-slate-300" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <button
@@ -432,40 +441,6 @@ export const WorkerReportPage = () => {
             </button>
 
           </form>
-        </div>
-
-        {/* Recently reported site issues for this mine */}
-        <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto space-y-4 mt-6">
-          <SectionHeader title="Recent Site Issues" subtitle="Reported by anyone at your mine, most recent first." />
-          {siteIssues.length === 0 && (
-            <p className="text-sm font-mono text-slate-400">No site issues reported yet.</p>
-          )}
-          {[...siteIssues]
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .map((issue) => (
-              <div
-                key={issue.id}
-                className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start justify-between gap-4"
-              >
-                <div>
-                  <p className="text-sm font-bold text-white">{issue.observation}</p>
-                  <p className="text-xs font-mono text-slate-500 mt-1">
-                    Level {issue.level}, Section {issue.section} · {issue.issue_type} · {issue.source}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider ${
-                    issue.severity === 'CRITICAL'
-                      ? 'bg-red-500/20 text-red-300'
-                      : issue.severity === 'WARNING'
-                        ? 'bg-amber-500/20 text-amber-300'
-                        : 'bg-white/10 text-slate-300'
-                  }`}
-                >
-                  {issue.status === 'open' ? issue.severity : 'RESOLVED'}
-                </span>
-              </div>
-            ))}
         </div>
       </PageLayout>
     </DashboardLayout>

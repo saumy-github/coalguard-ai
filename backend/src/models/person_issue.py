@@ -4,15 +4,16 @@ from typing import Literal, Optional
 from beanie import Document, PydanticObjectId
 from pydantic import Field
 
-PersonIssueType = Literal["no_helmet", "no_vest", "unsafe_practice", "other"]
+PersonIssueType = Literal["no_helmet", "no_vest", "other"]
 PersonIssueSource = Literal["camera", "manual"]
 PersonIssueSeverity = Literal["low", "medium", "high", "critical"]
 PersonIssueStatus = Literal["open", "resolved"]
 
 
 class PersonIssue(Document):
-    worker_id: Optional[PydanticObjectId] = None  # null when a camera detection can't resolve identity
+    worker_id: Optional[PydanticObjectId] = None  # the offender; null when identity can't be resolved
     mine_id: PydanticObjectId
+    source_id: Optional[str] = None  # reporter's own user id for a manual report; null for camera detections
     level: str
     section: int
     issue_type: PersonIssueType

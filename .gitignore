@@ -240,6 +240,13 @@ ai_engine/data/attendance/temp_selfies/*
 ai_engine/data/attendance/registered_faces/*
 !ai_engine/data/attendance/registered_faces/.gitkeep
 
+uploads/pending/*
+!uploads/pending/.gitkeep
+uploads/site_issues/*
+!uploads/site_issues/.gitkeep
+uploads/person_issues/*
+!uploads/person_issues/.gitkeep
+
 # macOS
 .DS_Store
 .DS_Store?

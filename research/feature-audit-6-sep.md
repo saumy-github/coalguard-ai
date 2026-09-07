@@ -54,7 +54,7 @@ All 6 sections below are now complete. Section 0 is the standing list of problem
 
 ---
 
-## 1. Auth / Guest Login / User & Access Management
+## 1. Auth / Guest Login / User & Access Management — Changes Planned DONE (2026-09-06)
 
 ### 1a. Auth (password + Google login)
 **Backend** — `models/user.py` (`User`: email/phone/password_hash/google_id/role/legacy mine_id&subsidiary_id [dead]/full_name/role_title/is_guest/active). `routes/auth.py`: `POST /auth/login`, `POST /auth/google`, `POST /auth/logout` (stateless JWT — does **not** revoke server-side, self-documented), `GET /auth/me` (returns `mine_ids` computed live via `accessible_mine_ids`, not stored). `services/auth_service.py`: password login checks bcrypt + `active`; Google login requires a **pre-existing** user by email (no self-provisioning — "an Admin must invite first"). JWT claims are only `{sub, role}` — no scope claims; scope resolved per-request from `mine_assignments`.
@@ -88,7 +88,7 @@ All 6 sections below are now complete. Section 0 is the standing list of problem
 
 **Verified bug (not previously documented anywhere)**: `provision_service.change_role` updates `User.role` but never updates the `role` field already snapshotted onto that user's existing `MineAssignment` row(s). Since regulator scope is derived by filtering `MineAssignment.role == "corporate_manager"` specifically, a user promoted/demoted away from `corporate_manager` via role-change will still be included/excluded from regulator visibility based on the now-**stale** snapshot, not their real current role, until a human manually re-touches that assignment. Also: `POST /mine-assignments` never validates that `mine_id` refers to a real `Mine` (no 404 check, unlike the `user_id` check which does exist).
 
-### Changes Planned (discussed 2026-09-06 — not yet implemented)
+### Changes Planned (discussed 2026-09-06 — implemented, see `implementation-plan-6-sep.md` Section 1)
 
 1. **Remove `subsidiary_id` everywhere.** Delete the `Subsidiary` model/collection entirely, and remove `subsidiary_id` from both `User` and `Mine` (currently dead/legacy fields on both, confirmed unused by any query or authorization logic).
 
@@ -153,7 +153,7 @@ A **second, entirely separate** lat/lng capture exists for Attendance (`Attendan
 6. `LocationPing`/live tracking: confirmed fully unbuilt.
 7. `Subsidiary`/`subsidiary_id` dead legacy fields still present on `Mine`/`User`.
 
-### Changes Planned (discussed 2026-09-06/07 — not yet implemented)
+### Changes Planned (discussed 2026-09-06/07 — items 1–4, 6, 7 implemented; item 5 blocked, see `implementation-plan-6-sep.md` Section 2)
 
 1. **Persist the mine-level diagram server-side instead of generating it client-side every render.** The same Voronoi computation (`MineLevelMap.tsx` today) runs once and its *result* — each section's actual polygon coordinates — gets stored (on `MineLevel` or a related structure) and returned by `GET /mine-levels`. The frontend stops computing shapes at all; it just renders whatever polygons it's given. This makes the diagram real, stable, per-mine data instead of a reproducible-but-fake client computation, and is a genuine architecture improvement, not just a variant of what's there today.
 
@@ -176,7 +176,7 @@ A **second, entirely separate** lat/lng capture exists for Attendance (`Attendan
 
 ---
 
-## 3. Person Issues / Site Issues / Inspections
+## 3. Person Issues / Site Issues / Inspections — Changes Planned items 1–4 DONE (2026-09-07)
 
 ### 3a. Person Issues — endpoint-by-endpoint usage (resolves Section 0 item 2)
 `Model`: worker_id, mine_id, level, section, issue_type, source (camera/manual), observation, `photo_url: Optional[str]`, severity, status (open/resolved — **no endpoint ever sets it to resolved**), created_at.
@@ -221,7 +221,7 @@ Does not call ai_engine at all (no CV, no predictive, no RAG) — confirmed via 
 ### Summary — dead backend endpoints across this whole cluster
 `POST /person-issues`, `POST /person-issues/detect`, `POST /site-issues/detect` — all fully implemented, all zero-caller from the frontend. No status/resolve endpoint exists for Person or Site Issues at all (never built, not merely unused).
 
-### Changes Planned (discussed 2026-09-07 — implemented)
+### Changes Planned (discussed 2026-09-07) — all items implemented, see `implementation-plan-6-sep.md` Section 3
 
 1. **Real seed data added for Site/Person Issues — `backend/scripts/seed_issues.py`.** While checking the DB's actual contents (prompted by Section 2's map testing), found `site_issues`(4)/`person_issues`(1)/`regulatory_reports`(3) already populated with leftover manual/undocumented data — not produced by any seed script. Two concrete bugs found in that leftover data: an exact duplicate `SiteIssue` (same mine/level/section/type/severity, twice), and a `SiteIssue` referencing Level B/Section 74 — Level B only has 15 sections, a live example of the already-documented "`MineLevel.section_count` and issue `section` are uncoupled" gap (Section 2).
    - **Confirmed**: keep the same counts (4 site issues, 1 person issue) but replace the leftover data with a real, idempotent seed script, following the established one-file-per-collection convention (`scripts/index.py`'s own docstring). Neither bug above was reproduced — the new seed data has no duplicate and stays within each level's real `section_count`, and is spread across both demo mines (3 on ECL, 1 on BCCL) rather than all on one mine, so multi-mine viewing (Section 2, Phase 2) has real data to show on both.
@@ -229,9 +229,52 @@ Does not call ai_engine at all (no CV, no predictive, no RAG) — confirmed via 
    - **Confirmed not in scope**: `RegulatoryReport` seeding. The leftover 3 regulatory-report documents were dropped and **not replaced** — that model's structure is expected to be rebuilt from scratch when Section 4 gets a real planning pass, so seeding it now would just be thrown away later. See Section 4 below.
    - Verified live: worker's `GET /person-issues/me` returns their seeded issue; worker's `GET /site-issues` correctly returns only their own mine's 3 (not BCCL's 1); the Section 2 mine-matching fix was independently verified against a synthetic same-level-and-section-but-different-mine collision case (one mine open, the other resolved) and correctly did not cross-contaminate.
 
+2. **Unified, AI-routed issue reporting — replaces manual issue creation entirely (confirmed 2026-09-07, implemented).** Full reasoning and the exploratory follow-on idea in `research/issue-reporting-ai-pipeline-notes-7-sep.md`.
+   - **`PersonIssue` model**: add `source_id: Optional[str]` (reporter's own user id for a manual report; null for camera detections). `PersonIssueType` narrows to `Literal["no_helmet", "no_vest", "other"]` — `unsafe_practice` is dropped, not deferred; `other` is the fallback when the classifier is confident it's a person issue but not one of the two known classes.
+   - **`SiteIssue` model**: add `source_id: Optional[str]` (same meaning; null for sensor-triggered issues) **and `photo_url: Optional[str]`** (confirmed 2026-09-07 — the model has no photo field at all today; without this, a photo attached to a report the AI classifies as a site issue would be silently discarded after classification). `SiteIssueType`'s existing 6 values are unchanged.
+   - **`POST /site-issues` and `POST /person-issues` (the manual-creation routes) are removed**, replaced by one new `POST /issues` endpoint, callable by `worker` and `safety_officer` with no restriction between them (confirmed 2026-09-07) — the AI decides person-vs-site and the specific type, not the caller's role, so either role's submission is free to land in either collection. The human only supplies a description + optional photo (level/section still resolved from `require_mine_assignment(user)`, same as today). `/site-issues/detect` and `/person-issues/detect` (sensor/camera-triggered, automatic) are untouched.
+   - **Response shape (confirmed 2026-09-07)**: `POST /issues` returns a wrapper, `{"target": "site_issue" | "person_issue", "issue": SiteIssueResponse | PersonIssueResponse}` — the caller can't know in advance which collection a report landed in, so the response makes it explicit rather than requiring shape-inference on the frontend.
+   - **New `raw_issue_reports` collection** as the durability layer: written (report fields + photo saved to `uploads/pending/`) *before* the AI call, so nothing is lost if the AI engine is unreachable. On successful classification the real `SiteIssue`/`PersonIssue` is created, the photo is moved into `uploads/site_issues/` or `uploads/person_issues/`, and the raw record is **deleted** (no audit trail kept — confirmed). On AI failure it's left as `status: "failed"` for later retry.
+   - **PersonIssue classification reuses the existing `cv_engine` PPE detector as-is** (no new AI model) — it already covers exactly `no_helmet`/`no_vest`.
+   - **SiteIssue classification needs a new ai_engine capability**: none of its 6 types are identifiable from text or a photo today (the only existing detector, `predictive_engine.assess_anomaly`, requires numeric sensor telemetry, not text). A new LLM text classifier (reusing `rag_engine.py`'s existing Groq plumbing) is needed, and doubles as the person-vs-site routing decision for `POST /issues`.
+   - **Photo storage**: root-level `uploads/` folder, subfolders per feature/status (`uploads/pending/`, `uploads/site_issues/`, `uploads/person_issues/`) — no library needed beyond FastAPI's native `UploadFile` handling (already used in `person_issues.py`) plus Pillow if resizing/validation is added later. Deployment target (Oracle Cloud vs. other) is undecided — explicitly deferred, local-disk storage assumed for now.
+   - **Frontend**: `WorkerDashboard.tsx`'s report form drops its manual "ISSUE TYPE"/"SEVERITY" dropdowns (AI-decided now) and gets real photo upload wiring — `handlePhotoUpload` is currently fully mocked (sets a boolean, no file ever read — see Section 3d above).
+   - **Not in scope / explicitly deferred, not decided**: the environmental sensor-confirmation flow (n8n workflow + live sensor ingestion via websockets, to give the 4 sensor-backed `SiteIssueType`s a real confirmed verdict instead of the LLM's text-only guess). This is an idea only — no schema, endpoint, or phase committed. Full detail in the notes file above.
+   - **Read-access role gating, confirmed 2026-09-07 — no n8n, plain role-scoped queries.** A separate idea (routing "which site issue concerns this worker" through an n8n workflow) was considered and rejected: that's a single synchronous DB filter, not a multi-step orchestration — n8n is reserved for the sensor-confirmation flow above, not general visibility filtering, and per-worker location-based relevance can't be computed anyway until Section 2 Phase 4 (checkpoint location) is unblocked. **Verified gap found while reviewing this**: `GET /person-issues` (the general, mine-wide endpoint) currently allows `worker` in its role list (`person_issues.py:50`) — a worker calling it directly would see every worker's PPE violations in the mine, the exact leak `GET /person-issues/me` exists to prevent; the frontend just never happens to call it that way today.
+   - **Revised same day, after checking "can a worker/officer see reports they personally filed?"** Flatly removing `worker` from `GET /person-issues` (the fix originally written here) would have closed the leak but also made it *impossible* for a worker to ever see a person-issue report they themselves filed — `GET /person-issues/me` filters by `worker_id` (the offender), not `source_id` (the reporter), so those are two different, non-overlapping sets of issues. **Corrected final design**: `list_person_issues` scopes a `worker` caller to `source_id == their own id` (their own submitted reports only) instead of denying them outright — this still closes the original leak (can't see other workers' violations) while actually answering the visibility question correctly. `SiteIssueResponse`/`PersonIssueResponse` both gain `source_id` in the response so this is checkable. A worker's own site-issue reports were never at risk the same way — `GET /site-issues` stays mine-wide for `worker`/`safety_officer` (their own reports are already inside it, just not isolated from others' — no finer scope possible without checkpoint location). `safety_officer` was never restricted on either endpoint, so they could already see reports they'd made, mixed into the full mine-wide list.
+   - **Also confirmed**: `GET /site-issues` and `GET /person-issues` both gain `regulator` and `admin` in their role lists — currently only `worker`/`safety_officer`/`corporate_manager` can call either at all, so `regulator`/`admin` presently cannot browse individual issues through these routes (only via `RegulatoryReport`'s aggregated counts, a separate code path). `regulator` scopes the same way `corporate_manager` already does (their own `profile.mines`, via `accessible_mine_ids`); `admin` gets unscoped/global visibility, matching the existing branch pattern in `routes/mines.py`.
+   - **`WorkerReportPage`'s "recent reports" list is dropped, not migrated (confirmed 2026-09-07).** It currently shows only `SiteIssue`s (`GET /site-issues`, refreshed after each submit) — correct today because every manual report from that page was necessarily a `SiteIssue`. Once a submission can land in either collection, keeping it correct would need reporter-scoped (`source_id`) filtering merged across both `GET` endpoints — decided against building that; the immediate post-submit toast (from the new response shape above) is the only feedback this page gives about what was just filed.
+
+3. **Failure-mode hardening for the new pipeline (confirmed 2026-09-07, implemented) — the parts simple enough to fix now, as opposed to Possible Future Issues below.**
+   - **Strict AI-output parsing with a hard fallback.** The new classifier (item 2) is an LLM — it will not always return an exact literal match. Any response that doesn't exactly match the known `issue_type`/`severity` vocab must fall back to `other`/a safe default rather than being written to the DB as-is or crashing the request. Same defensive-parsing pattern already used in `rag_engine.check_compliance` (`rag_engine.py:229`, stripping markdown before matching labels) — reuse that approach, don't invent a new one.
+   - **Strict step ordering in the `POST /issues` handler**, so a failure at any point leaves a clean, retryable state instead of an orphaned file or a dangling reference: (1) write the photo to `uploads/pending/` and confirm the write succeeded before anything else happens, (2) only then insert the `raw_issue_reports` record, (3) call the AI classifier, (4) only after the final `SiteIssue`/`PersonIssue` document is successfully created, move the photo to its final folder, (5) only after that move succeeds, delete the `raw_issue_reports` record. Failing at any step simply leaves the still-intact raw record + pending photo behind for retry — never a half-written state.
+   - **A `updated_at` timestamp field on `raw_issue_reports`**, so a record stuck at `status: "pending"` past a short window (e.g. 5 minutes) can be told apart from one still genuinely being processed. This is a cheap staleness marker, not the retry mechanism itself — see Possible Future Issues below for that.
+
+4. **Inspections removed; its capture mechanism migrates into the unified issue-report flow (confirmed 2026-09-07, implemented).** The `inspections` collection has no read endpoint, no ai_engine involvement, and its only real value (per Section 3e) is `ObservationForm.tsx`'s capture mechanism — real photo/voice capture plus a genuine IndexedDB offline queue (`db.ts` + `useSyncManager.ts`). That mechanism is being redirected at the new `POST /issues` endpoint rather than deleted.
+   - **Backend — deleted outright**: `models/inspection.py`, `services/inspection_service.py`, `schemas/inspections.py`, `routes/inspections.py`; `Inspection` removed from `models/__init__.py`'s import and `ALL_MODELS`; the router import and `app.include_router(inspections_router)` removed from `backend/src/main.py`. Confirmed no other backend file references any of these (Section 3e already established zero ai_engine involvement and no other consumers).
+   - **`frontend/src/utils/db.ts`**: the `Observation` IndexedDB schema is replaced to match the new Issue shape — `pillar` dropped (no `SiteIssueType`/`PersonIssueType` maps onto safety/environment/production/labour), `photo_urls: string[]` becomes a single `photo_url` (the new models take one photo, not an array), `lat`/`lng` dropped (neither `SiteIssue` nor `PersonIssue` has a coordinate field — location is `level`/`section`, per `location-and-pwa-notes-7-sep.md`'s checkpoint model). This is an IndexedDB version bump, not just a TypeScript type edit.
+   - **`frontend/src/hooks/useSyncManager.ts`**: POST target changes from `/inspections/observations` to the new `/issues` endpoint, payload shape updated to match.
+   - **Voice-note capture is dropped, not migrated.** It never had a consumer — Inspections had no read endpoint, so a recorded voice note was never played back to anyone — and neither `SiteIssue` nor `PersonIssue` has a voice field. Carrying it forward would just be a second dead capture path.
+   - **`frontend/src/hooks/useGeolocation.ts`** loses its only caller (`ObservationForm.tsx`) once `lat`/`lng` drop out of the form. Kept in place (cheap, tiny file) rather than deleted, in case a future surface-level feature wants it — flagged here as fully unused the moment this lands, not currently in use by anything else.
+   - **The `/worker` route is removed entirely**: `AppRoutes.tsx`'s `/worker` entry, `pages/worker/WorkerApp.tsx`, and `pages/worker/ObservationForm.tsx` are deleted after migrating the capture logic (photo picker + offline queue, minus voice) into `WorkerDashboard.tsx`'s existing report form. Per Section 0/3's earlier finding, `/worker` was already confirmed unreachable through any real navigation path once guest login was removed (Section 1) — this removes the last reason to keep it as a separate entry point.
+
 ---
 
-## 4. Regulatory Reports
+### Possible Future Issues (Section 3)
+
+Harder items surfaced during this planning pass that need more design/infra time than a hackathon pass affords right now — not started, no phase committed:
+
+- **Automatic retry for `status: "failed"`/stale-`"pending"` `raw_issue_reports`.** Item 3 above makes failures safe (nothing lost, nothing corrupted) but doesn't decide *who or what* reprocesses a failed/stale record — a manual admin action vs. a scheduled sweep job is still an open design choice.
+- **Duplicate-submission protection.** No idempotency key exists on `POST /issues` today — a client retrying a slow request (or a flaky double-tap) can create two real issues from one actual report.
+- **Person-issue offender identification (1-to-many face search).** Blocked on a real prerequisite: worker face registration isn't populated anywhere today — `ai_engine/data/attendance/registered_faces/` is empty and nothing in the frontend calls the existing `POST /attendance/register-face`. Full task spec in `research/ml-engineer-handoff-7-sep.md`.
+- **`equipment_fault` image classifier.** No existing detector; standalone, real vision-model effort. Same handoff file.
+- **Environmental sensor-confirmation flow** (n8n + live sensor ingestion via websockets). Exploratory only — full detail in `research/issue-reporting-ai-pipeline-notes-7-sep.md`.
+- **Deployment target.** Still undecided — options and open questions in `research/deployment-7-sep.md`.
+- **RAG compliance-checking (`/api/rag/check-compliance`) is not wired into the issue pipeline.** Confirmed 2026-09-07: left deliberately unused for now, same as today — no decision to attach legal citations/compliance status to a created issue. Ground truth and the (currently empty) Changes Planned for this capability live in Section 6, not here — not duplicated.
+
+---
+
+## 4. Regulatory Reports — seeding deferred, rest not yet planned
 
 **Backend** — `POST /regulatory-reports` (corporate_manager, must own the mine), `POST /regulatory-reports/{id}/respond` (regulator only, target must be a `corporate_submission`), `GET /regulatory-reports` (corporate_manager or regulator, scoped to their accessible mines). No `GET /{id}`, no update/delete — reports are create/list/respond only, and are **never mutated in place**; a regulator's response is a brand-new document linked back via `parent_report_id`.
 
@@ -269,7 +312,7 @@ Does not call ai_engine at all (no CV, no predictive, no RAG) — confirmed via 
 
 ---
 
-## 6. Computer Vision / Predictive Analytics / RAG Assistant
+## 6. Computer Vision / Predictive Analytics / RAG Assistant — one confirmed decision (no code impact), rest not yet planned
 
 ### 6a. Computer Vision / PPE Detection
 **ai_engine**: real **YOLOv8** (`ultralytics`), 2-class (helmet/reflective-jacket) detector. Fine-tuned weights (`ai_engine/data/models/best.pt`, 5.7MB) **exist on disk today and would load** (falls back to stock COCO `yolov8n.pt` only if that file is missing — it isn't). Violation logic is a simple rule (helmet/vest counts mismatch), not ML. Endpoint `POST /api/cv/detect`.
@@ -297,6 +340,10 @@ Embeddings: `all-MiniLM-L6-v2` (CPU). Chunking: 1000 chars / 150 overlap. Vector
 | Predictive — anomaly | ✅ hybrid rules+IsolationForest (synthetic-trained) | ✅ yes, via `/site-issues/detect` | ❌ no caller, no live sensor feed |
 | Predictive — forecast | ✅ real linear regression | ❌ never called | ❌ no caller |
 | RAG compliance | ⚠️ built, but currently 503s (empty Groq key) | ❌ never called | ❌ no caller |
+
+### Changes Planned
+
+1. **Left unused, deliberately, for now (confirmed 2026-09-07).** Considered whether the new unified issue-reporting pipeline (Section 3) should call `/api/rag/check-compliance` to attach legal citations/compliance status to a created issue — decided not to, no timeline. Revisit as future work if wanted; the empty `GROQ_API_KEY` (Section 0 item 14) would need fixing regardless, whenever this does get picked up.
 
 ---
 

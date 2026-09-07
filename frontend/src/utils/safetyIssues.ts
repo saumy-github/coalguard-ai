@@ -7,7 +7,6 @@ import { api } from './api';
 const PERSON_ISSUE_ACTION: Record<string, string> = {
   no_helmet: 'Direct the worker to put on a helmet immediately.',
   no_vest: 'Direct the worker to put on a high-visibility vest immediately.',
-  unsafe_practice: 'Intervene and correct the unsafe practice on site.',
   other: 'Investigate and follow standard safety procedure.',
 };
 
