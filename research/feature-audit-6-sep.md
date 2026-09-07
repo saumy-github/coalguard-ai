@@ -292,7 +292,7 @@ Harder items surfaced during this planning pass that need more design/infra time
 
 ---
 
-## 5. Attendance / Face Verification / Liveness
+## 5. Attendance / Face Verification / Liveness — Changes Planned items 1–5 DONE on backend/frontend (2026-09-07)
 
 **Directly resolves Section 0 item 1.** User's starting belief: "only frontend + ai_engine, no backend, no dedicated route." Verdict: **half right, half wrong.**
 
@@ -309,6 +309,35 @@ Harder items surfaced during this planning pass that need more design/infra time
 **Verified gaps**: `GET /attendance/today` has no per-user/per-mine filter and no role check — any authenticated user of any role can list every worker's attendance for the day. `register-face` (provisioning a worker's reference photo) has **zero UI** anywhere — must be done out-of-band today (manual file placement or direct API call).
 
 **Doc check — substantially stale**: `lld.md` and `INDEX.md` both currently claim attendance is **"Not built"** and describe an entirely different planned design (a `LabourShift` model with check-in/check-out, manual/proxy check-in for phone-less workers, rest-period computation) — none of that matches what's actually built. The real implementation (single `AttendanceRecord`, camera-only, no check-out, SFace/MediaPipe/Haversine) predates or postdates these docs without ever being reflected in them. This is the single biggest doc/reality gap found across the whole audit so far.
+
+### Changes Planned (discussed 2026-09-07) — items 1–5 DONE on backend/frontend (2026-09-07), see `implementation-plan-6-sep.md` Section 5 for the full execution log
+
+**One exception, called out explicitly**: item 4's 1-to-N face search is only done on the frontend/backend side of the contract — the ai_engine side (`POST /api/attendance/mark` still requires the old `worker_id`/geofence fields and does 1-to-1 matching) is real ML/CV work, spec'd for the ML engineer in `research/ml-engineer-handoff-7-sep.md` item 2. Until that's built, attendance-marking itself will reject every attempt with "Face not recognised" — everything upstream of it (registered-faces storage, the Admin photo-upload UI, the stripped schema, the Kiosk page, the privacy-scoped read endpoints) is real and working.
+
+1. **Schema & Naming Cleanup:**
+   - The collection `attendance_records` will be renamed to simply `attendance`.
+   - The schema will be heavily stripped down. Redundant/denormalized fields (`worker_name`, `mine_name`, `latitude`, `longitude`, `distance_from_site_m`) will be deleted.
+   - The final schema will just be: `worker_id` (ObjectId, linking to users), `mine_id` (ObjectId), `timestamp`, and `selfie_saved`.
+   - The system naturally keeps track of historical attendance (past X days) through these event-based timestamped records, with no need for a separate aggregate counter collection.
+
+2. **File Storage Consolidation:**
+   - Face storage will move out of `ai_engine/data/...` and into the shared project root at `uploads/registered_faces/` and `uploads/temp_selfies/`.
+   - Temporary selfie cleanup (currently best-effort triggered by the next check-in) will eventually be moved to a real background cron job (deferred).
+
+3. **Profile Photos & Registration:**
+   - The standalone `register-face` endpoint will be retired.
+   - Instead, a `photo_url` field will be added directly to `WorkerProfile` and `OfficerProfile`. This photo will be uploaded by the Admin during user creation on the dashboard and saved into `uploads/registered_faces/`.
+
+4. **1-to-N "Kiosk Mode" Workflow (Scenario A):**
+   - The attendance mechanism is shifting from a 1-to-1 verification (logged-in worker confirming identity) to a 1-to-N identification.
+   - A shared device/kiosk will capture frames of whoever steps up. The AI engine will search its registered faces to determine *who* the person is, and return their `worker_id` to the backend.
+   - The backend `POST /attendance/mark` endpoint will be rewritten to expect the identity *from* the AI engine rather than from the frontend payload.
+   - **This 1-to-N face search is the same capability that unblocks Person Issue Offender Identification** (Section 3's Possible Future Issues). The same AI engine function — scanning `uploads/registered_faces/` against a new photo — will be reused for both. This is deliberately spec'd in `ml-engineer-handoff-7-sep.md` (Section 2) as a single shared capability, not two separate builds.
+
+5. **API & Privacy Refactoring:**
+   - The inline `httpx` proxying in `routes/attendance.py` will be moved into the standardized `services/ai_engine_client.py`.
+   - The `GET /attendance/today` privacy gap is being closed: the read endpoints will use `require_mine_assignment` to ensure Workers can only fetch their own attendance, and Officers can only fetch attendance for their specific mine.
+
 
 ---
 

@@ -16,8 +16,10 @@ UPLOADS_ROOT = Path(__file__).resolve().parent.parent / "uploads"
 PENDING_DIR = UPLOADS_ROOT / "pending"
 SITE_ISSUES_DIR = UPLOADS_ROOT / "site_issues"
 PERSON_ISSUES_DIR = UPLOADS_ROOT / "person_issues"
+REGISTERED_FACES_DIR = UPLOADS_ROOT / "registered_faces"
+TEMP_SELFIES_DIR = UPLOADS_ROOT / "temp_selfies"
 
-for _dir in (PENDING_DIR, SITE_ISSUES_DIR, PERSON_ISSUES_DIR):
+for _dir in (PENDING_DIR, SITE_ISSUES_DIR, PERSON_ISSUES_DIR, REGISTERED_FACES_DIR, TEMP_SELFIES_DIR):
     _dir.mkdir(parents=True, exist_ok=True)
 
 

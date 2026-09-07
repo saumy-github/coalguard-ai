@@ -31,6 +31,7 @@ class UserResponse(BaseModel):
     # a synthetic flattened list invented for display convenience.
     mine: Optional[str] = None
     mines: list[str] = []
+    photo_url: Optional[str] = None
 
 
 class ChangeRoleRequest(BaseModel):

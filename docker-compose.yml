@@ -55,6 +55,7 @@ services:
       - ./ai_engine/data:/app/data
       - ./ai_engine/train_cv.py:/app/train_cv.py
       - ./ai_engine/ingest_rag.py:/app/ingest_rag.py
+      - ./uploads:/app/uploads  # for reading registered_faces/
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     restart: unless-stopped
 

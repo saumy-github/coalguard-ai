@@ -6,3 +6,5 @@ from pydantic import BaseModel
 
 class WorkerProfile(BaseModel):
     mine: Optional[PydanticObjectId] = None
+    photo_url: Optional[str] = None
+

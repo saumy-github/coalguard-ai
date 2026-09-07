@@ -98,13 +98,22 @@ export const SafetyOverviewPage = () => {
         badge="Safety Command"
         summaryCards={summaryCards}
         headerActions={
-          <Link
-            to="/dashboard/safety/issues"
-            className="btn-primary-earth px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"
-          >
-            <AlertCircle className="w-4 h-4" />
-            <span>View Safety Issues</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/dashboard/attendance/kiosk"
+              className="btn-glass px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 text-slate-300"
+            >
+              <Users className="w-4 h-4" />
+              <span>Attendance Kiosk</span>
+            </Link>
+            <Link
+              to="/dashboard/safety/issues"
+              className="btn-primary-earth px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span>View Safety Issues</span>
+            </Link>
+          </div>
         }
         attentionAlert={
           hasSevereOpenIssue ? (

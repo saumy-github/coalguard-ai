@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { displayName, userTypeLabel } from '../../utils/userDisplay';
-import { api } from '../../utils/api';
+import { api, API_URL } from '../../utils/api';
 import { ROLES, type UserType } from '../../utils/userTypes';
 import { fetchMines, type Mine } from '../../utils/regulatoryReports';
 import { DashboardLayout } from '../layout/DashboardLayout';
@@ -9,7 +9,8 @@ import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
 import { Dropdown } from '../common/Dropdown';
-import { UserPlus, MapPin } from 'lucide-react';
+import { UserPlus, MapPin, Camera as CameraIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface AdminUser {
   id: string;
@@ -20,6 +21,7 @@ interface AdminUser {
   active: boolean;
   mine: string | null;
   mines: string[];
+  photo_url: string | null;
 }
 
 const SINGLE_MINE_ROLES: UserType[] = ['worker', 'safety_officer'];
@@ -83,12 +85,14 @@ export const AdminUsersPage = () => {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserType>('worker');
+  const [newUserPhoto, setNewUserPhoto] = useState<File | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [selectedUserId, setSelectedUserId] = useState('');
   const [roleDraft, setRoleDraft] = useState<UserType>('worker');
   const [mineDraft, setMineDraft] = useState('');
   const [minesDraft, setMinesDraft] = useState<string[]>([]);
+  const [managePhoto, setManagePhoto] = useState<File | null>(null);
   const [manageError, setManageError] = useState<string | null>(null);
 
   const selectedUser = users.find((u) => u.id === selectedUserId);
@@ -99,16 +103,30 @@ export const AdminUsersPage = () => {
     if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) return;
 
     try {
-      await api.post('/users', {
+      const { data } = await api.post<AdminUser>('/users', {
         full_name: newUserName,
         email: newUserEmail,
         password: newUserPassword,
         role: newUserRole,
       });
+
+      if (newUserPhoto && SINGLE_MINE_ROLES.includes(newUserRole)) {
+        const formData = new FormData();
+        formData.append('file', newUserPhoto);
+        try {
+          await api.patch(`/users/${data.id}/photo`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+        } catch {
+          // account still created — photo can be added later
+        }
+      }
+
       await reloadUsers();
       setNewUserName('');
       setNewUserEmail('');
       setNewUserPassword('');
+      setNewUserPhoto(null);
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setCreateError(detail || 'Could not create the user.');
@@ -118,11 +136,29 @@ export const AdminUsersPage = () => {
   const selectUser = (userId: string) => {
     setSelectedUserId(userId);
     setManageError(null);
+    setManagePhoto(null);
     const user = users.find((u) => u.id === userId);
     if (user) {
       setRoleDraft(user.role);
       setMineDraft(user.mine ?? '');
       setMinesDraft(user.mines);
+    }
+  };
+
+  const handleUploadManagePhoto = async () => {
+    if (!selectedUserId || !managePhoto) return;
+    setManageError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', managePhoto);
+      await api.patch(`/users/${selectedUserId}/photo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setManagePhoto(null);
+      await reloadUsers();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setManageError(detail || 'Could not upload photo.');
     }
   };
 
@@ -177,6 +213,15 @@ export const AdminUsersPage = () => {
         title="Users & Provisioning"
         subtitle="Create accounts through the same delegated hierarchy every role uses — Admin may create any role. New accounts start mine-less; assign a mine below afterward."
         badge="User Management"
+        headerActions={
+          <Link
+            to="/dashboard/attendance/kiosk"
+            className="btn-glass px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 text-slate-300"
+          >
+            <CameraIcon className="w-4 h-4" />
+            <span>Attendance Kiosk</span>
+          </Link>
+        }
       >
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4">
           <div className="md:col-span-5 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
@@ -203,6 +248,20 @@ export const AdminUsersPage = () => {
                   options={ROLES.map((role) => ({ value: role.userType, label: role.title }))}
                 />
               </div>
+
+              {SINGLE_MINE_ROLES.includes(newUserRole) && (
+                <div>
+                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">
+                    Face Photo (for attendance)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNewUserPhoto(e.target.files?.[0] ?? null)}
+                    className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-orange-500/20 file:text-orange-300 file:text-xs file:font-bold hover:file:bg-orange-500/30"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Email</label>
@@ -250,11 +309,22 @@ export const AdminUsersPage = () => {
                     selectedUserId === u.id ? 'border border-orange-500/40' : ''
                   }`}
                 >
-                  <div>
-                    <h4 className="font-bold text-white tracking-wide text-base">{u.full_name || u.email || u.phone || 'Unnamed'}</h4>
-                    <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-                      {userTypeLabel(u.role)} • {u.email || u.phone || 'no contact'} • {mineSummary(u, mines)}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    {u.photo_url ? (
+                      <img
+                        src={`${API_URL}${u.photo_url}`}
+                        alt=""
+                        className="w-9 h-9 rounded-full object-cover border border-white/10 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 shrink-0" />
+                    )}
+                    <div>
+                      <h4 className="font-bold text-white tracking-wide text-base">{u.full_name || u.email || u.phone || 'Unnamed'}</h4>
+                      <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
+                        {userTypeLabel(u.role)} • {u.email || u.phone || 'no contact'} • {mineSummary(u, mines)}
+                      </p>
+                    </div>
                   </div>
                   <StatusBadge status={u.active ? 'safe' : 'critical'} label={u.active ? 'ACTIVE' : 'INACTIVE'} />
                 </button>
@@ -321,6 +391,40 @@ export const AdminUsersPage = () => {
                   <button onClick={handleSaveMines} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold">
                     Save Mines
                   </button>
+                </div>
+              )}
+
+              {SINGLE_MINE_ROLES.includes(selectedUser.role) && (
+                <div className="space-y-3 pt-4 border-t border-white/10">
+                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">
+                    Face Photo (for attendance)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {selectedUser.photo_url ? (
+                      <img
+                        src={`${API_URL}${selectedUser.photo_url}`}
+                        alt=""
+                        className="w-14 h-14 rounded-full object-cover border border-white/10 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 shrink-0 flex items-center justify-center text-[10px] text-slate-500 uppercase text-center">
+                        No Photo
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setManagePhoto(e.target.files?.[0] ?? null)}
+                      className="flex-1 text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-orange-500/20 file:text-orange-300 file:text-xs file:font-bold hover:file:bg-orange-500/30"
+                    />
+                    <button
+                      onClick={handleUploadManagePhoto}
+                      disabled={!managePhoto}
+                      className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0 disabled:opacity-40"
+                    >
+                      Upload
+                    </button>
+                  </div>
                 </div>
               )}
 

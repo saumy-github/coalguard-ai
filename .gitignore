@@ -246,6 +246,10 @@ uploads/site_issues/*
 !uploads/site_issues/.gitkeep
 uploads/person_issues/*
 !uploads/person_issues/.gitkeep
+uploads/registered_faces/*
+!uploads/registered_faces/.gitkeep
+uploads/temp_selfies/*
+!uploads/temp_selfies/.gitkeep
 
 # macOS
 .DS_Store
