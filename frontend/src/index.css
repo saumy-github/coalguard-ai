@@ -9,14 +9,20 @@
 
   body {
     font-family: var(--font-inter);
-    background-color: #0f0c09; /* Deep Coal/Earth */
+    background-color: #0f0c09;
+    /* Deep Coal/Earth */
     color: #e2e8f0;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-sora);
     letter-spacing: -0.03em;
     text-transform: uppercase;
@@ -27,7 +33,7 @@
 .bg-tech-grid {
   background-color: #0f0c09;
   /* Topographic SVG Pattern encoded in Data URI + A subtle noise layer */
-  background-image: 
+  background-image:
     radial-gradient(ellipse at 50% -20%, rgba(245, 158, 11, 0.08) 0%, transparent 60%),
     radial-gradient(circle at 15% 80%, rgba(234, 88, 12, 0.06) 0%, transparent 50%),
     url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c13.866 0 25.362 11.238 27.818 26h1c-2.457-15.31-14.475-27-28.818-27v1zm29.818 26c-2.456 15.31-14.474 27-28.818 27v1c14.344 0 26.362-11.69 28.818-27h-1zm-30.818 27c-13.866 0-25.362-11.238-27.818-26h-1c2.457 15.31 14.475 27 28.818 27v-1zm-29.818-26c2.456-15.31 14.474-27 28.818-27v-1c-14.344 0-26.362 11.69-28.818 27h1z' fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E");
@@ -37,13 +43,11 @@
 
 /* Hazard Tape Pattern */
 .bg-hazard-tape {
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(234, 179, 8, 0.1),
-    rgba(234, 179, 8, 0.1) 10px,
-    transparent 10px,
-    transparent 20px
-  );
+  background-image: repeating-linear-gradient(45deg,
+      rgba(234, 179, 8, 0.1),
+      rgba(234, 179, 8, 0.1) 10px,
+      transparent 10px,
+      transparent 20px);
 }
 
 .bg-dot-matrix {
@@ -62,9 +66,9 @@
   border-left: 1px solid rgba(245, 158, 11, 0.08);
   border-right: 1px solid rgba(0, 0, 0, 0.6);
   border-bottom: 1px solid rgba(0, 0, 0, 0.8);
-  box-shadow: 
+  box-shadow:
     0 10px 30px -10px rgba(0, 0, 0, 0.8),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
   /* Cut corners for an angular industrial look */
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
 }
@@ -75,8 +79,9 @@
 
 .glass-panel-hover:hover {
   background: linear-gradient(145deg, rgba(41, 31, 25, 0.9), rgba(26, 20, 16, 0.98));
-  border-top: 1px solid rgba(245, 158, 11, 0.4); /* Highlight top with amber */
-  box-shadow: 
+  border-top: 1px solid rgba(245, 158, 11, 0.4);
+  /* Highlight top with amber */
+  box-shadow:
     0 15px 40px -10px rgba(0, 0, 0, 0.9),
     inset 0 0 0 1px rgba(245, 158, 11, 0.15);
   transform: translateY(-2px);
@@ -85,26 +90,30 @@
 /* Rugged UI Buttons */
 .btn-primary-earth {
   /* Renamed functionally, using amber/orange contrast */
-  background: #f59e0b; /* amber-500 */
+  background: #f59e0b;
+  /* amber-500 */
   color: #110d0a;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border: 1px solid #d97706; /* amber-600 */
-  box-shadow: 4px 4px 0px rgba(0,0,0,0.5); /* Hard shadow */
+  border: 1px solid #d97706;
+  /* amber-600 */
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+  /* Hard shadow */
   transition: all 0.15s ease;
   clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
 }
 
 .btn-primary-earth:hover {
-  background: #fbbf24; /* amber-400 */
+  background: #fbbf24;
+  /* amber-400 */
   transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px rgba(0,0,0,0.6);
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.6);
 }
 
 .btn-primary-earth:active {
   transform: translate(2px, 2px);
-  box-shadow: 0px 0px 0px rgba(0,0,0,0.8);
+  box-shadow: 0px 0px 0px rgba(0, 0, 0, 0.8);
 }
 
 .btn-glass {
@@ -115,7 +124,7 @@
   font-weight: bold;
   letter-spacing: 0.05em;
   transition: all 0.2s ease;
-  box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.3);
 }
 
 .btn-glass:hover {
@@ -123,45 +132,235 @@
   border-color: rgba(245, 158, 11, 0.5);
   color: #f59e0b;
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px rgba(0,0,0,0.5);
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5);
 }
 
 /* Industrial Highlights */
-.glow-primary { box-shadow: 0 0 0 2px #f59e0b; }
-.glow-secondary { box-shadow: 0 0 0 2px #a8a29e; }
-.glow-amber { box-shadow: 0 0 0 2px #f59e0b, 0 0 15px rgba(245, 158, 11, 0.2); }
-.glow-rose { box-shadow: 0 0 0 2px #dc2626, 0 0 15px rgba(220, 38, 38, 0.2); }
-.text-glow { text-shadow: 2px 2px 0px rgba(0,0,0,0.5); } /* Heavy text shadow */
+.glow-primary {
+  box-shadow: 0 0 0 2px #f59e0b;
+}
+
+.glow-secondary {
+  box-shadow: 0 0 0 2px #a8a29e;
+}
+
+.glow-amber {
+  box-shadow: 0 0 0 2px #f59e0b, 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.glow-rose {
+  box-shadow: 0 0 0 2px #dc2626, 0 0 15px rgba(220, 38, 38, 0.2);
+}
+
+.text-glow {
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+}
+
+/* Heavy text shadow */
 
 /* Micro-Animations */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .animate-fade-in-up {
-  animation: fadeInUp 0.4s ease-out forwards;
+  animation: fadeInUp 0.8s ease-out both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slowPanZoom {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+
+  50% {
+    transform: scale(1.05) translate(-1%, -1%);
+  }
+
+  100% {
+    transform: scale(1.1) translate(1%, 1%);
+  }
+}
+
+.hero-bg-dynamic {
+  animation: fadeIn 1.5s ease-out forwards, slowPanZoom 30s ease-in-out infinite alternate;
 }
 
 @keyframes pulseGlow {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; filter: brightness(1.2); }
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
 }
+
 .animate-pulse-glow {
   animation: pulseGlow 2s infinite;
 }
 
-/* Custom Scrollbars - Heavy Machinery */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #0f0c09; border-left: 1px solid #1a1511; }
-::-webkit-scrollbar-thumb { 
-  background: #2b211a; 
-  border: 1px solid #403227;
+/* Custom Scrollbars - Graphite & Heavenly Gray */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
-::-webkit-scrollbar-thumb:hover { background: #f59e0b; border-color: #d97706; }
+
+::-webkit-scrollbar-track {
+  background: #0f0c09;
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #AAA7AD;
+  border-color: #AAA7AD;
+}
 
 @keyframes soot-fall {
-  0% { transform: translateY(-20px) rotate(0deg) scale(0.8); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(800px) rotate(360deg) scale(1.2); opacity: 0; }
+  0% {
+    transform: translateY(-20px) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(800px) rotate(360deg) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* Light Theme Utilities for Landing Page */
+.light-glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow:
+    0 10px 40px -10px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.light-glass-panel-hover:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 20px 40px -10px rgba(0, 0, 0, 0.12),
+    0 4px 6px rgba(0, 0, 0, 0.05);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.btn-primary-light {
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2), 0 2px 4px -2px rgba(15, 23, 42, 0.2);
+}
+
+.btn-primary-light:hover {
+  background: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2), 0 4px 6px -4px rgba(15, 23, 42, 0.2);
+}
+
+.btn-secondary-light {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary-light:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* --- New 3D Aesthetic Utilities --- */
+
+@keyframes slideUp3D {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95) rotateX(15deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotateX(0deg);
+  }
+}
+
+.animate-3d-enter {
+  animation: slideUp3D 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  perspective: 1000px;
+}
+
+.stagger-1 {
+  animation-delay: 100ms;
+}
+
+.stagger-2 {
+  animation-delay: 200ms;
+}
+
+.stagger-3 {
+  animation-delay: 300ms;
+}
+
+.stagger-4 {
+  animation-delay: 400ms;
+}
+
+.hover-3d-lift {
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow;
+}
+
+.hover-3d-lift:hover {
+  transform: translateY(-8px) scale(1.02) rotateX(2deg) rotateY(-1deg);
+  box-shadow:
+    -15px 25px 50px -12px rgba(0, 0, 0, 0.9),
+    0 15px 25px -5px rgba(37, 99, 235, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  z-index: 10;
 }

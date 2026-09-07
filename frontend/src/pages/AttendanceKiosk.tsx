@@ -210,7 +210,7 @@ export const AttendanceKioskPage = () => {
                 <button
                   type="button"
                   onClick={start}
-                  className="w-full btn-primary-earth py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all"
                 >
                   <Play className="w-4 h-4" />
                   <span>Start Kiosk</span>

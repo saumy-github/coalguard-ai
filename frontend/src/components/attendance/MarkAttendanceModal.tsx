@@ -348,7 +348,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
                 <button
                   type="button"
                   onClick={startBiometricSequence}
-                  className="flex-1 btn-primary-earth py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all"
                 >
                   <Camera className="w-5 h-5" />
                   <span>Mark Attendance Now</span>
@@ -369,7 +369,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
                 <button
                   type="button"
                   onClick={startBiometricSequence}
-                  className="flex-1 btn-primary-earth py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all"
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Retry Verification</span>

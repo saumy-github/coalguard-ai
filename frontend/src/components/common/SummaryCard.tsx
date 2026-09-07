@@ -27,32 +27,32 @@ export const SummaryCard = ({
   return (
     <div
       onClick={onClick}
-      className={`glass-card rounded-xl p-4 sm:p-5 border border-[#51443d]/50 flex flex-col justify-between transition-all ${
-        onClick ? 'cursor-pointer hover:border-[#f6b994]/60 hover:bg-[#1f1e1e]' : ''
+      className={`hover-3d-lift bg-zinc-900/40 backdrop-blur-md rounded-2xl p-5 sm:p-6 border border-white/5 flex flex-col justify-between transition-all duration-300 shadow-xl ${
+        onClick ? 'cursor-pointer hover:border-white/10 hover:bg-zinc-800/60' : ''
       } ${className}`}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <span className="text-xs font-mono font-medium text-[#9e8d85] uppercase tracking-wider">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
           {title}
         </span>
         {icon && (
-          <div className="p-2 rounded-lg bg-[#252423] text-[#f6b994] border border-[#51443d]/40">
+          <div className="p-2.5 rounded-xl bg-black/30 text-zinc-300 border border-white/5 shadow-inner">
             {icon}
           </div>
         )}
       </div>
 
-      <div className="my-1 flex items-baseline justify-between gap-2">
-        <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-['Sora'] tracking-tight">
+      <div className="my-2 flex items-end justify-between gap-3">
+        <h3 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-none">
           {value}
         </h3>
         {status && <StatusBadge status={status} label={statusLabel} />}
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-xs font-mono text-[#d6c3b9] pt-2 border-t border-[#353534]/50">
+      <div className="mt-4 flex items-center justify-between text-xs text-zinc-500 pt-3 border-t border-white/5 font-medium">
         <span className="truncate">{subtext}</span>
         {trend && (
-          <span className="text-[11px] text-[#f6b994] font-semibold shrink-0 ml-2">
+          <span className="text-[11px] text-blue-400 font-bold shrink-0 ml-2 px-2 py-0.5 bg-blue-500/10 rounded-md">
             {trend}
           </span>
         )}

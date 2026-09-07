@@ -3,6 +3,7 @@ import { RequireAuth } from '../components/auth/RequireAuth';
 import { RequireRole } from '../components/auth/RequireRole';
 import { AttendanceKioskPage } from '../pages/AttendanceKiosk';
 import { LandingPage } from '../components/views/LandingPage';
+import { DemoFlowPage } from '../components/views/DemoFlowPage';
 import { Login } from '../pages/auth/Login';
 import { Dashboard } from '../pages/Dashboard';
 import { MineMapPage } from '../pages/MineMapPage';
@@ -26,6 +27,7 @@ import { AdminUsersPage, AdminMinesPage, AdminProfilePage } from '../components/
 export const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<LandingPage />} />
+    <Route path="/demo" element={<DemoFlowPage />} />
     <Route path="/login" element={<Login />} />
 
     {/* Shared authenticated landing route — redirects every role to its own

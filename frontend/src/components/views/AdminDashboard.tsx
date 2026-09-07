@@ -9,7 +9,7 @@ import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
 import { Dropdown } from '../common/Dropdown';
-import { UserPlus, MapPin, Camera as CameraIcon } from 'lucide-react';
+import { UserPlus, MapPin, Search, Camera as CameraIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface AdminUser {
@@ -46,7 +46,7 @@ function useAdminUsers() {
       const { data } = await api.get<AdminUser[]>('/users');
       setUsers(data);
     } catch {
-      // Non-critical — pages just show empty state if this fails.
+      // Non-critical
     }
   };
 
@@ -64,7 +64,7 @@ function useAdminMines() {
     try {
       setMines(await fetchMines());
     } catch {
-      // Non-critical — pages just show empty state if this fails.
+      // Non-critical
     }
   };
 
@@ -75,11 +75,11 @@ function useAdminMines() {
   return { mines, reload };
 }
 
-// Users — /dashboard/admin/users — directory, provisioning, role changes,
-// and mine assignment. New accounts start mine-less; assign a mine after.
+// Users — /dashboard/admin/users
 export const AdminUsersPage = () => {
   const { users, reload: reloadUsers } = useAdminUsers();
   const { mines } = useAdminMines();
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -168,7 +168,6 @@ export const AdminUsersPage = () => {
     try {
       await api.patch(`/users/${selectedUserId}/role`, { role: roleDraft });
       await reloadUsers();
-      // Backend resets the profile on role change — mirror that locally.
       setMineDraft('');
       setMinesDraft([]);
     } catch (err) {
@@ -207,12 +206,18 @@ export const AdminUsersPage = () => {
     }
   };
 
+  const filteredUsers = users.filter((u) => {
+    const nameMatch = u.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const emailMatch = u.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    return nameMatch || emailMatch;
+  });
+
   return (
     <DashboardLayout>
       <PageLayout
-        title="Users & Provisioning"
-        subtitle="Create accounts through the same delegated hierarchy every role uses — Admin may create any role. New accounts start mine-less; assign a mine below afterward."
-        badge="User Management"
+        title="Access Provisioning"
+        subtitle="Manage secure system access, role hierarchies, and mine assignments across the entire platform."
+        badge="IAM System"
         headerActions={
           <Link
             to="/dashboard/attendance/kiosk"
@@ -224,29 +229,32 @@ export const AdminUsersPage = () => {
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4">
-          <div className="md:col-span-5 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
-            <SectionHeader title="Register New User" subtitle="Create an authorized operator account." />
+          
+          <div className="md:col-span-4 bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 space-y-6 h-fit">
+            <SectionHeader title="Register Operator" subtitle="Provision a new identity." />
 
-            <form onSubmit={handleAddUser} className="space-y-5">
+            <form onSubmit={handleAddUser} className="space-y-4">
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Full Name</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1.5 block">Full Name</label>
                 <input
                   type="text"
                   required
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 shadow-inner"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Role</label>
-                <Dropdown
-                  value={newUserRole}
-                  onChange={(v) => setNewUserRole(v as UserType)}
-                  options={ROLES.map((role) => ({ value: role.userType, label: role.title }))}
-                />
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1.5 block">Role</label>
+                <div className="rounded-xl overflow-hidden shadow-inner">
+                  <Dropdown
+                    value={newUserRole}
+                    onChange={(v) => setNewUserRole(v as UserType)}
+                    options={ROLES.map((role) => ({ value: role.userType, label: role.title }))}
+                  />
+                </div>
               </div>
 
               {SINGLE_MINE_ROLES.includes(newUserRole) && (
@@ -264,180 +272,161 @@ export const AdminUsersPage = () => {
               )}
 
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Email</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1.5 block">Email</label>
                 <input
                   type="email"
                   required
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
                   placeholder="e.g. ramesh@example.com"
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 shadow-inner"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Password</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1.5 block">Password</label>
                 <input
                   type="password"
                   required
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 shadow-inner"
                 />
               </div>
 
-              {createError && <p className="text-sm text-rose-400">{createError}</p>}
+              {createError && <p className="text-sm text-red-400 bg-red-500/10 p-2 rounded-lg border border-red-500/20">{createError}</p>}
 
               <button
                 type="submit"
-                className="w-full btn-primary-earth py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all transform active:scale-95"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>Create Account</span>
+                <span>Provision Identity</span>
               </button>
             </form>
           </div>
 
-          <div className="md:col-span-7 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
-            <SectionHeader title="Authorized Operator Directory" subtitle="Click a user to manage their role and mine(s)." />
-            <div className="space-y-3">
-              {users.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => selectUser(u.id)}
-                  className={`w-full text-left glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono transition-colors ${
-                    selectedUserId === u.id ? 'border border-orange-500/40' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {u.photo_url ? (
-                      <img
-                        src={`${API_URL}${u.photo_url}`}
-                        alt=""
-                        className="w-9 h-9 rounded-full object-cover border border-white/10 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 shrink-0" />
-                    )}
-                    <div>
-                      <h4 className="font-bold text-white tracking-wide text-base">{u.full_name || u.email || u.phone || 'Unnamed'}</h4>
-                      <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-                        {userTypeLabel(u.role)} • {u.email || u.phone || 'no contact'} • {mineSummary(u, mines)}
-                      </p>
-                    </div>
-                  </div>
-                  <StatusBadge status={u.active ? 'safe' : 'critical'} label={u.active ? 'ACTIVE' : 'INACTIVE'} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {selectedUser && (
-            <div className="md:col-span-12 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
-              <SectionHeader
-                title={`Manage ${selectedUser.full_name || selectedUser.email || 'User'}`}
-                subtitle="Role and mine scope for this account."
-              />
-
-              <div className="space-y-3">
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Role</label>
-                <div className="flex items-center gap-3">
-                  <Dropdown
-                    value={roleDraft}
-                    onChange={(v) => setRoleDraft(v as UserType)}
-                    options={ROLES.map((role) => ({ value: role.userType, label: role.title }))}
-                    className="flex-1"
-                  />
-                  <button onClick={handleChangeRole} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0">
-                    Update Role
-                  </button>
-                </div>
+          <div className="md:col-span-8 flex flex-col gap-6">
+            <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 space-y-6 flex-1 flex flex-col min-h-[400px]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                 <SectionHeader title="Operator Directory" subtitle="Manage access control and role bindings." />
+                 <div className="relative -mt-6">
+                   <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                   <input
+                     type="text"
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     placeholder="Search operators..."
+                     className="pl-9 pr-4 py-2 bg-black/30 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500/50 w-full sm:w-64"
+                   />
+                 </div>
               </div>
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                {filteredUsers.length === 0 ? (
+                   <p className="text-zinc-500 text-center py-8 font-mono text-sm">No identities match your search.</p>
+                ) : (
+                   filteredUsers.map((u) => (
+                     <button
+                       key={u.id}
+                       onClick={() => selectUser(u.id)}
+                       className={`w-full text-left p-4 rounded-xl flex items-center justify-between transition-all border ${
+                         selectedUserId === u.id 
+                           ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.1)]' 
+                           : 'bg-black/20 border-white/5 hover:bg-black/40 hover:border-white/10'
+                       }`}
+                     >
+                       <div className="flex items-center gap-3">
+                         {u.photo_url ? (
+                           <img
+                             src={`${API_URL}${u.photo_url}`}
+                             alt=""
+                             className="w-9 h-9 rounded-full object-cover border border-white/10 shrink-0"
+                           />
+                         ) : (
+                           <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 shrink-0" />
+                         )}
+                         <div>
+                           <h4 className="font-bold text-white tracking-wide text-base leading-snug">{u.full_name || u.email || u.phone || 'Unnamed'}</h4>
+                           <p className="text-xs text-zinc-500 mt-0.5 uppercase tracking-widest font-bold">
+                             <span className="text-blue-400">{userTypeLabel(u.role)}</span> • {u.email || u.phone || 'no contact'} • {mineSummary(u, mines)}
+                           </p>
+                         </div>
+                       </div>
+                       <StatusBadge status={u.active ? 'safe' : 'critical'} label={u.active ? 'ACTIVE' : 'INACTIVE'} />
+                     </button>
+                   ))
+                )}
+              </div>
+            </div>
 
-              {SINGLE_MINE_ROLES.includes(selectedUser.role) && (
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Mine</label>
+            {selectedUser && (
+              <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 space-y-6">
+                <SectionHeader
+                  title={`Manage ${selectedUser.full_name || selectedUser.email || 'User'}`}
+                  subtitle="Role and scope for this identity."
+                />
+
+                <div className="space-y-4">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest block">Authorization Level</label>
                   <div className="flex items-center gap-3">
                     <Dropdown
-                      value={mineDraft}
-                      onChange={setMineDraft}
-                      options={mines.map((mine) => ({ value: mine.id, label: mine.name }))}
-                      placeholder="No mine assigned"
-                      className="flex-1"
+                      value={roleDraft}
+                      onChange={(v) => setRoleDraft(v as UserType)}
+                      options={ROLES.map((role) => ({ value: role.userType, label: role.title }))}
+                      className="flex-1 bg-black/30 border-white/10"
                     />
-                    <button onClick={handleSaveMine} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0">
-                      Save
+                    <button onClick={handleChangeRole} className="px-6 py-3.5 rounded-xl text-sm font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all shrink-0">
+                      Update Role
                     </button>
                   </div>
                 </div>
-              )}
 
-              {MULTI_MINE_ROLES.includes(selectedUser.role) && (
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Mines</label>
-                  <div className="space-y-2">
-                    {mines.map((mine) => (
-                      <label key={mine.id} className="flex items-center gap-3 text-sm text-slate-300 font-mono">
-                        <input
-                          type="checkbox"
-                          checked={minesDraft.includes(mine.id)}
-                          onChange={() => toggleMine(mine.id)}
-                          className="accent-orange-500"
-                        />
-                        {mine.name}
-                      </label>
-                    ))}
-                  </div>
-                  <button onClick={handleSaveMines} className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold">
-                    Save Mines
-                  </button>
-                </div>
-              )}
-
-              {SINGLE_MINE_ROLES.includes(selectedUser.role) && (
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block">
-                    Face Photo (for attendance)
-                  </label>
-                  <div className="flex items-center gap-4">
-                    {selectedUser.photo_url ? (
-                      <img
-                        src={`${API_URL}${selectedUser.photo_url}`}
-                        alt=""
-                        className="w-14 h-14 rounded-full object-cover border border-white/10 shrink-0"
+                {SINGLE_MINE_ROLES.includes(selectedUser.role) && (
+                  <div className="space-y-4 pt-6 border-t border-white/5">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest block">Assigned Mine</label>
+                    <div className="flex items-center gap-3">
+                      <Dropdown
+                        value={mineDraft}
+                        onChange={setMineDraft}
+                        options={mines.map((mine) => ({ value: mine.id, label: mine.name }))}
+                        placeholder="No assigned sector"
+                        className="flex-1 bg-black/30 border-white/10"
                       />
-                    ) : (
-                      <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 shrink-0 flex items-center justify-center text-[10px] text-slate-500 uppercase text-center">
-                        No Photo
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setManagePhoto(e.target.files?.[0] ?? null)}
-                      className="flex-1 text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-orange-500/20 file:text-orange-300 file:text-xs file:font-bold hover:file:bg-orange-500/30"
-                    />
-                    <button
-                      onClick={handleUploadManagePhoto}
-                      disabled={!managePhoto}
-                      className="btn-primary-earth px-5 py-3 rounded-xl text-sm font-bold shrink-0 disabled:opacity-40"
-                    >
-                      Upload
-                    </button>
+                      <button onClick={handleSaveMine} className="px-6 py-3.5 rounded-xl text-sm font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all shrink-0">
+                        Commit
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {manageError && <p className="text-sm text-rose-400">{manageError}</p>}
-            </div>
-          )}
+                {MULTI_MINE_ROLES.includes(selectedUser.role) && (
+                  <div className="space-y-4 pt-6 border-t border-white/5">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest block">Assigned Sectors</label>
+                    <div className="space-y-3 p-4 bg-black/30 rounded-xl border border-white/5">
+                      {mines.map((mine) => (
+                        <label key={mine.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${minesDraft.includes(mine.id) ? 'bg-blue-500 border-blue-500' : 'border-white/20 bg-black/40'}`}>
+                             {minesDraft.includes(mine.id) && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+                          </div>
+                          <span className="text-sm text-zinc-300 font-mono">{mine.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {manageError && <p className="text-sm text-red-400 bg-red-500/10 p-3 rounded-xl border border-red-500/20">{manageError}</p>}
+              </div>
+            )}
+          </div>
         </div>
       </PageLayout>
     </DashboardLayout>
   );
 };
 
-// 2. Mines — /dashboard/admin/mines — mine registry.
+// 2. Mines — /dashboard/admin/mines
 export const AdminMinesPage = () => {
   const { mines, reload } = useAdminMines();
   const [name, setName] = useState('');
@@ -460,61 +449,67 @@ export const AdminMinesPage = () => {
 
   return (
     <DashboardLayout>
-      <PageLayout title="Mine Registry" subtitle="Every mine known to the platform." badge="Mine Registry">
+      <PageLayout title="System Mine Registry" subtitle="Manage physical assets and locations within the cryptographic ledger." badge="Asset Registry">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4">
-          <div className="md:col-span-5 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
-            <SectionHeader title="Register New Mine" />
+          
+          <div className="md:col-span-4 bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 space-y-6 h-fit">
+            <SectionHeader title="Register Asset" />
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Mine Name</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1.5 block">Asset Name</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 shadow-inner"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Latitude</label>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1.5 block">Latitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={lat}
                     onChange={(e) => setLat(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                    className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-blue-500/50 shadow-inner"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2 block">Longitude</label>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1.5 block">Longitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={lng}
                     onChange={(e) => setLng(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50"
+                    className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-blue-500/50 shadow-inner"
                   />
                 </div>
               </div>
-              <button type="submit" className="w-full btn-primary-earth py-3.5 rounded-xl text-sm font-bold">
-                Register Mine
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 transition-transform active:scale-95">
+                Register Physical Asset
               </button>
             </form>
           </div>
 
-          <div className="md:col-span-7 glass-panel rounded-3xl p-6 sm:p-8 space-y-4">
-            <SectionHeader title="All Mines" />
-            {mines.map((mine) => (
-              <div key={mine.id} className="glass-panel glass-panel-hover p-4 rounded-2xl flex items-center justify-between text-sm font-mono">
-                <span className="font-bold text-white">{mine.name}</span>
-                {mine.lat !== null && mine.lng !== null && (
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" /> {mine.lat.toFixed(4)}, {mine.lng.toFixed(4)}
-                  </span>
-                )}
-              </div>
-            ))}
+          <div className="md:col-span-8 bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 space-y-4">
+            <SectionHeader title="Active Registry" />
+            <div className="space-y-2">
+              {mines.map((mine) => (
+                <div key={mine.id} className="bg-black/20 hover:bg-black/40 border border-white/5 p-4 rounded-xl flex items-center justify-between text-sm transition-colors">
+                  <span className="font-bold text-white tracking-wide">{mine.name}</span>
+                  {mine.lat !== null && mine.lng !== null && (
+                    <span className="text-xs text-zinc-400 flex items-center gap-1.5 font-mono bg-zinc-900/50 px-2 py-1 rounded border border-white/5">
+                      <MapPin className="w-3.5 h-3.5 text-blue-500" /> {mine.lat.toFixed(4)}, {mine.lng.toFixed(4)}
+                    </span>
+                  )}
+                </div>
+              ))}
+              {mines.length === 0 && (
+                 <div className="text-center py-10 text-zinc-500 font-mono text-sm">No assets registered in the system.</div>
+              )}
+            </div>
           </div>
         </div>
       </PageLayout>
@@ -522,39 +517,51 @@ export const AdminMinesPage = () => {
   );
 };
 
-// 3. Profile — /dashboard/admin/profile — read-only, sourced only from
-// GET /auth/me's real fields, same treatment as every other role.
+// 3. Profile — /dashboard/admin/profile
 export const AdminProfilePage = () => {
   const user = useAuthStore((state) => state.user);
 
   return (
     <DashboardLayout>
-      <PageLayout title="Admin Profile" subtitle="Your account identity, as recorded by the system." badge="Root Admin">
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 max-w-xl mx-auto mt-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+      <PageLayout title="System Administrator Profile" subtitle="Your secure cryptographic profile and metadata." badge="Root Access">
+        <div className="max-w-2xl mx-auto mt-8">
+           <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden">
+             
+             {/* Banner */}
+             <div className="h-32 bg-gradient-to-br from-blue-900/40 to-black border-b border-white/5 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-[0.2]" style={{ backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+                <div className="absolute bottom-[-50%] right-[-10%] w-64 h-64 bg-blue-500/20 rounded-full blur-[80px]"></div>
+             </div>
 
-          <SectionHeader title="Account Details" />
+             <div className="px-8 sm:px-12 pb-12">
+                <div className="flex flex-col items-center -mt-16 mb-8 relative z-10">
+                  <div className="w-32 h-32 rounded-2xl bg-zinc-900 border-4 border-[#121214] flex items-center justify-center text-zinc-100 text-5xl font-extrabold shadow-2xl relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent pointer-events-none"></div>
+                    <span className="relative z-10 group-hover:scale-110 transition-transform duration-500">{displayName(user).charAt(0).toUpperCase()}</span>
+                  </div>
+                  <h3 className="text-2xl font-extrabold text-white tracking-tight mt-5">{displayName(user)}</h3>
+                  <div className="px-3 py-1 bg-blue-500/10 rounded-md border border-blue-500/20 text-xs font-mono font-bold text-blue-400 uppercase tracking-widest mt-3">
+                    {userTypeLabel(user?.role)}
+                  </div>
+                </div>
 
-          <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
-            <div className="w-20 h-20 rounded-[1.25rem] bg-linear-to-br from-purple-600/20 to-blue-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.2)]">
-              {displayName(user).charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
-              <p className="text-sm font-mono text-purple-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
-            </div>
-          </div>
+                <div className="space-y-3">
+                  <div className="bg-black/30 rounded-xl p-4 border border-white/5 flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Email</span>
+                    <span className="text-sm font-mono text-zinc-200">{user?.email || '—'}</span>
+                  </div>
+                  <div className="bg-black/30 rounded-xl p-4 border border-white/5 flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Phone</span>
+                    <span className="text-sm font-mono text-zinc-200">{user?.phone || '—'}</span>
+                  </div>
+                  <div className="bg-black/30 rounded-xl p-4 border border-white/5 flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Clearance Level</span>
+                    <span className="text-sm font-mono text-blue-400 font-bold">SYSTEM ROOT</span>
+                  </div>
+                </div>
 
-          <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-slate-500 uppercase text-xs tracking-wider">Email</span>
-              <span className="text-white">{user?.email || '—'}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-slate-500 uppercase text-xs tracking-wider">Phone</span>
-              <span className="text-white">{user?.phone || '—'}</span>
-            </div>
-          </div>
+             </div>
+           </div>
         </div>
       </PageLayout>
     </DashboardLayout>

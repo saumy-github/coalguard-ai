@@ -39,8 +39,8 @@ interface Cell {
 }
 
 const STATUS_COLORS = {
-  open: { fill: 'rgba(220,38,38,0.32)', stroke: '#dc2626', text: '#fca5a5' },
-  clear: { fill: '#221b14', stroke: 'rgba(245,158,11,0.45)', text: '#c4bcae' },
+  open: { fill: 'rgba(239,68,68,0.2)', stroke: '#ef4444', text: '#fca5a5' },
+  clear: { fill: '#18181b', stroke: '#3f3f46', text: '#a1a1aa' },
 };
 
 const CARD_W = 700;
@@ -191,8 +191,8 @@ export const MineLevelMap = () => {
   const selectedCell = layout?.cells.find((c) => c.key === selectedKey) || null;
 
   return (
-    <PageLayout title="Mine Level Map" subtitle="Underground layout by level and section" badge="Live Layout">
-      <div className="space-y-4 mt-4">
+    <PageLayout title="Mine Level Map" subtitle="Interactive underground layout by level and section" badge="Live Layout">
+      <div className="space-y-6 mt-2">
         {needsMinePicker && (
           <div className="max-w-xs">
             <Dropdown
@@ -204,51 +204,69 @@ export const MineLevelMap = () => {
           </div>
         )}
 
-        {isLoading && <p className="text-sm font-mono text-slate-400">Loading mine layout…</p>}
+        {isLoading && <p className="text-sm font-mono text-zinc-500">Loading mine layout…</p>}
         {!isLoading && sortedLevels.length === 0 && (
-          <p className="text-sm font-mono text-slate-400">No levels configured for this mine yet.</p>
+          <p className="text-sm font-mono text-zinc-500">No levels configured for this mine yet.</p>
         )}
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2.5 flex-wrap">
           {sortedLevels.map((lvl) => {
             const active = lvl.level === selectedLevel;
             return (
               <button
                 key={lvl.level}
                 onClick={() => { setSelectedLevel(lvl.level); setSelectedKey(null); setPan({ x: 0, y: 0 }); }}
-                className="cursor-pointer font-sora font-bold text-[11px] uppercase tracking-wide px-3.5 py-2 rounded-sm flex flex-col items-start gap-0.5"
+                className="cursor-pointer font-bold text-[11px] uppercase tracking-widest px-4 py-2.5 rounded-xl flex flex-col items-start gap-1 transition-all"
                 style={{
-                  background: active ? '#f59e0b' : 'rgba(255,255,255,0.03)',
-                  color: active ? '#110d0a' : '#a1a1aa',
-                  border: active ? '1px solid #d97706' : '1px solid rgba(255,255,255,0.1)',
+                  background: active ? '#ffffff' : 'rgba(0,0,0,0.2)',
+                  color: active ? '#18181b' : '#a1a1aa',
+                  border: active ? '1px solid #ffffff' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: active ? '0 4px 15px rgba(255,255,255,0.1)' : 'none'
                 }}
               >
                 <span>LEVEL {lvl.level}</span>
-                <span className="font-mono font-medium text-[9px] opacity-75 normal-case tracking-normal">{lvl.section_count} sections</span>
+                <span className={`font-mono font-medium text-[9px] ${active ? 'opacity-80' : 'opacity-60'} normal-case tracking-normal`}>
+                  {lvl.section_count} sections
+                </span>
               </button>
             );
           })}
         </div>
 
         {layout && (
-          <>
-            <div className="flex justify-end gap-1.5">
-              <button onClick={() => setZoom((z) => Math.max(z - 25, 50))} className="cursor-pointer w-6.5 h-6.5 bg-white/3 border border-white/10 text-slate-400 font-mono font-bold text-sm rounded-sm hover:text-amber-500 hover:border-amber-500/50">–</button>
-              <span className="min-w-10.5 text-center font-mono text-[11px] text-stone-400 leading-6.5">{zoom}%</span>
-              <button onClick={() => setZoom((z) => Math.min(z + 25, 250))} className="cursor-pointer w-6.5 h-6.5 bg-white/3 border border-white/10 text-slate-400 font-mono font-bold text-sm rounded-sm hover:text-amber-500 hover:border-amber-500/50">+</button>
+          <div className="bg-zinc-900/40 backdrop-blur-md rounded-[2rem] p-6 sm:p-8 border border-white/5 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              
+              <div className="flex gap-4 flex-wrap items-center font-mono text-[11px] text-zinc-400 bg-black/30 border border-white/5 px-4 py-2.5 rounded-xl">
+                <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block shadow-[0_0_10px_rgba(239,68,68,0.5)]" />Active Issue</span>
+                <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-zinc-600 inline-block" />Clear</span>
+              </div>
+
+              <div className="flex gap-1.5 items-center bg-black/30 border border-white/5 rounded-xl p-1">
+                <button onClick={() => setZoom((z) => Math.max(z - 25, 50))} className="cursor-pointer w-8 h-8 flex items-center justify-center text-zinc-400 font-mono font-bold text-lg rounded-lg hover:bg-white/10 hover:text-white transition-colors">–</button>
+                <span className="min-w-[3.5rem] text-center font-mono font-bold text-[11px] text-zinc-300">{zoom}%</span>
+                <button onClick={() => setZoom((z) => Math.min(z + 25, 250))} className="cursor-pointer w-8 h-8 flex items-center justify-center text-zinc-400 font-mono font-bold text-lg rounded-lg hover:bg-white/10 hover:text-white transition-colors">+</button>
+              </div>
+
             </div>
 
             <div
               onPointerDown={startPan}
-              className="relative w-full mx-auto overflow-hidden rounded cursor-grab active:cursor-grabbing select-none"
+              className="relative w-full mx-auto overflow-hidden rounded-2xl cursor-grab active:cursor-grabbing select-none transition-shadow"
               style={{
                 maxWidth: 700, aspectRatio: '700 / 400', touchAction: 'none',
-                background: 'linear-gradient(145deg, rgba(31,24,19,0.8), rgba(20,15,12,0.95))',
-                borderTop: '1px solid rgba(245,158,11,0.15)', borderLeft: '1px solid rgba(245,158,11,0.08)',
-                borderRight: '1px solid rgba(0,0,0,0.6)', borderBottom: '1px solid rgba(0,0,0,0.8)',
-                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.8)',
+                background: 'linear-gradient(145deg, #18181b, #09090b)',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                borderLeft: '1px solid rgba(255,255,255,0.03)',
+                boxShadow: 'inset 0 10px 40px -10px rgba(0,0,0,0.8), 0 20px 40px rgba(0,0,0,0.4)',
               }}
             >
+              {/* Subtle map grid background */}
+              <div 
+                className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+                style={{ backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}
+              ></div>
+
               <div
                 className="absolute top-1/2 left-1/2"
                 style={{
@@ -257,17 +275,18 @@ export const MineLevelMap = () => {
                   transformOrigin: 'center center',
                 }}
               >
-                <svg viewBox={layout.viewBox} className="absolute inset-0 w-full h-full block" style={{ filter: 'drop-shadow(0 16px 26px rgba(0,0,0,0.65))' }}>
-                  <path d={layout.boundaryPath} fill="#171310" stroke="#f59e0b" strokeWidth={3} strokeOpacity={0.85} />
+                <svg viewBox={layout.viewBox} className="absolute inset-0 w-full h-full block" style={{ filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.8))' }}>
+                  <path d={layout.boundaryPath} fill="#000000" stroke="#71717a" strokeWidth={3} strokeOpacity={0.8} />
                   {layout.cells.map((cell) => (
                     <path
                       key={cell.key}
                       d={cell.pathD}
                       fill={cell.fill}
-                      stroke={selectedKey === cell.key ? '#f59e0b' : cell.stroke}
+                      stroke={selectedKey === cell.key ? '#ffffff' : cell.stroke}
                       strokeWidth={selectedKey === cell.key ? 4 : cell.strokeWidth}
-                      className="cursor-pointer hover:brightness-125"
+                      className="cursor-pointer transition-colors duration-300"
                       onClick={() => setSelectedKey(cell.key)}
+                      style={{ filter: selectedKey === cell.key ? 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' : 'none' }}
                     />
                   ))}
                 </svg>
@@ -275,38 +294,33 @@ export const MineLevelMap = () => {
                   <div
                     key={cell.key}
                     onClick={() => setSelectedKey(cell.key)}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer font-mono font-bold text-[11px] select-none"
-                    style={{ left: cell.leftPct, top: cell.topPct, color: cell.textColor }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer font-mono font-bold text-[11px] select-none pointer-events-none"
+                    style={{ left: cell.leftPct, top: cell.topPct, color: selectedKey === cell.key ? '#ffffff' : cell.textColor }}
                   >
                     {cell.num}
                   </div>
                 ))}
               </div>
             </div>
-          </>
-        )}
 
-        <div className="flex gap-4 flex-wrap items-center font-mono text-[11px] text-stone-400 bg-white/3 border border-white/6 px-3.5 py-2.5 rounded">
-          <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block" />Open issue</span>
-          <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-white/20 inline-block" />Clear</span>
-        </div>
-
-        <div className="bg-linear-to-br from-[rgba(31,24,19,0.8)] to-[rgba(20,15,12,0.95)] border border-white/6 rounded px-4.5 py-3.5 flex items-center gap-3">
-          <span
-            className="w-2.5 h-2.5 rounded-full shrink-0 inline-block"
-            style={{ background: selectedCell ? selectedCell.stroke : 'rgba(255,255,255,0.2)' }}
-          />
-          <div>
-            <div className="font-sora font-bold text-xs tracking-wide text-[#f5f1ec]">
-              {selectedCell ? `LEVEL ${selectedLevel} · SECTION ${selectedCell.num}` : 'NO SECTION SELECTED'}
-            </div>
-            <div className="text-xs text-zinc-400 mt-0.5">
-              {selectedCell
-                ? (openSectionsForLevel.has(selectedCell.num) ? 'Open issue reported at this section' : 'No issues reported')
-                : 'Click a section on the map to view its status.'}
+            <div className="mt-6 bg-black/20 border border-white/5 rounded-2xl p-5 flex items-center gap-4 shadow-inner">
+              <span
+                className="w-3 h-3 rounded-full shrink-0 inline-block shadow-md"
+                style={{ background: selectedCell ? selectedCell.stroke : 'rgba(255,255,255,0.1)' }}
+              />
+              <div>
+                <div className="font-bold text-sm tracking-wide text-white">
+                  {selectedCell ? `LEVEL ${selectedLevel} · SECTION ${selectedCell.num}` : 'NO SECTION SELECTED'}
+                </div>
+                <div className="text-sm font-mono text-zinc-500 mt-1">
+                  {selectedCell
+                    ? (openSectionsForLevel.has(selectedCell.num) ? 'Critical: Open issue reported at this section.' : 'Status: Clear (No issues reported)')
+                    : 'Select a section on the map to view detailed status.'}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </PageLayout>
   );
