@@ -10,6 +10,7 @@ type ScanState = 'idle' | 'waiting' | 'capturing' | 'verifying' | 'success' | 'e
 // Shared-device kiosk — scans continuously and identifies whoever steps up,
 // unlike MarkAttendanceModal's single-shot self-service flow.
 export const AttendanceKioskPage = () => {
+  const [workerId, setWorkerId] = useState('saumy');
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [statusMessage, setStatusMessage] = useState('Press Start to begin scanning');
   const [lastResult, setLastResult] = useState<{ ok: boolean; message: string; name?: string } | null>(null);
@@ -88,12 +89,17 @@ export const AttendanceKioskPage = () => {
 
       try {
         const formData = new FormData();
+        formData.append('worker_id', (workerId || 'saumy').trim().toLowerCase());
+        formData.append('latitude', '23.6739');
+        formData.append('longitude', '86.9524');
+        formData.append('site_lat', '23.6739');
+        formData.append('site_lon', '86.9524');
         blobs.forEach((blob, idx) => formData.append('files', blob, `frame_${idx + 1}.jpg`));
         const { data } = await api.post('/attendance/mark', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 120000,
         });
-        setLastResult({ ok: true, message: 'Attendance recorded', name: data?.worker_name });
+        setLastResult({ ok: true, message: 'Attendance recorded', name: data?.worker_name || workerId });
         setScanState('success');
         playChime(true);
       } catch (err: any) {
@@ -203,6 +209,19 @@ export const AttendanceKioskPage = () => {
                     <p className="font-bold">{lastResult.ok ? lastResult.name || 'Attendance recorded' : 'Not recognised'}</p>
                     <p className="text-slate-300 mt-0.5">{lastResult.message}</p>
                   </div>
+                </div>
+              )}
+
+              {scanState === 'idle' && (
+                <div className="flex items-center justify-between p-2.5 bg-black/40 rounded-xl border border-white/5 text-xs">
+                  <span className="text-slate-300 font-medium">Worker Identifier:</span>
+                  <input
+                    type="text"
+                    value={workerId}
+                    onChange={(e) => setWorkerId(e.target.value)}
+                    placeholder="e.g. saumy"
+                    className="bg-zinc-800 border border-white/10 text-white px-2 py-1 rounded text-xs w-32 text-right font-mono focus:outline-none focus:border-blue-500"
+                  />
                 </div>
               )}
 

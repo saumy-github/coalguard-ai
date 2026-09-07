@@ -1,15 +1,17 @@
-import logging
 from datetime import datetime, timezone
+import logging
 from typing import Any, Dict, List, Optional
 
-import httpx
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+import httpx
 
-from ..auth.dependencies import get_current_user, require_role
+from ..auth.dependencies import get_current_user
+from ..config import settings
 from ..models.attendance import AttendanceRecord
-from ..models.user import User
-from ..services import ai_engine_client
+from ..models.mine import Mine
+from ..models.user import User, get_profile
+from ..services.org_service import ECL_MINE_LAT, ECL_MINE_LNG, ECL_MINE_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -17,93 +19,196 @@ router = APIRouter(prefix="/attendance", tags=["attendance"])
 
 
 def _to_record_dict(record: AttendanceRecord) -> Dict[str, Any]:
+    ts = record.timestamp or record.created_at
+    ca = record.created_at or record.timestamp
+    selfie_url = f"/uploads/temp_selfies/{record.selfie_saved}" if record.selfie_saved else None
     return {
         "id": str(record.id),
+        "user_id": str(record.user_id) if record.user_id else None,
         "worker_id": str(record.worker_id),
+        "worker_name": record.worker_name,
         "mine_id": str(record.mine_id) if record.mine_id else None,
+        "mine_name": record.mine_name,
+        "latitude": record.latitude,
+        "longitude": record.longitude,
+        "distance_from_site_m": record.distance_from_site_m,
+        "status": record.status,
+        "liveness": record.liveness,
+        "identity": record.identity,
         "selfie_saved": record.selfie_saved,
-        "timestamp": record.timestamp.isoformat(),
+        "selfie_url": selfie_url,
+        "timestamp": ts.isoformat() if ts else datetime.now(timezone.utc).isoformat(),
+        "created_at": ca.isoformat() if ca else datetime.now(timezone.utc).isoformat(),
     }
 
 
 @router.post("/mark")
 async def mark_attendance(
     files: List[UploadFile] = File(..., description="Camera burst frames for liveness and face match"),
+    latitude: float = Form(..., description="Worker's current GPS latitude"),
+    longitude: float = Form(..., description="Worker's current GPS longitude"),
+    site_lat: Optional[float] = Form(None, description="Optional mine site latitude override"),
+    site_lon: Optional[float] = Form(None, description="Optional mine site longitude override"),
+    worker_id: Optional[str] = Form(None, description="Optional worker ID override (e.g. 'saumy')"),
+    mine_id: Optional[str] = Form(None, description="Optional mine ID"),
     user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    """Receive camera burst frames, forward to AI engine for liveness check and
-    1-to-N face identification, then persist the attendance record."""
-    prepared = []
+    """Validate geofence, liveness, and 1-to-1 face match via AI Engine, then record attendance."""
+    from pathlib import Path
+    from ..uploads import REGISTERED_FACES_DIR
+
+    # Resolve worker identifier
+    effective_worker_id = worker_id.strip().lower() if worker_id else ""
+    if not effective_worker_id:
+        if user.full_name:
+            effective_worker_id = user.full_name.strip().lower().replace(" ", "_")
+        elif user.email:
+            effective_worker_id = user.email.split("@")[0].lower()
+        else:
+            effective_worker_id = str(user.id)
+
+    worker_display_name = user.full_name or effective_worker_id.capitalize()
+
+    # Smart-resolve photo candidate in uploads/registered_faces:
+    # If the user has a photo uploaded by admin (e.g. {user_id}.jpg) or custom photo_url,
+    # match that file so AI engine can find the registered face.
+    photo_worker_id = effective_worker_id
+    candidates = [effective_worker_id]
+    profile = get_profile(user)
+    photo_url = getattr(profile, "photo_url", None)
+    if photo_url:
+        stem = Path(photo_url).stem
+        if stem and stem not in candidates:
+            candidates.append(stem)
+    if user.full_name:
+        fn_clean = user.full_name.strip().lower().replace(" ", "_")
+        if fn_clean and fn_clean not in candidates:
+            candidates.append(fn_clean)
+    candidates.append(str(user.id))
+
+    for cand in candidates:
+        if not cand:
+            continue
+        found = False
+        for ext in (".jpg", ".jpeg", ".png", ".webp", ".JPG", ".JPEG", ".PNG"):
+            if (REGISTERED_FACES_DIR / f"{cand}{ext}").is_file():
+                photo_worker_id = cand
+                found = True
+                break
+        if found:
+            break
+
+    # Resolve Mine & Coordinates
+    resolved_mine_id: Optional[PydanticObjectId] = None
+    resolved_mine_name: str = ECL_MINE_NAME
+    resolved_site_lat: float = ECL_MINE_LAT
+    resolved_site_lon: float = ECL_MINE_LNG
+
+    target_mine: Optional[Mine] = None
+    if mine_id:
+        try:
+            target_mine = await Mine.get(PydanticObjectId(mine_id))
+        except Exception:
+            target_mine = None
+
+    if not target_mine:
+        user_mine_id = getattr(profile, "mine", None)
+        if user_mine_id:
+            target_mine = await Mine.get(user_mine_id)
+
+    if target_mine:
+        resolved_mine_id = target_mine.id
+        resolved_mine_name = target_mine.name
+        if target_mine.lat is not None and target_mine.lng is not None:
+            resolved_site_lat = target_mine.lat
+            resolved_site_lon = target_mine.lng
+
+    # Apply manual site coordinate override if provided
+    if site_lat is not None and site_lon is not None:
+        resolved_site_lat = site_lat
+        resolved_site_lon = site_lon
+
+    # Prepare multipart files and data to proxy to AI Engine
+    form_data = {
+        "worker_id": photo_worker_id,
+        "latitude": str(latitude),
+        "longitude": str(longitude),
+        "site_lat": str(resolved_site_lat),
+        "site_lon": str(resolved_site_lon),
+    }
+
+    multipart_files = []
     for upload in files:
         content = await upload.read()
-        prepared.append((upload.filename or "frame.jpg", content, upload.content_type or "image/jpeg"))
+        multipart_files.append(
+            ("files", (upload.filename or "frame.jpg", content, upload.content_type or "image/jpeg"))
+        )
 
+    ai_url = f"{settings.ai_engine_url.rstrip('/')}/api/attendance/mark"
     try:
-        ai_result = await ai_engine_client.mark_attendance(prepared)
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(ai_url, data=form_data, files=multipart_files)
+
     except httpx.RequestError as exc:
-        logger.error("AI engine unreachable during attendance mark: %s", exc)
+        logger.error("Failed to connect to AI Engine at %s: %s", ai_url, exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"AI Attendance Engine is unreachable: {exc}",
         )
-    except httpx.HTTPStatusError as exc:
+
+    if resp.status_code != 200:
         error_detail = "Attendance verification failed."
         try:
-            error_detail = exc.response.json().get("detail", error_detail)
+            err_json = resp.json()
+            error_detail = err_json.get("detail", error_detail)
         except Exception:
-            error_detail = exc.response.text or error_detail
+            error_detail = resp.text or error_detail
+        # Use 400 Bad Request for biometric/geofence failures so frontend auth session remains intact
         rejection_status = (
             status.HTTP_400_BAD_REQUEST
-            if exc.response.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-            else exc.response.status_code
+            if resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+            else resp.status_code
         )
         raise HTTPException(status_code=rejection_status, detail=error_detail)
 
-    matched_worker_id_str = ai_result.get("worker_id")
-    if not matched_worker_id_str:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Face not recognised — no matching worker found.",
-        )
+    ai_result = resp.json()
 
-    try:
-        matched_worker_id = PydanticObjectId(matched_worker_id_str)
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"AI engine returned an invalid worker_id: {matched_worker_id_str!r}",
-        )
-
-    # Resolve mine_id (and display name) for the matched worker
-    from ..models.user import User as UserModel, get_profile
-    matched_user = await UserModel.get(matched_worker_id)
-    resolved_mine_id: Optional[PydanticObjectId] = None
-    worker_name: Optional[str] = None
-    if matched_user:
-        profile = get_profile(matched_user)
-        resolved_mine_id = getattr(profile, "mine", None)
-        worker_name = matched_user.full_name
-
+    # Create and persist AttendanceRecord in MongoDB
     record = await AttendanceRecord(
-        worker_id=matched_worker_id,
+        user_id=user.id,
+        worker_id=effective_worker_id,
+        worker_name=worker_display_name,
         mine_id=resolved_mine_id,
+        mine_name=resolved_mine_name,
+        latitude=latitude,
+        longitude=longitude,
+        distance_from_site_m=float(ai_result.get("distance_from_site_m", 0.0)),
+        status="verified",
+        liveness=ai_result.get("liveness"),
+        identity=ai_result.get("identity"),
         selfie_saved=ai_result.get("selfie_saved"),
     ).insert()
 
+    record_dict = _to_record_dict(record)
     return {
         "status": "success",
-        "attendance_record": _to_record_dict(record),
-        "worker_name": worker_name,  # presentation-only, not persisted
-        "message": f"Attendance recorded for worker {matched_worker_id_str}.",
+        "attendance_record": record_dict,
+        "ai_engine": ai_result,
+        "selfie_url": record_dict.get("selfie_url"),
+        "worker_name": worker_display_name,
+        "message": f"Attendance verified & recorded for {worker_display_name}.",
     }
 
 
 @router.get("/me")
-async def get_my_attendance(user: User = Depends(require_role("worker"))) -> List[Dict[str, Any]]:
-    """Return the authenticated worker's own attendance history (latest 30)."""
+async def get_my_attendance(user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    """Return attendance history for the authenticated user."""
+    worker_id_clean = (user.full_name or "").strip().lower().replace(" ", "_")
     records = (
-        await AttendanceRecord.find(AttendanceRecord.worker_id == user.id)
-        .sort("-timestamp")
+        await AttendanceRecord.find(
+            {"$or": [{"user_id": user.id}, {"worker_id": str(user.id)}, {"worker_id": worker_id_clean}]}
+        )
+        .sort("-created_at")
         .limit(30)
         .to_list()
     )
@@ -112,38 +217,81 @@ async def get_my_attendance(user: User = Depends(require_role("worker"))) -> Lis
 
 @router.get("/today")
 async def get_today_attendance(user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
-    """Return today's attendance records, scoped by role.
-    Worker — only their own records.
-    Safety Officer — all records for their mine.
-    Admin — unscoped/global.
-    """
+    """Return today's attendance records, scoped by role."""
     now = datetime.now(timezone.utc)
     start_of_day = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=timezone.utc)
 
-    base = AttendanceRecord.find(AttendanceRecord.timestamp >= start_of_day)
+    base = AttendanceRecord.find(
+        {"$or": [{"created_at": {"$gte": start_of_day}}, {"timestamp": {"$gte": start_of_day}}]}
+    )
 
     if user.role == "admin":
-        records = await base.sort("-timestamp").to_list()
+        records = await base.sort("-created_at").to_list()
     elif user.role == "safety_officer":
-        from ..models.user import get_profile
         profile = get_profile(user)
         mine_id = getattr(profile, "mine", None)
         if not mine_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Officer has no mine assigned.",
+            records = await base.sort("-created_at").to_list()
+        else:
+            records = (
+                await base.find(AttendanceRecord.mine_id == mine_id)
+                .sort("-created_at")
+                .to_list()
             )
-        records = (
-            await base.find(AttendanceRecord.mine_id == mine_id)
-            .sort("-timestamp")
-            .to_list()
-        )
     else:
-        # worker — own records only
+        worker_id_clean = (user.full_name or "").strip().lower().replace(" ", "_")
         records = (
-            await base.find(AttendanceRecord.worker_id == user.id)
-            .sort("-timestamp")
+            await base.find(
+                {"$or": [{"user_id": user.id}, {"worker_id": str(user.id)}, {"worker_id": worker_id_clean}]}
+            )
+            .sort("-created_at")
             .to_list()
         )
 
     return [_to_record_dict(r) for r in records]
+
+
+@router.post("/register-face")
+async def register_face_proxy(
+    worker_id: str = Form(...),
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Proxy reference photo registration to AI Engine."""
+    content = await file.read()
+    ai_url = f"{settings.ai_engine_url.rstrip('/')}/api/attendance/register-face"
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                ai_url,
+                data={"worker_id": worker_id},
+                files={"file": (file.filename or "face.jpg", content, file.content_type or "image/jpeg")},
+            )
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI Attendance Engine is unreachable: {exc}",
+        )
+
+    if resp.status_code != 200:
+        detail = resp.text
+        try:
+            detail = resp.json().get("detail", detail)
+        except Exception:
+            pass
+        raise HTTPException(status_code=resp.status_code, detail=detail)
+
+    res_json = resp.json()
+    try:
+        filename = res_json.get("filename")
+        if filename:
+            profile = get_profile(user)
+            profile.photo_url = f"/uploads/registered_faces/{filename}"
+            set_profile(user, profile)
+            await user.save()
+    except Exception as exc:
+        logger.warning("Could not update user profile photo_url: %s", exc)
+
+    return res_json
+

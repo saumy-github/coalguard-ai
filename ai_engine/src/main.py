@@ -17,6 +17,7 @@ Endpoints:
 from __future__ import annotations
 
 import logging
+import os
 import traceback
 from dataclasses import asdict
 from pathlib import Path
@@ -249,8 +250,43 @@ async def rag_check_compliance(payload: ComplianceInput) -> Dict[str, Any]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ISSUE CLASSIFICATION — FREE-TEXT TRIAGE
+# ══════════════════════════════════════════════════════════════════════════════
+
+class IssueClassificationInput(BaseModel):
+    """Input schema for issue triage classification."""
+    observation: str = Field(
+        ...,
+        min_length=5,
+        description="Free-text description of the problem observed by the worker or safety officer.",
+    )
+
+
+@app.post("/api/issues/classify", tags=["Issue Classification"])
+async def classify_issue_endpoint(payload: IssueClassificationInput) -> Dict[str, Any]:
+    """Accept a free-text observation and return target / issue_type / severity classification.
+
+    The response JSON is guaranteed to contain:
+      - target:     "site_issue" | "person_issue"
+      - issue_type: valid literal for the target (never outside the allowed set)
+      - severity:   valid literal for the target (never outside the allowed set)
+    """
+    from src.issue_classifier import classify_issue
+
+    try:
+        result = classify_issue(observation=payload.observation)
+        return asdict(result)
+    except EnvironmentError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception as exc:
+        logger.error("Issue classification failed: %s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Issue classification failed: {exc}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ATTENDANCE — GEO-FENCED FACE ATTENDANCE
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @app.post("/api/attendance/mark", tags=["Attendance"])
 async def attendance_mark(
@@ -355,5 +391,55 @@ async def attendance_mark(
         "liveness": liveness_msg,
         "identity": verify_msg,
         "selfie_saved": selfie_path.name,
+        "selfie_url": f"/uploads/temp_selfies/{selfie_path.name}",
         "message": "Attendance marked successfully.",
     }
+
+
+@app.post("/api/attendance/register-face", tags=["Attendance"])
+async def register_face(
+    worker_id: str = Form(..., description="Unique worker ID (e.g. 'saumy', 'worker_001')."),
+    file: UploadFile = File(..., description="Reference face photo (.jpg, .jpeg, .png)."),
+) -> Dict[str, Any]:
+    """Upload and register a worker's reference facial photo in uploads/registered_faces."""
+    from src.attendance.face_verify import DATA_REGISTERED_DIR, REGISTERED_DIR
+
+    clean_id = worker_id.strip().lower()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="Worker ID cannot be empty.")
+
+    filename = file.filename or ""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        ext = ".jpg"
+
+    target_path = REGISTERED_DIR / f"{clean_id}{ext}"
+    try:
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+        with open(target_path, "wb") as f:
+            f.write(content)
+        logger.info("Registered face photo for worker=%s saved to %s", clean_id, target_path)
+
+        # Also write a backup copy to DATA_REGISTERED_DIR if distinct
+        try:
+            if DATA_REGISTERED_DIR.resolve() != REGISTERED_DIR.resolve():
+                backup_path = DATA_REGISTERED_DIR / f"{clean_id}{ext}"
+                with open(backup_path, "wb") as bf:
+                    bf.write(content)
+        except Exception:
+            pass
+
+    except Exception as exc:
+        logger.error("Failed to save reference photo for %s: %s", clean_id, exc)
+        raise HTTPException(status_code=500, detail=f"Failed to save reference photo: {exc}")
+
+    return {
+        "status": "success",
+        "worker_id": clean_id,
+        "filename": target_path.name,
+        "photo_url": f"/uploads/registered_faces/{target_path.name}",
+        "message": f"Reference face photo registered for worker '{clean_id}'.",
+    }
+

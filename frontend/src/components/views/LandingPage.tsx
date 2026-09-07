@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { CoalGuardLogo } from '../../components/common/CoalGuardLogo';
 
-const RevealOnScroll = ({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) => {
+const RevealOnScroll = ({ children, delay = 0, className = '' }: { children: React.ReactNode, delay?: number, className?: string }) => {
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -42,7 +42,7 @@ const RevealOnScroll = ({ children, delay = 0 }: { children: React.ReactNode, de
   return (
     <div 
       ref={ref}
-      className={`transition-all duration-1000 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}
+      className={`transition-all duration-1000 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -93,8 +93,6 @@ const ROLE_DISPLAY: Record<UserType, { icon: React.ReactNode; org: string; desc:
 
 export const LandingPage = () => {
   const navigate = useNavigate();
-  const loginAsGuest = useAuthStore((state) => state.loginAsGuest);
-  const addToast = useUIStore((state) => state.addToast);
   const [isScrolled, setIsScrolled] = useState(false);
   const [headerTheme, setHeaderTheme] = useState<'dark' | 'light'>('dark');
 
@@ -122,14 +120,8 @@ export const LandingPage = () => {
     return () => observer.disconnect();
   }, []);
 
-  const handleGuestLogin = async (userType: UserType) => {
-    window.scrollTo(0, 0);
-    try {
-      await loginAsGuest(userType);
-      navigate(DASHBOARD_PATH_BY_ROLE[userType]);
-    } catch {
-      addToast('error', 'Guest Login Failed', 'Could not start a guest session. Try again in a moment.');
-    }
+  const handleGuestLogin = (_userType: UserType) => {
+    navigate('/login');
   };
 
   return (
