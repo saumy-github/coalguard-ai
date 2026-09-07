@@ -91,51 +91,51 @@ export const Sidebar = () => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-obsidian/40 backdrop-blur-sm z-50 transition-opacity"
+        className="fixed inset-0 bg-[#0f0c09]/80 backdrop-blur-sm z-50 transition-opacity"
         onClick={() => setIsSidebarOpen(false)}
       />
 
       {/* Drawer */}
-      <div className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-limestone z-50 flex flex-col justify-between animate-fade-in-up">
+      <div className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#1a1511]/95 backdrop-blur-xl border-r border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-50 flex flex-col justify-between animate-fade-in-up">
 
         {/* Top: Header with close */}
         <div>
-          <div className="p-5 flex items-center justify-between">
+          <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-ember flex items-center justify-center">
-                <ShieldAlert className="w-5 h-5 text-chalk" />
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h2 className="text-base font-display text-obsidian leading-tight tracking-wide">
-                  COAL<span className="text-ember">GUARD</span> AI
+                <h2 className="text-base font-extrabold text-white font-['Sora'] leading-tight tracking-tight">
+                  COAL<span className="text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-orange-400">GUARD</span> AI
                 </h2>
-                <p className="text-[10px] text-obsidian/50 tracking-widest uppercase mt-0.5">Navigation Menu</p>
+                <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">Navigation Menu</p>
               </div>
             </div>
 
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="p-2 rounded-full bg-chalk hover:bg-pumice text-obsidian transition-colors"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all border border-transparent hover:border-white/10"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Current User Card */}
-          <div className="px-5 pb-5">
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-chalk">
-              <div className="w-12 h-12 rounded-full bg-ember flex items-center justify-center text-chalk font-display text-xl shrink-0">
+          <div className="p-4 border-b border-white/5">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xl shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                 {displayName(user).charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-medium text-obsidian truncate">
+                <h3 className="text-sm font-bold text-white truncate font-['Sora']">
                   {displayName(user)}
                 </h3>
-                <p className="text-xs text-ember truncate uppercase tracking-wider mt-0.5">
+                <p className="text-[11px] text-amber-400 font-mono truncate uppercase tracking-wider mt-0.5">
                   {userTypeLabel(user?.role)}
                 </p>
                 {user?.organization && (
-                  <p className="text-xs text-obsidian/50 truncate mt-0.5">
+                  <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
                     {user.organization}
                   </p>
                 )}
@@ -144,8 +144,8 @@ export const Sidebar = () => {
           </div>
 
           {/* Navigation Links */}
-          <div className="px-5 space-y-1.5 overflow-y-auto max-h-[calc(100vh-320px)]">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-obsidian/40 px-3 py-2">
+          <div className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 px-3 py-2">
               {userTypeLabel(user?.role)} Menu
             </p>
 
@@ -156,23 +156,25 @@ export const Sidebar = () => {
                   key={item.id}
                   id={`sidebar-link-${item.id}`}
                   onClick={() => handleNavClick(item)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-pill text-sm transition-colors text-left ${
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm transition-all text-left ${
                     isActive
-                      ? 'bg-ember text-chalk font-medium'
-                      : 'text-obsidian hover:bg-chalk'
+                      ? 'bg-amber-500/10 text-amber-400 font-bold border border-amber-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span>{item.icon}</span>
+                    <span className={isActive ? 'text-amber-400' : 'text-slate-400'}>
+                      {item.icon}
+                    </span>
                     <span>{item.label}</span>
                   </div>
 
                   {item.badge ? (
-                    <span className="px-2 py-0.5 rounded-full bg-sulfur text-obsidian text-[10px] font-medium">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-[0_0_10px_rgba(16,185,129,0.4)]">
                       {item.badge}
                     </span>
                   ) : isActive ? (
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 text-amber-400" />
                   ) : null}
                 </button>
               );
@@ -181,10 +183,10 @@ export const Sidebar = () => {
         </div>
 
         {/* Bottom Actions */}
-        <div className="p-5">
+        <div className="p-4 border-t border-white/5 space-y-3">
           <button
             onClick={handleSignOut}
-            className="btn-glass w-full flex items-center justify-center gap-2 py-3 text-sm"
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl text-sm font-bold text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all border border-transparent hover:border-rose-500/30"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>

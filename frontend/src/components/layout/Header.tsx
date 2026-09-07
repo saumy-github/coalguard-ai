@@ -28,7 +28,7 @@ export const Header = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-pumice/90 backdrop-blur-md px-4 sm:px-6 py-4">
+    <header className="sticky top-0 z-40 w-full bg-[#0f0c09]/80 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
 
         {/* Left: Hamburger & Brand */}
@@ -37,7 +37,7 @@ export const Header = () => {
             <button
               id="header-hamburger-btn"
               onClick={toggleSidebar}
-              className="p-2.5 rounded-pill bg-limestone hover:bg-chalk text-obsidian transition-colors"
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500/50"
               aria-label="Toggle navigation menu"
             >
               <Menu className="w-5 h-5" />
@@ -48,14 +48,16 @@ export const Header = () => {
             onClick={() => navigate('/')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-full bg-ember flex items-center justify-center transition-opacity group-hover:opacity-85">
-              <ShieldAlert className="w-5 h-5 text-chalk" />
+            <div className="w-10 h-10 rounded-[14px] bg-linear-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.2)] group-hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] group-hover:border-amber-400 transition-all duration-300">
+              <ShieldAlert className="w-5 h-5 text-amber-400" />
             </div>
             <div className="hidden sm:block">
-              <span className="font-display text-lg text-obsidian tracking-wide">
-                COAL<span className="text-ember">GUARD</span> AI
-              </span>
-              <p className="text-[10px] text-obsidian/50 leading-none tracking-widest uppercase mt-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold tracking-tight text-lg text-white font-['Sora']">
+                  COAL<span className="text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-orange-400">GUARD</span> AI
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-mono leading-none tracking-widest uppercase mt-0.5">
                 Mine Safety Platform
               </p>
             </div>

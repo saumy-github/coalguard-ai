@@ -107,8 +107,8 @@ export const WorkerOverviewPage = () => {
               onClick={() => setIsAttendanceModalOpen(true)}
               className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition ${
                 todayAttendance
-                  ? 'btn-glass text-obsidian/70'
-                  : 'btn-primary-earth text-obsidian'
+                  ? 'btn-glass text-slate-300'
+                  : 'btn-primary-earth text-slate-950'
               }`}
             >
               <Camera className="w-4 h-4" />
@@ -126,25 +126,25 @@ export const WorkerOverviewPage = () => {
         attentionAlert={
           openPersonIssues.length > 0 ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-ember">
+              <div className="flex items-center gap-2 text-red-400">
                 <AlertTriangle className="w-5 h-5" />
                 <h3 className="text-sm font-bold uppercase tracking-wider">
                   Personal Safety Issue{openPersonIssues.length > 1 ? 's' : ''}
                 </h3>
               </div>
               {openPersonIssues.map((issue) => (
-                <div key={issue.id} className="p-4 rounded-xl bg-pumice border border-ember/20">
+                <div key={issue.id} className="p-4 rounded-xl bg-black/20 border border-red-500/20">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-bold text-obsidian">
+                    <span className="text-sm font-bold text-white">
                       {PERSON_ISSUE_LABEL[issue.issue_type] ?? issue.issue_type}
                     </span>
                     <StatusBadge status={issue.severity} label={issue.severity.toUpperCase()} />
                   </div>
-                  <p className="text-sm text-obsidian/70 mt-1.5">{issue.observation}</p>
-                  <p className="text-xs font-mono text-obsidian/50 mt-2">
+                  <p className="text-sm text-slate-300 mt-1.5">{issue.observation}</p>
+                  <p className="text-xs font-mono text-slate-500 mt-2">
                     Level {issue.level}, Section {issue.section}
                   </p>
-                  <p className="text-xs font-mono text-ember mt-2">
+                  <p className="text-xs font-mono text-amber-400 mt-2">
                     {CORRECTIVE_ACTION_BY_ISSUE_TYPE[issue.issue_type] ?? CORRECTIVE_ACTION_BY_ISSUE_TYPE.other}
                   </p>
                 </div>
@@ -160,28 +160,28 @@ export const WorkerOverviewPage = () => {
               <div
                 className={`w-11 h-11 rounded-2xl flex items-center justify-center border ${
                   todayAttendance
-                    ? 'bg-obsidian/10 border-obsidian/30 text-obsidian'
-                    : 'bg-ember/10 border-ember/30 text-ember'
+                    ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                    : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
                 }`}
               >
                 {todayAttendance ? <CheckCircle2 className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-obsidian uppercase tracking-wide">
+                  <h3 className="text-base font-bold text-white uppercase tracking-wide">
                     Shift Attendance & Geofence Status
                   </h3>
                   {todayAttendance ? (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-obsidian/20 text-obsidian border border-obsidian/40 uppercase">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/40 uppercase">
                       Present On-Site
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-ember/20 text-ember border border-ember/40 uppercase animate-pulse">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase animate-pulse">
                       Action Required
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-obsidian/60 mt-0.5">
+                <p className="text-xs text-slate-400 mt-0.5">
                   {todayAttendance
                     ? `Clocked in at ${new Date(todayAttendance.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • Geofence verified (<100m)`
                     : 'Verify your face & GPS location to confirm presence on the mine site.'}
@@ -194,8 +194,8 @@ export const WorkerOverviewPage = () => {
               onClick={() => setIsAttendanceModalOpen(true)}
               className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition whitespace-nowrap ${
                 todayAttendance
-                  ? 'btn-glass text-obsidian/70 hover:text-obsidian'
-                  : 'btn-primary-earth text-obsidian'
+                  ? 'btn-glass text-slate-300 hover:text-white'
+                  : 'btn-primary-earth text-slate-950'
               }`}
             >
               <Camera className="w-4 h-4" />
@@ -204,29 +204,29 @@ export const WorkerOverviewPage = () => {
           </div>
 
           {todayAttendance && (
-            <div className="mt-4 pt-3 border-t border-obsidian/10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+            <div className="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
               <div>
-                <span className="text-obsidian/50 text-[10px] block uppercase">Mine Site</span>
-                <span className="text-obsidian/80">{todayAttendance.mine_name || 'ECL Sector 7G'}</span>
+                <span className="text-slate-500 text-[10px] block uppercase">Mine Site</span>
+                <span className="text-slate-200">{todayAttendance.mine_name || 'ECL Sector 7G'}</span>
               </div>
               <div>
-                <span className="text-obsidian/50 text-[10px] block uppercase">Perimeter Radius</span>
-                <span className="text-obsidian">{todayAttendance.distance_from_site_m ?? 0} m (Within 100m)</span>
+                <span className="text-slate-500 text-[10px] block uppercase">Perimeter Radius</span>
+                <span className="text-green-400">{todayAttendance.distance_from_site_m ?? 0} m (Within 100m)</span>
               </div>
               <div>
-                <span className="text-obsidian/50 text-[10px] block uppercase">Liveness Check</span>
-                <span className="text-obsidian">Blink Confirmed</span>
+                <span className="text-slate-500 text-[10px] block uppercase">Liveness Check</span>
+                <span className="text-green-400">Blink Confirmed</span>
               </div>
               <div>
-                <span className="text-obsidian/50 text-[10px] block uppercase">Identity Match</span>
-                <span className="text-obsidian">DeepFace Verified</span>
+                <span className="text-slate-500 text-[10px] block uppercase">Identity Match</span>
+                <span className="text-green-400">DeepFace Verified</span>
               </div>
             </div>
           )}
         </div>
 
         {openPersonIssues.length === 0 && (
-          <div className="glass-panel rounded-3xl p-6 text-center text-sm text-obsidian/60">
+          <div className="glass-panel rounded-3xl p-6 text-center text-sm text-slate-400">
             No open safety issues assigned to you right now.
           </div>
         )}
@@ -342,7 +342,7 @@ export const WorkerReportPage = () => {
       >
         <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto space-y-6 mt-4 relative overflow-hidden">
           {/* Glow effect */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-ember/10 rounded-full blur-[80px] pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none"></div>
 
           <SectionHeader
             title="New Incident Report"
@@ -352,7 +352,7 @@ export const WorkerReportPage = () => {
           <form onSubmit={handleReportSubmit} className="space-y-5 relative z-10">
 
             <div>
-              <label className="text-xs font-mono text-obsidian/60 mb-2 block uppercase tracking-wider">
+              <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">
                 What is the problem?
               </label>
               <textarea
@@ -361,17 +361,17 @@ export const WorkerReportPage = () => {
                 value={reportDescription}
                 onChange={(e) => setReportDescription(e.target.value)}
                 placeholder="e.g. Unusual gas odor near Face 4B fan"
-                className="w-full px-5 py-3.5 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm focus:outline-none focus:border-ember/50 focus:ring-1 focus:ring-ember/50 transition-all placeholder:text-obsidian/40 resize-none"
+                className="w-full px-5 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all placeholder:text-slate-600 resize-none"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="text-xs font-mono text-obsidian/60 mb-2 block uppercase tracking-wider">Level</label>
+                <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Level</label>
                 <select
                   value={reportLevel}
                   onChange={(e) => setReportLevel(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm focus:outline-none focus:border-ember/50 appearance-none custom-select"
+                  className="w-full px-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 appearance-none custom-select"
                 >
                   <option value="A">Level A</option>
                   <option value="B">Level B</option>
@@ -380,14 +380,14 @@ export const WorkerReportPage = () => {
               </div>
 
               <div>
-                <label className="text-xs font-mono text-obsidian/60 mb-2 block uppercase tracking-wider">Section</label>
+                <label className="text-xs font-mono text-slate-400 mb-2 block uppercase tracking-wider">Section</label>
                 <input
                   type="number"
                   required
                   min={1}
                   value={reportSection}
                   onChange={(e) => setReportSection(Number(e.target.value))}
-                  className="w-full px-5 py-3.5 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm focus:outline-none focus:border-ember/50 transition-all"
+                  className="w-full px-5 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 transition-all"
                 />
               </div>
             </div>
@@ -398,11 +398,11 @@ export const WorkerReportPage = () => {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className={`px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 border transition-all ${photoFile
-                    ? 'bg-ember/20 text-ember border-ember/50'
-                    : 'bg-pumice text-obsidian/70 hover:text-obsidian border-obsidian/10 hover:border-obsidian/10'
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+                    : 'bg-white/5 text-slate-300 hover:text-white border-white/10 hover:border-white/20'
                   }`}
               >
-                <Camera className={`w-4 h-4 ${photoFile ? 'text-ember' : 'text-obsidian/60'}`} />
+                <Camera className={`w-4 h-4 ${photoFile ? 'text-amber-400' : 'text-slate-400'}`} />
                 <span>{photoFile ? 'Photo Attached ✓' : 'Add Photo'}</span>
               </button>
               <input
@@ -418,14 +418,14 @@ export const WorkerReportPage = () => {
                   <img
                     src={photoPreviewUrl}
                     alt="Attached"
-                    className="w-12 h-12 object-cover rounded-lg border border-obsidian/10"
+                    className="w-12 h-12 object-cover rounded-lg border border-white/10"
                   />
                   <button
                     type="button"
                     onClick={removePhoto}
-                    className="absolute -top-1.5 -right-1.5 bg-limestone border border-obsidian/10 rounded-full p-0.5"
+                    className="absolute -top-1.5 -right-1.5 bg-slate-900 border border-slate-700 rounded-full p-0.5"
                   >
-                    <X size={12} className="text-obsidian/70" />
+                    <X size={12} className="text-slate-300" />
                   </button>
                 </div>
               )}
@@ -434,7 +434,7 @@ export const WorkerReportPage = () => {
             <button
               type="submit"
               disabled={isSubmittingReport}
-              className="w-full btn-primary-earth py-4 flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
+              className="w-full bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all transform hover:-translate-y-1 mt-4 disabled:opacity-50 disabled:hover:translate-y-0"
             >
               <Send className="w-5 h-5" />
               <span>{isSubmittingReport ? 'Submitting...' : 'Submit Report to Command Center'}</span>
@@ -464,28 +464,28 @@ export const WorkerProfilePage = () => {
         <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 max-w-xl mx-auto mt-4">
           <SectionHeader title="Account Details" />
 
-          <div className="flex items-center gap-5 pb-6 border-b border-obsidian/10">
-            <div className="w-20 h-20 rounded-full bg-ember flex items-center justify-center text-chalk text-3xl font-display">
+          <div className="flex items-center gap-5 pb-6 border-b border-white/10">
+            <div className="w-20 h-20 rounded-[1.25rem] bg-linear-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(16,185,129,0.2)]">
               {displayName(user).charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-obsidian tracking-tight">{displayName(user)}</h3>
-              <p className="text-sm font-mono text-ember mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
+              <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
+              <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
             </div>
           </div>
 
-          <div className="space-y-4 text-sm font-mono text-obsidian/70">
+          <div className="space-y-4 text-sm font-mono text-slate-300">
             <div className="flex justify-between items-center py-1">
-              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Email</span>
-              <span className="text-obsidian">{user?.email || '—'}</span>
+              <span className="text-slate-500 uppercase text-xs tracking-wider">Email</span>
+              <span className="text-white">{user?.email || '—'}</span>
             </div>
             <div className="flex justify-between items-center py-1">
-              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Phone</span>
-              <span className="text-obsidian">{user?.phone || '—'}</span>
+              <span className="text-slate-500 uppercase text-xs tracking-wider">Phone</span>
+              <span className="text-white">{user?.phone || '—'}</span>
             </div>
             <div className="flex justify-between items-center py-1">
-              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Assigned Mine</span>
-              <span className="text-obsidian">{user?.mine ? 'Assigned' : 'None assigned'}</span>
+              <span className="text-slate-500 uppercase text-xs tracking-wider">Assigned Mine</span>
+              <span className="text-white">{user?.mine ? 'Assigned' : 'None assigned'}</span>
             </div>
           </div>
         </div>

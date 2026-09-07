@@ -62,54 +62,52 @@ export const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-pumice px-4">
-      <div className="w-full max-w-sm bg-limestone rounded-card p-8">
-        <h1 className="text-3xl font-display text-obsidian mb-1">
-          COAL<span className="text-ember">GUARD</span>
-        </h1>
-        <p className="text-sm text-obsidian/60 mb-6">Sign in to continue</p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+      <div className="w-full max-w-sm bg-slate-900 rounded-lg shadow border border-slate-800 p-6">
+        <h1 className="text-2xl font-bold text-white mb-1">CoalGuard</h1>
+        <p className="text-sm text-slate-400 mb-6">Sign in to continue</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-obsidian/70 mb-1.5">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               Email or phone
             </label>
             <input
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full bg-chalk text-obsidian rounded-input px-5 py-3 focus:outline-none focus:ring-2 focus:ring-ember/40"
+              className="w-full bg-slate-800 text-white rounded p-2 border border-slate-700"
               placeholder="you@example.com or +91..."
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-obsidian/70 mb-1.5">Password</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-chalk text-obsidian rounded-input px-5 py-3 focus:outline-none focus:ring-2 focus:ring-ember/40"
+              className="w-full bg-slate-800 text-white rounded p-2 border border-slate-700"
               required
             />
           </div>
 
           {(validationError || error) && (
-            <p className="text-sm text-ember font-medium">{validationError || error}</p>
+            <p className="text-sm text-red-400">{validationError || error}</p>
           )}
 
           <button
             type="submit"
             disabled={isLoading}
-            className="btn-primary-earth w-full py-3 disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded transition-colors"
           >
             {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         {GOOGLE_AUTH_ENABLED && GOOGLE_CLIENT_ID && (
-          <div className="mt-6 pt-6 border-t border-obsidian/10 flex justify-center">
+          <div className="mt-6 pt-6 border-t border-slate-800 flex justify-center">
             <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
@@ -119,18 +117,18 @@ export const Login = () => {
           </div>
         )}
 
-        <div className="mt-6 pt-6 border-t border-obsidian/10">
-          <p className="text-xs font-medium text-obsidian/50 uppercase tracking-wider mb-2">Demo accounts (seeded)</p>
-          <ul className="space-y-1 text-xs text-obsidian/70">
+        <div className="mt-6 pt-6 border-t border-slate-800">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Demo accounts (seeded)</p>
+          <ul className="space-y-1 text-xs text-slate-400 font-mono">
             {DEMO_ACCOUNTS.map((account) => (
               <li key={account.identifier} className="flex justify-between gap-3">
-                <span className="text-obsidian/50">{account.role}</span>
-                <span className="text-obsidian font-mono">{account.identifier}</span>
+                <span className="text-slate-500">{account.role}</span>
+                <span className="text-slate-300">{account.identifier}</span>
               </li>
             ))}
           </ul>
-          <p className="text-xs text-obsidian/50 mt-2">
-            Password for all of the above: <span className="text-obsidian font-mono">{DEMO_PASSWORD}</span>
+          <p className="text-xs text-slate-500 mt-2">
+            Password for all of the above: <span className="text-slate-300 font-mono">{DEMO_PASSWORD}</span>
           </p>
         </div>
       </div>

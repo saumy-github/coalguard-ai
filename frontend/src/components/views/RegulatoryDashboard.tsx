@@ -111,7 +111,7 @@ export const RegulatoryOverviewPage = () => {
             subtitle="Corporate submissions with no regulatory response yet."
           />
           {threads.filter((t) => t.latest.report_type === 'corporate_submission').length === 0 && (
-            <p className="text-sm text-obsidian/60 text-center py-6">Nothing awaiting review.</p>
+            <p className="text-sm text-slate-400 text-center py-6">Nothing awaiting review.</p>
           )}
           {threads
             .filter((t) => t.latest.report_type === 'corporate_submission')
@@ -120,8 +120,8 @@ export const RegulatoryOverviewPage = () => {
               return (
                 <div key={`${t.mineId}-${t.reportingPeriod}`} className="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between gap-4">
                   <div>
-                    <h4 className="text-sm font-bold text-obsidian">{mine?.name ?? t.mineId}</h4>
-                    <p className="text-xs font-mono text-obsidian/60 mt-1">{t.reportingPeriod} · {t.latest.total_safety_issues} issues reported ({t.latest.critical_issues} critical)</p>
+                    <h4 className="text-sm font-bold text-white">{mine?.name ?? t.mineId}</h4>
+                    <p className="text-xs font-mono text-slate-400 mt-1">{t.reportingPeriod} · {t.latest.total_safety_issues} issues reported ({t.latest.critical_issues} critical)</p>
                   </div>
                   <StatusBadge status={REPORT_STATUS_BADGE[t.latest.status]} label={t.latest.status.toUpperCase()} />
                 </div>
@@ -150,7 +150,7 @@ export const RegulatoryMinesPage = () => {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
           {mines.length === 0 && (
-            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-obsidian/60 md:col-span-2">
+            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-slate-400 md:col-span-2">
               No mines currently under Corporate Management.
             </div>
           )}
@@ -158,19 +158,19 @@ export const RegulatoryMinesPage = () => {
             const thread = threadForMine(threads, mine.id);
             return (
               <div key={mine.id} className="glass-panel glass-panel-hover p-6 rounded-2xl space-y-3">
-                <h4 className="text-base font-bold text-obsidian tracking-wide">{mine.name}</h4>
+                <h4 className="text-base font-bold text-white tracking-wide">{mine.name}</h4>
                 {mine.lat !== null && mine.lng !== null && (
-                  <p className="text-xs font-mono text-obsidian/60 flex items-center gap-1">
+                  <p className="text-xs font-mono text-slate-400 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5" /> {mine.lat.toFixed(4)}, {mine.lng.toFixed(4)}
                   </p>
                 )}
                 {thread ? (
-                  <div className="flex items-center justify-between pt-2 border-t border-obsidian/10 text-sm font-mono">
-                    <span className="text-obsidian/70">{thread.latest.total_safety_issues} issues · {thread.latest.critical_issues} critical</span>
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5 text-sm font-mono">
+                    <span className="text-slate-300">{thread.latest.total_safety_issues} issues · {thread.latest.critical_issues} critical</span>
                     <StatusBadge status={REPORT_STATUS_BADGE[thread.latest.status]} label={thread.latest.status.toUpperCase()} />
                   </div>
                 ) : (
-                  <p className="text-xs text-obsidian/50 pt-2 border-t border-obsidian/10">No reports yet.</p>
+                  <p className="text-xs text-slate-500 pt-2 border-t border-white/5">No reports yet.</p>
                 )}
               </div>
             );
@@ -218,7 +218,7 @@ export const RegulatoryCompliancePage = () => {
       >
         <div className="space-y-4 mt-4">
           {mines.length === 0 && (
-            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-obsidian/60">
+            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-slate-400">
               No mines currently under Corporate Management.
             </div>
           )}
@@ -228,8 +228,8 @@ export const RegulatoryCompliancePage = () => {
             return (
               <div key={mine.id} className="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h4 className="text-sm font-bold text-obsidian">{mine.name}</h4>
-                  <p className="text-xs font-mono text-obsidian/60 mt-1">
+                  <h4 className="text-sm font-bold text-white">{mine.name}</h4>
+                  <p className="text-xs font-mono text-slate-400 mt-1">
                     {thread ? `${thread.reportingPeriod} · ${thread.latest.total_safety_issues} issues, ${thread.latest.critical_issues} critical` : 'No reports yet'}
                   </p>
                 </div>
@@ -254,11 +254,11 @@ export const RegulatoryCompliancePage = () => {
             <SectionHeader title="Respond to Report" subtitle={respondingTo.reporting_period} />
             <form onSubmit={submitRespond} className="space-y-4">
               <div>
-                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-wider mb-2 block">Decision</label>
+                <label className="text-xs font-mono text-slate-400 uppercase tracking-wider mb-2 block">Decision</label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as typeof status)}
-                  className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm focus:outline-none focus:border-ember/50"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50"
                 >
                   <option value="under_review">Under Review</option>
                   <option value="verified">Verified</option>
@@ -266,13 +266,13 @@ export const RegulatoryCompliancePage = () => {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-mono text-obsidian/60 uppercase tracking-wider mb-2 block">Findings</label>
+                <label className="text-xs font-mono text-slate-400 uppercase tracking-wider mb-2 block">Findings</label>
                 <textarea
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Findings from cross-checking against real issue counts..."
-                  className="w-full px-4 py-3 rounded-xl bg-pumice border border-obsidian/10 text-obsidian text-sm focus:outline-none focus:border-ember/50 resize-none"
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 resize-none"
                 />
               </div>
               <div className="flex items-center gap-3">
@@ -286,7 +286,7 @@ export const RegulatoryCompliancePage = () => {
                 <button
                   type="button"
                   onClick={() => setRespondingTo(null)}
-                  className="px-5 py-2.5 rounded-xl text-sm font-bold text-obsidian/60 hover:text-obsidian"
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white"
                 >
                   Cancel
                 </button>
@@ -313,7 +313,7 @@ export const RegulatoryReportsPage = () => {
       >
         <div className="space-y-6 mt-4">
           {threads.length === 0 && (
-            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-obsidian/60">
+            <div className="glass-panel rounded-3xl p-6 text-center text-sm text-slate-400">
               No reports yet.
             </div>
           )}
@@ -324,22 +324,22 @@ export const RegulatoryReportsPage = () => {
                 <SectionHeader title={`${mine?.name ?? t.mineId} — ${t.reportingPeriod}`} />
                 <div className="space-y-3">
                   {t.thread.map((report) => (
-                    <div key={report.id} className="p-4 rounded-2xl bg-pumice border border-obsidian/10">
+                    <div key={report.id} className="p-4 rounded-2xl bg-white/5 border border-white/10">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <span className="text-sm font-bold text-obsidian">
+                        <span className="text-sm font-bold text-white">
                           {report.report_type === 'corporate_submission' ? 'Corporate Submission' : 'Regulatory Verification'}
                         </span>
                         <StatusBadge status={REPORT_STATUS_BADGE[report.status]} label={report.status.toUpperCase()} />
                       </div>
-                      <p className="text-xs font-mono text-obsidian/50 mt-2">
+                      <p className="text-xs font-mono text-slate-500 mt-2">
                         {new Date(report.submitted_at).toLocaleString()} · {report.total_safety_issues} issues, {report.critical_issues} critical, {report.resolved_issues} resolved
                       </p>
                       {report.average_resolution_time_hours !== null && (
-                        <p className="text-xs font-mono text-ember mt-1">
+                        <p className="text-xs font-mono text-amber-400 mt-1">
                           Declared avg. resolution time: {report.average_resolution_time_hours}h
                         </p>
                       )}
-                      {report.notes && <p className="text-sm text-obsidian/70 mt-2">{report.notes}</p>}
+                      {report.notes && <p className="text-sm text-slate-300 mt-2">{report.notes}</p>}
                     </div>
                   ))}
                 </div>
@@ -365,32 +365,32 @@ export const RegulatoryProfilePage = () => {
         badge="Inspector Record"
       >
         <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 max-w-xl mx-auto mt-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-ember/5 rounded-full blur-[80px]"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px]"></div>
 
           <SectionHeader title="Account Details" />
 
-          <div className="flex items-center gap-5 pb-6 border-b border-obsidian/10 relative z-10">
-            <div className="w-20 h-20 rounded-full bg-ember flex items-center justify-center text-chalk text-3xl font-display">
+          <div className="flex items-center gap-5 pb-6 border-b border-white/10 relative z-10">
+            <div className="w-20 h-20 rounded-[1.25rem] bg-linear-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl font-extrabold shadow-[0_0_20px_rgba(245,158,11,0.2)]">
               {displayName(user).charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-obsidian tracking-tight">{displayName(user)}</h3>
-              <p className="text-sm font-mono text-ember mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
+              <h3 className="text-xl font-bold text-white tracking-tight">{displayName(user)}</h3>
+              <p className="text-sm font-mono text-amber-400 mt-1 uppercase tracking-wider">{userTypeLabel(user?.role)}</p>
             </div>
           </div>
 
-          <div className="space-y-4 text-sm font-mono text-obsidian/70 relative z-10">
-            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
-              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Email</span>
-              <span className="text-obsidian">{user?.email || '—'}</span>
+          <div className="space-y-4 text-sm font-mono text-slate-300 relative z-10">
+            <div className="flex justify-between items-center py-2 border-b border-white/5">
+              <span className="text-slate-500 uppercase text-xs tracking-wider">Email</span>
+              <span className="text-white">{user?.email || '—'}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
-              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Phone</span>
-              <span className="text-obsidian">{user?.phone || '—'}</span>
+            <div className="flex justify-between items-center py-2 border-b border-white/5">
+              <span className="text-slate-500 uppercase text-xs tracking-wider">Phone</span>
+              <span className="text-white">{user?.phone || '—'}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-obsidian/10">
-              <span className="text-obsidian/50 uppercase text-xs tracking-wider">Assigned Mine(s)</span>
-              <span className="text-obsidian">{user?.mines?.length ? `${user.mines.length} assigned` : 'None assigned'}</span>
+            <div className="flex justify-between items-center py-2 border-b border-white/5">
+              <span className="text-slate-500 uppercase text-xs tracking-wider">Assigned Mine(s)</span>
+              <span className="text-white">{user?.mines?.length ? `${user.mines.length} assigned` : 'None assigned'}</span>
             </div>
           </div>
         </div>

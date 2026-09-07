@@ -14,11 +14,12 @@ interface DropdownProps {
   className?: string;
 }
 
-// A from-scratch dropdown, not a native <select> — kept from before Caldera:
-// a native select's popup, nested inside certain ancestor stacking contexts,
-// can hit real browser popup-positioning bugs. This sidesteps it entirely:
-// no OS-level popup is ever opened, just an ordinary absolutely-positioned
-// list composited like any other element on the page.
+// A from-scratch dropdown, not a native <select> — a native select's popup,
+// nested inside an ancestor with `backdrop-filter` (this app's `.glass-panel`,
+// index.css), hits a real Chromium/Blink bug where the popup closes almost
+// immediately instead of staying open, making an option unreachable. This
+// sidesteps it entirely: no OS-level popup is ever opened, just an ordinary
+// absolutely-positioned list composited like any other element on the page.
 export const Dropdown = ({ value, onChange, options, placeholder, className }: DropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,14 +41,14 @@ export const Dropdown = ({ value, onChange, options, placeholder, className }: D
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="w-full px-6 py-3 rounded-input bg-limestone text-obsidian text-sm font-medium focus:outline-none flex items-center justify-between gap-2 text-left"
+        className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-orange-500/50 flex items-center justify-between gap-2 text-left"
       >
-        <span className={selected ? '' : 'text-obsidian/40'}>{selected ? selected.label : (placeholder ?? 'Select...')}</span>
-        <ChevronDown className={`w-4 h-4 text-obsidian/50 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+        <span className={selected ? '' : 'text-slate-500'}>{selected ? selected.label : (placeholder ?? 'Select...')}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full max-h-64 overflow-y-auto rounded-2xl bg-chalk p-1.5">
+        <div className="absolute z-50 mt-2 w-full max-h-64 overflow-y-auto rounded-xl bg-[#1a1511] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
           {options.map((option) => (
             <button
               key={option.value}
@@ -56,8 +57,8 @@ export const Dropdown = ({ value, onChange, options, placeholder, className }: D
                 onChange(option.value);
                 setIsOpen(false);
               }}
-              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                option.value === value ? 'bg-ember text-chalk' : 'text-obsidian hover:bg-pumice'
+              className={`w-full text-left px-4 py-2.5 text-sm font-mono transition-colors ${
+                option.value === value ? 'bg-orange-500/20 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'
               }`}
             >
               {option.label}

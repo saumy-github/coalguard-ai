@@ -5,12 +5,6 @@ export interface StatusBadgeProps {
   label?: string;
 }
 
-// Caldera's palette is deliberately constrained to Ember/Plasma Violet/Sulfur
-// (DESIGN.md's "Don't ... introduce additional accent colors"), but a status
-// badge needs to distinguish good/attention/bad at a glance — Sulfur doubles
-// as the "needs attention" tone here since it's the system's only other
-// chromatic color, and Ember (already the primary-action color) reads as
-// "critical" rather than introducing a fourth hue like red.
 export const StatusBadge = ({ status, label }: StatusBadgeProps) => {
   const getBadgeStyle = () => {
     switch (status) {
@@ -21,7 +15,7 @@ export const StatusBadge = ({ status, label }: StatusBadgeProps) => {
       case 'verified_closed':
       case 'active':
       case 'completed':
-        return 'bg-obsidian text-chalk';
+        return 'bg-lime-500/15 text-lime-400 border-lime-500/30';
 
       case 'warning':
       case 'action_required':
@@ -29,26 +23,27 @@ export const StatusBadge = ({ status, label }: StatusBadgeProps) => {
       case 'in_investigation':
       case 'medium':
       case 'conditional':
-        return 'bg-sulfur text-obsidian';
+        return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
 
       case 'critical':
       case 'danger':
       case 'fail':
       case 'high':
-        return 'bg-ember text-chalk';
+        return 'bg-red-500/15 text-red-400 border-red-500/30';
 
       case 'info':
       case 'low':
       case 'pending':
       default:
-        return 'bg-pumice text-obsidian';
+        return 'bg-[#8d5d3e]/20 text-[#f6b994] border-[#8d5d3e]/40';
     }
   };
 
   const displayText = label || (status ? status.replace(/_/g, ' ').toUpperCase() : 'STATUS');
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-pill text-xs font-medium ${getBadgeStyle()}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-semibold border ${getBadgeStyle()}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
       {displayText}
     </span>
   );
