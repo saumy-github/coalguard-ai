@@ -250,8 +250,43 @@ async def rag_check_compliance(payload: ComplianceInput) -> Dict[str, Any]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ISSUE CLASSIFICATION — FREE-TEXT TRIAGE
+# ══════════════════════════════════════════════════════════════════════════════
+
+class IssueClassificationInput(BaseModel):
+    """Input schema for issue triage classification."""
+    observation: str = Field(
+        ...,
+        min_length=5,
+        description="Free-text description of the problem observed by the worker or safety officer.",
+    )
+
+
+@app.post("/api/issues/classify", tags=["Issue Classification"])
+async def classify_issue_endpoint(payload: IssueClassificationInput) -> Dict[str, Any]:
+    """Accept a free-text observation and return target / issue_type / severity classification.
+
+    The response JSON is guaranteed to contain:
+      - target:     "site_issue" | "person_issue"
+      - issue_type: valid literal for the target (never outside the allowed set)
+      - severity:   valid literal for the target (never outside the allowed set)
+    """
+    from src.issue_classifier import classify_issue
+
+    try:
+        result = classify_issue(observation=payload.observation)
+        return asdict(result)
+    except EnvironmentError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception as exc:
+        logger.error("Issue classification failed: %s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Issue classification failed: {exc}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ATTENDANCE — GEO-FENCED FACE ATTENDANCE
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @app.post("/api/attendance/mark", tags=["Attendance"])
 async def attendance_mark(

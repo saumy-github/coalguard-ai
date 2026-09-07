@@ -20,7 +20,8 @@ import {
   ShieldAlert,
   Fingerprint,
   X,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 import { MarkAttendanceModal } from '../attendance/MarkAttendanceModal';
 import { useSyncManager } from '../../hooks/useSyncManager';
@@ -291,6 +292,7 @@ export const WorkerReportPage = () => {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [siteIssues, setSiteIssues] = useState<SiteIssueRecord[]>([]);
+  const [lastClassification, setLastClassification] = useState<{ target: string; issue_type: string; severity: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { isOnline, syncIssueReports } = useSyncManager();
@@ -337,14 +339,20 @@ export const WorkerReportPage = () => {
 
       const { data } = await api.post('/issues', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 45000, // AI classification may take a moment
       });
 
-      if (data) {
+      if (data && data.issue) {
         const kindLabel = data.target === 'site_issue' ? 'Site Issue' : 'Person Issue';
+        setLastClassification({
+          target: data.target,
+          issue_type: data.issue.issue_type,
+          severity: data.issue.severity,
+        });
         addToast(
           'success',
           'Report Filed',
-          `Classified as a ${kindLabel} (${data.issue.issue_type.replace(/_/g, ' ')}).`
+          `Classified as a ${kindLabel} — ${data.issue.issue_type.replace(/_/g, ' ')} (${data.issue.severity}).`
         );
       } else {
         addToast('success', 'Report Received', 'Your report was received and is being processed.');
@@ -487,14 +495,44 @@ export const WorkerReportPage = () => {
                   )}
                 </div>
 
+                {/* AI classification result badge */}
+                {lastClassification && (
+                  <div className={`rounded-xl border px-5 py-4 flex items-start gap-4 ${
+                    lastClassification.target === 'site_issue'
+                      ? 'bg-amber-500/10 border-amber-500/25 text-amber-300'
+                      : 'bg-blue-500/10 border-blue-500/25 text-blue-300'
+                  }`}>
+                    <div className="shrink-0 mt-0.5">
+                      {lastClassification.target === 'site_issue'
+                        ? <AlertTriangle className="w-5 h-5" />
+                        : <ShieldCheck className="w-5 h-5" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-70">
+                        AI Triage Result
+                      </p>
+                      <p className="text-sm font-semibold">
+                        {lastClassification.target === 'site_issue' ? 'Site Issue' : 'Person Issue'}
+                        {' · '}
+                        <span className="font-mono">{lastClassification.issue_type.replace(/_/g, ' ')}</span>
+                      </p>
+                      <p className="text-xs mt-0.5 opacity-70 font-mono uppercase">
+                        Severity: {lastClassification.severity}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-4">
                   <button
                     type="submit"
                     disabled={isSubmittingReport}
                     className="w-full relative overflow-hidden group bg-zinc-100 hover:bg-white disabled:opacity-50 text-zinc-900 font-bold py-4 px-6 rounded-xl transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-3 shadow-[0_10px_20px_rgba(0,0,0,0.2)]"
                   >
-                    <Send className="w-5 h-5 text-zinc-700" />
-                    <span>{isSubmittingReport ? 'Submitting...' : 'Submit to Command Center'}</span>
+                    {isSubmittingReport
+                      ? <RefreshCw className="w-5 h-5 text-zinc-600 animate-spin" />
+                      : <Send className="w-5 h-5 text-zinc-700" />}
+                    <span>{isSubmittingReport ? 'Analysing & Submitting...' : 'Submit to Command Center'}</span>
                   </button>
                 </div>
               </form>
