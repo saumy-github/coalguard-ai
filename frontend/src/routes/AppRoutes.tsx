@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from '../components/auth/RequireAuth';
 import { RequireRole } from '../components/auth/RequireRole';
+import { AttendanceKioskPage } from '../pages/AttendanceKiosk';
 import { LandingPage } from '../components/views/LandingPage';
 import { Login } from '../pages/auth/Login';
 import { Dashboard } from '../pages/Dashboard';
@@ -74,6 +75,16 @@ export const AppRoutes = () => (
     <Route path="/dashboard/admin/users" element={<RequireRole role="admin"><AdminUsersPage /></RequireRole>} />
     <Route path="/dashboard/admin/mines" element={<RequireRole role="admin"><AdminMinesPage /></RequireRole>} />
     <Route path="/dashboard/admin/profile" element={<RequireRole role="admin"><AdminProfilePage /></RequireRole>} />
+
+    {/* Shared attendance kiosk device — not tied to one role's own tree. */}
+    <Route
+      path="/dashboard/attendance/kiosk"
+      element={
+        <RequireAuth roles={['safety_officer', 'admin']}>
+          <AttendanceKioskPage />
+        </RequireAuth>
+      }
+    />
 
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

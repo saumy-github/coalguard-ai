@@ -1,5 +1,5 @@
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from ..auth.dependencies import require_role
 from ..models.user import User, get_profile, set_profile
@@ -11,6 +11,7 @@ from ..schemas.users import (
     UserResponse,
 )
 from ..services import provision_service, user_service
+from ..uploads import REGISTERED_FACES_DIR
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -22,6 +23,7 @@ def _to_response(user: User) -> UserResponse:
     profile = get_profile(user)
     mine = getattr(profile, "mine", None)
     mines = getattr(profile, "mines", None) or []
+    photo_url = getattr(profile, "photo_url", None)
     return UserResponse(
         id=str(user.id),
         email=user.email,
@@ -31,6 +33,7 @@ def _to_response(user: User) -> UserResponse:
         active=user.active,
         mine=str(mine) if mine else None,
         mines=[str(mine_id) for mine_id in mines],
+        photo_url=photo_url,
     )
 
 
@@ -98,6 +101,32 @@ async def update_user_mines(user_id: str, payload: UpdateUserMinesRequest) -> Us
         )
     profile = get_profile(target)
     profile.mines = [PydanticObjectId(mine_id) for mine_id in payload.mine_ids]
+    set_profile(target, profile)
+    await target.save()
+    return _to_response(target)
+
+
+@router.patch("/{user_id}/photo", response_model=UserResponse, dependencies=[Depends(require_role("admin"))])
+async def upload_user_photo(user_id: str, file: UploadFile = File(...)) -> UserResponse:
+    """Upload or replace a Worker/Officer face reference photo.
+    Saves to uploads/registered_faces/{user_id}<ext> and stores the
+    servable URL in the user's profile.photo_url field.
+    Only workers and safety_officers need a face photo."""
+    target = await User.get(PydanticObjectId(user_id))
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if target.role not in _SINGLE_MINE_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Photo upload is only supported for worker and safety_officer accounts, not {target.role}.",
+        )
+    from pathlib import Path
+    ext = Path(file.filename or "").suffix or ".jpg"
+    dest = REGISTERED_FACES_DIR / f"{user_id}{ext}"
+    dest.write_bytes(await file.read())
+    photo_url = f"/uploads/registered_faces/{user_id}{ext}"
+    profile = get_profile(target)
+    profile.photo_url = photo_url
     set_profile(target, profile)
     await target.save()
     return _to_response(target)
