@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from '../../store/authStore';
 import { 
@@ -12,7 +12,8 @@ import {
   ArrowRight,
   ShieldAlert,
   User,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 import { CoalGuardLogo } from '../../components/common/CoalGuardLogo';
 
@@ -22,6 +23,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undef
 const DEMO_ACCOUNTS = [
   { 
     role: 'Worker', 
+    userType: 'worker',
     identifier: '9990000001',
     icon: HardHat,
     color: 'text-zinc-300 group-hover:text-amber-400',
@@ -32,6 +34,7 @@ const DEMO_ACCOUNTS = [
   },
   { 
     role: 'Mine Safety Officer', 
+    userType: 'safety_officer',
     identifier: 'officer@example.com',
     icon: ShieldCheck,
     color: 'text-zinc-300 group-hover:text-emerald-400',
@@ -42,6 +45,7 @@ const DEMO_ACCOUNTS = [
   },
   { 
     role: 'Corporate Management', 
+    userType: 'corporate_manager',
     identifier: 'corporate@example.com',
     icon: Building2,
     color: 'text-zinc-300 group-hover:text-blue-400',
@@ -52,6 +56,7 @@ const DEMO_ACCOUNTS = [
   },
   { 
     role: 'Regulatory Authority', 
+    userType: 'regulator',
     identifier: 'regulator@example.com',
     icon: Landmark,
     color: 'text-zinc-300 group-hover:text-purple-400',
@@ -62,6 +67,7 @@ const DEMO_ACCOUNTS = [
   },
   { 
     role: 'Admin', 
+    userType: 'admin',
     identifier: 'admin@example.com',
     icon: Sliders,
     color: 'text-zinc-300 group-hover:text-orange-400',
@@ -75,10 +81,15 @@ const DEMO_PASSWORD = 'test123';
 
 export const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loginWithGoogle, isLoading, error } = useAuthStore();
 
-  const [selectedAccount, setSelectedAccount] = useState(DEMO_ACCOUNTS[0]);
-  const [identifier, setIdentifier] = useState(DEMO_ACCOUNTS[0].identifier);
+  const initialAccount = location.state?.role 
+    ? DEMO_ACCOUNTS.find(a => a.userType === location.state.role) || DEMO_ACCOUNTS[0]
+    : DEMO_ACCOUNTS[0];
+
+  const [selectedAccount, setSelectedAccount] = useState(initialAccount);
+  const [identifier, setIdentifier] = useState(initialAccount.identifier);
   const [password, setPassword] = useState(DEMO_PASSWORD);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -113,6 +124,15 @@ export const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-zinc-950 font-sans selection:bg-zinc-700 selection:text-white">
       
+      {/* Top Left Back Button */}
+      <button 
+        onClick={() => navigate('/')} 
+        className="absolute top-6 left-6 z-50 flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group px-4 py-2 bg-zinc-900/50 hover:bg-zinc-800/80 rounded-lg border border-white/5 backdrop-blur-md"
+      >
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        <span className="text-sm font-semibold tracking-wide">Back to Home</span>
+      </button>
+
       {/* Sleek Graphite Gradient Background */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-[#18181b] to-zinc-950"></div>

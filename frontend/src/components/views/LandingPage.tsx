@@ -121,7 +121,7 @@ export const LandingPage = () => {
   }, []);
 
   const handleGuestLogin = (_userType: UserType) => {
-    navigate('/login');
+    navigate('/login', { state: { role: _userType } });
   };
 
   return (
@@ -175,56 +175,24 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* Who We Are & Mission Section */}
-      <section data-theme="dark" className="py-24 bg-slate-900 text-white relative z-10 border-b border-white/5">
+      {/* Built for Transparency Section */}
+      <section data-theme="dark" className="pt-24 pb-8 bg-slate-900 text-white relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <RevealOnScroll>
-            <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="text-center max-w-3xl mx-auto">
               <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6">Built For Transparency. <br/><span className="text-blue-500">Secured By Cryptography.</span></h2>
               <p className="text-lg text-slate-400 leading-relaxed">
                 CoalGuard is a digital ecosystem dedicated to transforming the mining industry. We remove silos between underground workers, corporate management, and government regulators—ensuring every incident is handled swiftly and every compliance metric is immutable.
               </p>
             </div>
           </RevealOnScroll>
-
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <RevealOnScroll delay={100}>
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors h-full">
-                <div className="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/30">
-                  <ShieldCheck className="w-7 h-7 text-blue-400" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Privacy & Security First</h3>
-                <p className="text-slate-400 leading-relaxed">
-                  Built on Military-grade encryption and Strict Role-Based Access Control (RBAC). Personal data is cryptographically protected to ensure the safety and privacy of individual workers, while systemic compliance data is locked into an immutable ledger that guarantees regulatory integrity.
-                </p>
-              </div>
-            </RevealOnScroll>
-            
-            <RevealOnScroll delay={200}>
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors h-full flex flex-col justify-center items-center text-center">
-                <h3 className="text-2xl font-bold mb-4">See It In Action</h3>
-                <p className="text-slate-400 mb-8 max-w-sm">
-                  Watch a single hazard report trigger a synchronized response across the entire organization.
-                </p>
-                <button 
-                  onClick={() => navigate('/demo')}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:scale-105 inline-flex items-center gap-3"
-                >
-                  <Play className="w-5 h-5 fill-white" />
-                  View Interactive Demo Flow
-                </button>
-              </div>
-            </RevealOnScroll>
-          </div>
         </div>
       </section>
 
       {/* Combined Light Sections for Seamless Gradient */}
-      <div className="bg-gradient-to-b from-[#AAA7AD] to-[#C5C6C7]">
+      <div className="bg-[linear-gradient(to_bottom,#0f172a_0px,#334155_50px,#C5C6C7_100px,#C5C6C7_calc(100%-100px),#334155_calc(100%-50px),#0f172a_100%)]">
         {/* Features Section */}
         <section data-theme="light" id="features" className="py-24 relative z-10 overflow-hidden">
-        {/* Downward gradient transition from dark hero seam into light grey */}
-        <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-slate-900 to-transparent pointer-events-none"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -352,8 +320,8 @@ export const LandingPage = () => {
       </div>
 
       {/* Where We Operate */}
-      <section data-theme="dark" className="py-24 bg-slate-900 relative z-10 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section data-theme="dark" className="py-24 bg-slate-900 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <RevealOnScroll>
             <div className="mb-12 text-center">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">Where We Operate</h2>
@@ -361,6 +329,50 @@ export const LandingPage = () => {
             </div>
             <IndiaMineMap />
           </RevealOnScroll>
+        </div>
+      </section>
+
+      {/* Privacy & Demo Section */}
+      <section data-theme="dark" className="py-24 bg-slate-900 text-white relative z-10 border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <RevealOnScroll>
+            <div className="mb-16 text-center max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 tracking-tight">Privacy & Demo</h2>
+              <p className="text-lg text-slate-400">
+                Experience how we protect your data while seamlessly connecting operations across the organization.
+              </p>
+            </div>
+          </RevealOnScroll>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            <RevealOnScroll delay={100}>
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors h-full">
+                <div className="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/30">
+                  <ShieldCheck className="w-7 h-7 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">Privacy & Security First</h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Built on Military-grade encryption and Strict Role-Based Access Control (RBAC). Personal data is cryptographically protected to ensure the safety and privacy of individual workers, while systemic compliance data is locked into an immutable ledger that guarantees regulatory integrity.
+                </p>
+              </div>
+            </RevealOnScroll>
+            
+            <RevealOnScroll delay={200}>
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors h-full flex flex-col justify-center items-center text-center">
+                <h3 className="text-2xl font-bold mb-4">See It In Action</h3>
+                <p className="text-slate-400 mb-8 max-w-sm">
+                  Watch a single hazard report trigger a synchronized response across the entire organization.
+                </p>
+                <button 
+                  onClick={() => navigate('/demo')}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:scale-105 inline-flex items-center gap-3"
+                >
+                  <Play className="w-5 h-5 fill-white" />
+                  View Interactive Demo Flow
+                </button>
+              </div>
+            </RevealOnScroll>
+          </div>
         </div>
       </section>
 
