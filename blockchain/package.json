@@ -1,0 +1,26 @@
+{
+  "name": "coalguard-blockchain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CoalGuard audit ledger — Solidity contract, Hardhat tooling, and deployment artifacts. The runtime service alongside it is Python (see src/); Node is only needed to compile, test and deploy.",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "node": "hardhat node",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "grant:anchorer": "hardhat run scripts/grant-anchorer.js --network sepolia",
+    "anchor:demo": "hardhat run scripts/anchor-demo.js --network sepolia",
+    "export:abi": "hardhat run scripts/export-abi.js",
+    "check:abi": "hardhat run scripts/export-abi.js -- --check"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.10"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}

@@ -23,6 +23,9 @@ class PersonIssue(Document):
     severity: PersonIssueSeverity
     status: PersonIssueStatus = "open"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Set when `status` flips to "resolved", cleared on reopen — same contract
+    # as SiteIssue.resolved_at, and read by the same report aggregator.
+    resolved_at: Optional[datetime] = None
 
     class Settings:
         name = "person_issues"

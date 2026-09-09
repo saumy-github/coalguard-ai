@@ -10,7 +10,7 @@ Gets your local environment running. Read once, then use as reference.
 - `frontend/` — Vite + React + TypeScript + Tailwind. Deployed independently on Vercel; not part of Docker.
 - `backend/` — Python/FastAPI, runs in Docker.
 - `ai_engine/` — Python/FastAPI (ML), runs in Docker. See `ai_engine/README.md` for details specific to that service.
-- `blockchain/` — contracts (early scaffolding).
+- `blockchain/` — the audit ledger: a Solidity contract plus a Python/FastAPI service that anchors record hashes on-chain. Runs in Docker. See §8.
 - `research/` — planning docs, not code.
 
 You do **not** need Python installed locally — `backend` and `ai_engine` only run inside Docker.
@@ -73,7 +73,7 @@ There's no team branch workflow finalized yet — for now, coordinate directly b
 
 ## 3. Config files
 
-Three files, none committed (see `.gitignore`) — copy each `.env.example` to `.env` in the same folder and adjust as needed.
+Four files, none committed (see `.gitignore`) — copy each `.env.example` to `.env` in the same folder and adjust as needed.
 
 ### `backend/.env`
 
@@ -86,6 +86,10 @@ JWT_SECRET_KEY=change-me-to-a-long-random-string
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=5256000
 GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+
+AI_ENGINE_URL=http://ai_engine:8000
+BLOCKCHAIN_URL=http://blockchain:8000
+LEDGER_API_KEY=change-me-to-a-long-random-string
 ```
 
 Change `JWT_SECRET_KEY` to a real random string even for local dev — it signs every login session, and sessions are deliberately long-lived (~10 years, no refresh-token rotation — see the comment in `backend/.env.example`). `GOOGLE_CLIENT_ID` can stay as the placeholder: Google sign-in is currently disabled in the frontend UI (see `research/saumy/02-google-auth-deferred.md`), so nothing depends on it yet.
@@ -108,6 +112,16 @@ GROQ_MODEL=openai/gpt-oss-120b
 
 `GROQ_API_KEY` is required for the RAG compliance endpoint (`/api/rag/check-compliance`) — get a free one at [console.groq.com/keys](https://console.groq.com/keys). Everything else in `ai_engine` (PPE detection, anomaly detection, forecasting) works without it.
 
+### `blockchain/.env`
+
+```bash
+cp blockchain/.env.example blockchain/.env
+```
+
+The defaults are enough to boot. `ANCHOR_ENABLED=false` runs the service with no chain at all: the API, `/health` and the anchor queue all work, entries just stay `pending`. Turn it on with either the local chain or Sepolia — both in §8.
+
+`LEDGER_API_KEY` is a shared secret on the service's write endpoints and must match `LEDGER_API_KEY` in `backend/.env`.
+
 ---
 
 ## 4. Start backend + datastores (Docker)
@@ -116,12 +130,13 @@ GROQ_MODEL=openai/gpt-oss-120b
 npm run dev:up
 ```
 
-This builds and starts `backend`, `mongodb`, `redis`, and `chromadb` in the background.
+This builds and starts `backend`, `mongodb`, `redis`, `chromadb`, and `blockchain` in the background.
 
 - Backend: http://localhost:8000
 - MongoDB: `mongodb://localhost:27018`
 - Redis: `localhost:6380`
 - ChromaDB: http://localhost:8002
+- Blockchain ledger: http://127.0.0.1:8003 (loopback-only — see §8)
 
 To also start the ML service (`ai_engine`, heavier build — pulls PyTorch):
 
@@ -187,7 +202,75 @@ Stop with `npm run dev:down` when done. Seeding (step 5) is one-time — the acc
 
 ---
 
-## 8. Useful commands
+## 8. Audit ledger (blockchain)
+
+The `blockchain` service anchors a SHA-256 fingerprint of a record on-chain, so a regulator can re-hash whatever is in MongoDB now and prove whether it has been altered since. Mongo stays the source of truth for the application; the chain is the source of truth for *integrity*.
+
+It starts with `npm run dev:up` and works out of the box with `ANCHOR_ENABLED=false` — the queue accepts anchors and holds them as `pending`. To actually put them on a chain, pick one of the two paths below.
+
+### Option A — local chain (no faucet, no internet, no account)
+
+```bash
+npm run chain:node               # starts a local Hardhat node
+npm run chain:deploy:localhost   # deploys AuditLedger to it
+```
+
+Take the printed address into `blockchain/.env`:
+
+```
+ANCHOR_ENABLED=true
+CHAIN_RPC_URL=http://hardhat:8545
+CHAIN_ID=31337
+CONTRACT_ADDRESS=<the address printed above>
+CONFIRMATIONS_REQUIRED=0
+ANCHOR_PRIVATE_KEY=<any private key the node prints at startup>
+```
+
+`CONFIRMATIONS_REQUIRED=0` matters here: Hardhat mines a block only when a transaction arrives, so with a non-zero depth the last anchor of any burst waits forever for a block nothing will ever produce. On Sepolia leave it at 1+.
+
+Then `docker compose up -d blockchain` and check `curl 127.0.0.1:8003/health` — every module should read `ready: true`.
+
+### Option B — Ethereum Sepolia (a public, clickable transaction)
+
+Needs an RPC URL (Alchemy/Infura free tier) and a **fresh throwaway wallet** — never a personal MetaMask key, since the same key controls the same address on mainnet. Fund it from the [Google Cloud Web3 faucet](https://cloud.google.com/application/web3/faucet/ethereum/sepolia); faucets ration per 24h, so **claim it the day before a demo, not the morning of**. One claim covers hundreds of anchors (~90–120k gas each).
+
+```bash
+npm run chain:new-wallet     # generates a throwaway wallet; fund the printed address
+npm run chain:deploy:sepolia
+npm run chain:export-abi
+```
+
+Set `CHAIN_ID=11155111`, the Sepolia `CHAIN_RPC_URL`, `CONTRACT_ADDRESS`, and `CONFIRMATIONS_REQUIRED=1` in `blockchain/.env`, then restart the service.
+
+**This is testnet ETH with no market value. Never fund this wallet with real ETH.**
+
+### Trying it out
+
+```bash
+docker exec sih26-backend-1 python -m scripts.anchor_mines   # anchor every mine
+curl 127.0.0.1:8003/api/ledger/stats                          # watch pending → confirmed
+```
+
+Then, logged in as `regulator@example.com`:
+
+```bash
+POST /audit/verify/mine/<mine_id>     # → VERIFIED
+```
+
+Edit that mine's name directly in `mongosh`, verify again, and it returns **TAMPERED** with a different hash. Delete the record entirely and `GET 127.0.0.1:8003/api/ledger/records/mine/<id>/onchain` still returns its full anchor history from the chain alone.
+
+Verification never collapses failure modes: an unreachable RPC returns `UNAVAILABLE`, never `TAMPERED`. A record that was simply never anchored returns `NOT_ANCHORED`.
+
+### Contract tests
+
+```bash
+npm run chain:test     # 22 Solidity tests, no chain or wallet needed
+npm run chain:pytest   # 22 canonical-hashing tests
+```
+
+---
+
+## 9. Useful commands
 
 - View backend logs: `docker compose logs -f backend`
 - View ai_engine logs: `docker compose logs -f ai_engine`

@@ -14,7 +14,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# Anchored to the repo root: unanchored `lib/` matches at ANY depth, which
+# would silently swallow e.g. blockchain/**/lib/ (OpenZeppelin sources).
+/lib/
 lib64/
 parts/
 sdist/
@@ -259,3 +261,15 @@ uploads/temp_selfies/*
 .Trashes
 
 .vscode
+# Blockchain / Hardhat
+# Build output and local-chain state only. The ABI, the Sepolia deployment
+# record and the Sepolia Ignition state are all COMMITTED on purpose — a fresh
+# clone must be able to `docker compose up` with zero Node installed.
+blockchain/artifacts/
+blockchain/cache/
+blockchain/typechain-types/
+blockchain/coverage/
+blockchain/coverage.json
+blockchain/node_modules/
+blockchain/ignition/deployments/chain-31337/
+blockchain/deployments/localhost.json

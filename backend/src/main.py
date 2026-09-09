@@ -8,6 +8,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from .config import settings
 from .models import ALL_MODELS
+from .routes.attendance import router as attendance_router
+from .routes.audit import router as audit_router
 from .routes.auth import router as auth_router
 from .routes.issues import router as issues_router
 from .routes.mine_levels import router as mine_levels_router
@@ -16,7 +18,6 @@ from .routes.person_issues import router as person_issues_router
 from .routes.regulatory_reports import router as regulatory_reports_router
 from .routes.site_issues import router as site_issues_router
 from .routes.users import router as users_router
-from .routes.attendance import router as attendance_router
 from .uploads import UPLOADS_ROOT
 
 
@@ -49,6 +50,7 @@ app.include_router(person_issues_router)
 app.include_router(regulatory_reports_router)
 app.include_router(site_issues_router)
 app.include_router(attendance_router)
+app.include_router(audit_router)
 
 app.mount("/uploads", StaticFiles(directory=UPLOADS_ROOT), name="uploads")
 

@@ -1,10 +1,27 @@
 {
   "name": "sih26",
   "private": true,
+  "comments": {
+    "chain:*": "Hardhat runs inside a pinned node:20 container, never on the host. Hardhat 2 does not support Node 26 (what this machine ships) and hangs silently with no output on it — so pinning the runtime is what makes these reproducible for every teammate, and means nobody needs Node installed at all."
+  },
   "scripts": {
-    "dev:up": "docker compose up -d --build backend mongodb redis chromadb",
+    "dev:up": "docker compose up -d --build backend mongodb redis chromadb blockchain",
     "dev:up:all": "docker compose up -d --build",
     "dev:down": "docker compose down",
-    "dev:seed": "docker compose exec backend python -m scripts.index"
+    "dev:seed": "docker compose exec backend python -m scripts.index",
+    "chain:install": "docker run --rm -v \"$PWD/blockchain\":/app -w /app node:20 npm install",
+    "chain:compile": "docker run --rm -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat compile",
+    "chain:test": "docker run --rm -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat test",
+    "chain:coverage": "docker run --rm -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat coverage",
+    "chain:export-abi": "docker run --rm -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat run scripts/export-abi.js",
+    "chain:check-abi": "docker run --rm -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat run scripts/export-abi.js -- --check",
+    "chain:deploy:sepolia": "docker run --rm --env-file blockchain/.env -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat run scripts/deploy.js --network sepolia",
+    "chain:grant-anchorer": "docker run --rm --env-file blockchain/.env -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat run scripts/grant-anchorer.js --network sepolia",
+    "chain:anchor-demo": "docker run --rm --env-file blockchain/.env -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat run scripts/anchor-demo.js --network sepolia",
+    "chain:verify": "docker run --rm --env-file blockchain/.env -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat verify --network sepolia",
+    "chain:new-wallet": "docker run --rm -v \"$PWD/blockchain\":/app -w /app node:20 npx hardhat run scripts/new-wallet.js",
+    "chain:node": "docker compose --profile chain up -d hardhat",
+    "chain:deploy:localhost": "docker exec sih26-hardhat-1 npx hardhat run scripts/deploy.js --network localhost",
+    "chain:pytest": "docker compose exec blockchain sh -c 'pip install -q -r requirements-dev.txt && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q'"
   }
 }

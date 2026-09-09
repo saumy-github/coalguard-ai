@@ -6,6 +6,19 @@ from pydantic import BaseModel
 from ..models.site_issue import SiteIssueSeverity, SiteIssueStatus, SiteIssueType
 
 
+class CreateSiteIssueRequest(BaseModel):
+    level: str
+    section: int
+    issue_type: SiteIssueType
+    observation: str
+    severity: SiteIssueSeverity
+    recommended_action: Optional[str] = None
+
+
+class UpdateSiteIssueStatusRequest(BaseModel):
+    status: SiteIssueStatus
+
+
 class DetectSiteIssueRequest(BaseModel):
     level: str
     section: int
@@ -30,3 +43,4 @@ class SiteIssueResponse(BaseModel):
     photo_url: Optional[str] = None
     status: SiteIssueStatus
     created_at: datetime
+    resolved_at: Optional[datetime] = None

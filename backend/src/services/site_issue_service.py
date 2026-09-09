@@ -1,10 +1,11 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from beanie import PydanticObjectId
 from beanie.operators import In
 
 from . import ai_engine_client
-from ..models.site_issue import SiteIssue, SiteIssueSeverity, SiteIssueType
+from ..models.site_issue import SiteIssue, SiteIssueSeverity, SiteIssueStatus, SiteIssueType
 
 # Simple lookup, not returned by ai_engine — the anomaly endpoint only classifies
 # severity and explains why, it never says what to do about it.
@@ -48,6 +49,21 @@ async def create_site_issue(
         photo_url=photo_url,
     )
     await issue.insert()
+    return issue
+
+
+async def set_site_issue_status(*, issue: SiteIssue, status: SiteIssueStatus) -> SiteIssue:
+    """The only path that resolves a site issue — nothing else in the codebase
+    ever wrote `status = "resolved"`, which is why `resolved_issues` on every
+    regulatory report read zero before this existed.
+
+    Reopening clears `resolved_at` deliberately: a reopen-then-resolve should
+    measure the second resolution, not leave a stale timestamp that would make
+    an unresolved issue look closed to the report aggregator.
+    """
+    issue.status = status
+    issue.resolved_at = datetime.now(timezone.utc) if status == "resolved" else None
+    await issue.save()
     return issue
 
 

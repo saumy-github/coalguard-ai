@@ -15,6 +15,13 @@ class Settings(BaseSettings):
 
     ai_engine_url: str = "http://ai_engine:8000"
 
+    # Blockchain ledger microservice. Defaulted like every other field here so
+    # a teammate with no blockchain/.env still boots the backend — the ledger
+    # is best-effort by design (see audit_service.py), so a wrong/unreachable
+    # URL just means anchors stay unavailable, never a crash at import time.
+    blockchain_url: str = "http://blockchain:8000"
+    ledger_api_key: str = "change-me-to-a-long-random-string"
+
 
 settings = Settings()
 
