@@ -5,8 +5,10 @@ import { api } from '../../utils/api';
 import {
   fetchMines,
   fetchRegulatoryReports,
+  formatHours,
   groupIntoThreads,
   REPORT_STATUS_BADGE,
+  type DirectivePriority,
   type Mine,
   type RegulatoryReport,
   type ReportThread,
@@ -15,7 +17,8 @@ import { DashboardLayout } from '../layout/DashboardLayout';
 import { PageLayout } from '../common/PageLayout';
 import { SectionHeader } from '../common/SectionHeader';
 import { StatusBadge } from '../common/StatusBadge';
-import { Landmark, FileCheck, AlertCircle, MapPin, ShieldCheck } from 'lucide-react';
+import { ReportDetail } from '../common/ReportDetail';
+import { Landmark, FileCheck, AlertCircle, MapPin, ShieldCheck, Plus, X } from 'lucide-react';
 
 function useMinesAndReports() {
   const [mines, setMines] = useState<Mine[]>([]);
@@ -54,11 +57,12 @@ export const RegulatoryOverviewPage = () => {
   const awaitingReview = threads.filter((t) => t.latest.report_type === 'corporate_submission').length;
   const totalIssues = threads.reduce((sum, t) => sum + t.latest.total_safety_issues, 0);
   const criticalIssues = threads.reduce((sum, t) => sum + t.latest.critical_issues, 0);
-  const declaredTimes = reports
+  const openIssues = threads.reduce((sum, t) => sum + t.latest.open_issues, 0);
+  const resolutionTimes = reports
     .map((r) => r.average_resolution_time_hours)
     .filter((v): v is number => v !== null && v !== undefined);
-  const avgResolutionHours = declaredTimes.length
-    ? declaredTimes.reduce((a, b) => a + b, 0) / declaredTimes.length
+  const avgResolutionHours = resolutionTimes.length
+    ? resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length
     : null;
   const verifiedCount = threads.filter((t) => t.latest.status === 'verified').length;
 
@@ -82,16 +86,16 @@ export const RegulatoryOverviewPage = () => {
     {
       title: 'Reported Issues',
       value: `${totalIssues}`,
-      subtext: `${criticalIssues} critical anomalies reported`,
-      icon: <FileCheck className="w-6 h-6" />,
+      subtext: `${criticalIssues} critical, ${openIssues} still open`,
+      icon: <FileCheck className="w-5 h-5" />,
       status: criticalIssues > 0 ? 'warning' : 'safe',
       statusLabel: criticalIssues > 0 ? 'REVIEW' : 'CLEAR',
     },
     {
       title: 'Compliance State',
       value: `${verifiedCount}/${threads.length || 0}`,
-      subtext: 'Verified reports. Avg. resolution: ' + (avgResolutionHours !== null ? `${avgResolutionHours.toFixed(1)}h` : '—'),
-      icon: <ShieldCheck className="w-6 h-6" />,
+      subtext: 'Reports verified · avg. resolution: ' + formatHours(avgResolutionHours),
+      icon: <Landmark className="w-5 h-5" />,
       status: 'safe',
       statusLabel: 'SUMMARY',
     },
@@ -116,28 +120,20 @@ export const RegulatoryOverviewPage = () => {
               <p className="text-sm font-medium tracking-wide">No reports awaiting verification.</p>
             </div>
           )}
-          <div className="space-y-3">
-            {threads
-              .filter((t) => t.latest.report_type === 'corporate_submission')
-              .map((t) => {
-                const mine = mines.find((m) => m.id === t.mineId);
-                return (
-                  <div key={`${t.mineId}-${t.reportingPeriod}`} className="bg-black/30 p-5 rounded-2xl border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-black/40 transition-colors shadow-inner">
-                    <div>
-                      <h4 className="text-base font-bold text-white tracking-wide">{mine?.name ?? t.mineId}</h4>
-                      <div className="flex items-center gap-3 text-xs font-mono text-zinc-400 mt-2 bg-zinc-900/50 p-2 rounded-lg border border-white/5 w-fit">
-                        <span>{t.reportingPeriod}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span>{t.latest.total_safety_issues} total issues</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-red-400/80">{t.latest.critical_issues} critical</span>
-                      </div>
-                    </div>
-                    <StatusBadge status={REPORT_STATUS_BADGE[t.latest.status]} label={t.latest.status.toUpperCase()} />
+          {threads
+            .filter((t) => t.latest.report_type === 'corporate_submission')
+            .map((t) => {
+              const mine = mines.find((m) => m.id === t.mineId);
+              return (
+                <div key={`${t.mineId}-${t.periodLabel}`} className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 shadow-lg hover:bg-zinc-800/40 transition-colors p-5 rounded-2xl flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{mine?.name ?? t.mineId}</h4>
+                    <p className="text-xs font-mono text-zinc-400 mt-1">{t.periodLabel} · {t.latest.total_safety_issues} issues reported ({t.latest.critical_issues} critical)</p>
                   </div>
-                );
-              })}
-          </div>
+                  <StatusBadge status={REPORT_STATUS_BADGE[t.latest.status]} label={t.latest.status.toUpperCase()} />
+                </div>
+              );
+            })}
         </div>
       </PageLayout>
     </DashboardLayout>
@@ -192,27 +188,59 @@ export const RegulatoryMinesPage = () => {
   );
 };
 
-// 3. Compliance — /dashboard/regulatory/compliance
+// 3. Compliance — /dashboard/regulatory/compliance — current status per mine, with a respond action.
+interface DirectiveDraft {
+  text: string;
+  priority: DirectivePriority;
+  due_at: string;
+}
+
+// Mirrors f40fc947's input/label spec — see the same constants in
+// CorporateDashboard.tsx for why the compact variant is its own string.
+const regField =
+  'w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 shadow-inner';
+const regFieldCompact =
+  'w-full px-4 py-2 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 shadow-inner';
+const regLabel = 'text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 block';
+
 export const RegulatoryCompliancePage = () => {
   const { mines, reports, reload } = useMinesAndReports();
   const threads = groupIntoThreads(reports);
   const [respondingTo, setRespondingTo] = useState<RegulatoryReport | null>(null);
   const [status, setStatus] = useState<'under_review' | 'verified' | 'disputed'>('verified');
+  const [findings, setFindings] = useState<string[]>([]);
+  const [directives, setDirectives] = useState<DirectiveDraft[]>([]);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const openRespond = (report: RegulatoryReport) => {
     setRespondingTo(report);
     setStatus('verified');
+    setFindings([]);
+    setDirectives([]);
     setNotes('');
   };
+
+  const updateDirective = (index: number, patch: Partial<DirectiveDraft>) =>
+    setDirectives((current) => current.map((d, i) => (i === index ? { ...d, ...patch } : d)));
 
   const submitRespond = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!respondingTo) return;
     setIsSubmitting(true);
     try {
-      await api.post(`/regulatory-reports/${respondingTo.id}/respond`, { status, notes: notes || undefined });
+      await api.post(`/regulatory-reports/${respondingTo.id}/respond`, {
+        status,
+        findings: findings.map((f) => f.trim()).filter(Boolean),
+        directives: directives
+          .filter((d) => d.text.trim())
+          .map((d) => ({
+            text: d.text.trim(),
+            priority: d.priority,
+            due_at: d.due_at ? `${d.due_at}T00:00:00Z` : undefined,
+          })),
+        notes: notes || undefined,
+      });
       setRespondingTo(null);
       await reload();
     } finally {
@@ -239,16 +267,12 @@ export const RegulatoryCompliancePage = () => {
             return (
               <div key={mine.id} className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-zinc-800/40 transition-colors shadow-lg">
                 <div>
-                  <h4 className="text-base font-bold text-white tracking-wide">{mine.name}</h4>
-                  <div className="flex items-center gap-3 text-xs font-mono text-zinc-400 mt-2">
-                    {thread ? (
-                       <span className="bg-black/30 px-2 py-1 rounded border border-white/5">
-                         {thread.reportingPeriod} · {thread.latest.total_safety_issues} issues, <span className="text-red-400/80">{thread.latest.critical_issues} critical</span>
-                       </span>
-                    ) : (
-                      'No reports yet'
-                    )}
-                  </div>
+                  <h4 className="text-sm font-bold text-white">{mine.name}</h4>
+                  <p className="text-xs font-mono text-zinc-400 mt-1">
+                    {thread
+                      ? `${thread.periodLabel} · ${thread.latest.total_safety_issues} issues, ${thread.latest.critical_issues} critical, ${thread.latest.open_issues} open`
+                      : 'No reports yet'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-4">
                   {thread && <StatusBadge status={REPORT_STATUS_BADGE[thread.latest.status]} label={thread.latest.status.toUpperCase()} />}
@@ -268,31 +292,131 @@ export const RegulatoryCompliancePage = () => {
 
         {respondingTo && (
           <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-blue-500/20 shadow-[0_0_50px_rgba(37,99,235,0.1)] p-6 sm:p-8 space-y-6 mt-8 max-w-xl">
-            <SectionHeader title="Regulatory Decision" subtitle={`Reviewing: ${respondingTo.reporting_period}`} />
+            <SectionHeader
+              title="Regulatory Decision"
+              subtitle={`Reviewing: ${respondingTo.period_label}`}
+            />
             <form onSubmit={submitRespond} className="space-y-5">
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Decision Status</label>
+                <label className={regLabel}>Decision</label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as typeof status)}
-                  className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 shadow-inner appearance-none"
+                  className={regField}
                 >
                   <option value="under_review" className="bg-zinc-900">Under Review</option>
                   <option value="verified" className="bg-zinc-900">Verified</option>
                   <option value="disputed" className="bg-zinc-900">Disputed</option>
                 </select>
               </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className={`${regLabel} mb-0`}>Findings</p>
+                  <button
+                    type="button"
+                    onClick={() => setFindings((c) => [...c, ''])}
+                    className="flex items-center gap-1 text-xs font-mono text-amber-400 hover:text-white"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add
+                  </button>
+                </div>
+                {findings.length === 0 && (
+                  <p className="text-xs text-zinc-500 font-mono">No findings recorded.</p>
+                )}
+                {findings.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={f}
+                      onChange={(e) =>
+                        setFindings((c) => c.map((v, idx) => (idx === i ? e.target.value : v)))
+                      }
+                      placeholder="e.g. Resolved count could not be reconciled with sensor logs."
+                      className={regFieldCompact}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFindings((c) => c.filter((_, idx) => idx !== i))}
+                      className="p-2 text-zinc-500 hover:text-red-400 shrink-0"
+                      aria-label="Remove finding"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className={`${regLabel} mb-0`}>Directives</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDirectives((c) => [...c, { text: '', priority: 'mandatory', due_at: '' }])
+                    }
+                    className="flex items-center gap-1 text-xs font-mono text-amber-400 hover:text-white"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add
+                  </button>
+                </div>
+                {directives.length === 0 && (
+                  <p className="text-xs text-zinc-500 font-mono">No directives issued.</p>
+                )}
+                {directives.map((d, i) => (
+                  <div key={i} className="rounded-xl border border-white/10 bg-black/40 p-3 space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={d.text}
+                        onChange={(e) => updateDirective(i, { text: e.target.value })}
+                        placeholder="What the operator must do"
+                        className={regFieldCompact}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setDirectives((c) => c.filter((_, idx) => idx !== i))}
+                        className="p-2 text-zinc-500 hover:text-red-400 shrink-0"
+                        aria-label="Remove directive"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={d.priority}
+                        onChange={(e) =>
+                          updateDirective(i, { priority: e.target.value as DirectivePriority })
+                        }
+                        className={regFieldCompact}
+                      >
+                        <option value="advisory" className="bg-zinc-900">Advisory</option>
+                        <option value="mandatory" className="bg-zinc-900">Mandatory</option>
+                        <option value="immediate" className="bg-zinc-900">Immediate</option>
+                      </select>
+                      <input
+                        type="date"
+                        value={d.due_at}
+                        onChange={(e) => updateDirective(i, { due_at: e.target.value })}
+                        className={regFieldCompact}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Official Findings / Notes</label>
+                <label className={regLabel}>Notes</label>
                 <textarea
-                  rows={4}
+                  rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Detail findings from cryptographic anomaly verification..."
-                  className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50 resize-none shadow-inner"
+                  placeholder="Overall remarks on this return..."
+                  className={`${regField} resize-none`}
                 />
               </div>
-              <div className="flex items-center gap-3 pt-2">
+
+              <div className="flex items-center gap-3">
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -324,9 +448,9 @@ export const RegulatoryReportsPage = () => {
   return (
     <DashboardLayout>
       <PageLayout
-        title="Regulatory Report Ledger"
-        subtitle="Every submission and verification, stored immutably."
-        badge="Report Ledger"
+        title="Regulatory Reports"
+        subtitle="Every submission and the regulator's response, in order."
+        badge="Report History"
       >
         <div className="space-y-6 mt-4">
           {threads.length === 0 && (
@@ -338,40 +462,11 @@ export const RegulatoryReportsPage = () => {
           {threads.map((t) => {
             const mine = mines.find((m) => m.id === t.mineId);
             return (
-              <div key={`${t.mineId}-${t.reportingPeriod}`} className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 space-y-6">
-                <SectionHeader title={`${mine?.name ?? t.mineId} — ${t.reportingPeriod}`} />
-                <div className="space-y-4">
+              <div key={`${t.mineId}-${t.periodLabel}`} className="bg-zinc-900/40 backdrop-blur-2xl border border-white/5 shadow-2xl rounded-[2rem] p-6 sm:p-8 space-y-4">
+                <SectionHeader title={`${mine?.name ?? t.mineId} — ${t.periodLabel}`} />
+                <div className="space-y-3">
                   {t.thread.map((report) => (
-                    <div key={report.id} className="p-5 rounded-2xl bg-black/30 border border-white/5 shadow-inner transition-colors hover:bg-black/40">
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <span className="text-sm font-bold text-white tracking-wide">
-                          {report.report_type === 'corporate_submission' ? 'Corporate Submission' : 'Regulatory Verification'}
-                        </span>
-                        <StatusBadge status={REPORT_STATUS_BADGE[report.status]} label={report.status.toUpperCase()} />
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-xs font-mono text-zinc-500 mt-3 bg-zinc-900/50 p-2.5 rounded-lg border border-white/5">
-                        <span>{new Date(report.submitted_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span>{report.total_safety_issues} total anomalies</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-red-400/80">{report.critical_issues} critical</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-emerald-400/80">{report.resolved_issues} resolved</span>
-                      </div>
-
-                      {report.average_resolution_time_hours !== null && (
-                        <p className="text-xs font-mono text-blue-400 font-bold mt-4">
-                          Declared Avg. Resolution: {report.average_resolution_time_hours}h
-                        </p>
-                      )}
-                      
-                      {report.notes && (
-                        <p className="text-sm text-zinc-300 mt-4 leading-relaxed pl-3 border-l-2 border-blue-500/30">
-                          {report.notes}
-                        </p>
-                      )}
-                    </div>
+                    <ReportDetail key={report.id} report={report} />
                   ))}
                 </div>
               </div>

@@ -1,9 +1,15 @@
-from fastapi import APIRouter, Depends
+from beanie import PydanticObjectId
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth.dependencies import accessible_mine_ids, require_mine_assignment, require_role
 from ..models.site_issue import SiteIssue
 from ..models.user import User
-from ..schemas.site_issues import DetectSiteIssueRequest, SiteIssueResponse
+from ..schemas.site_issues import (
+    CreateSiteIssueRequest,
+    DetectSiteIssueRequest,
+    SiteIssueResponse,
+    UpdateSiteIssueStatusRequest,
+)
 from ..services import site_issue_service
 
 router = APIRouter(prefix="/site-issues", tags=["site-issues"])
@@ -25,6 +31,7 @@ def to_response(issue: SiteIssue) -> SiteIssueResponse:
         photo_url=issue.photo_url,
         status=issue.status,
         created_at=issue.created_at,
+        resolved_at=issue.resolved_at,
     )
 
 
@@ -39,6 +46,29 @@ async def list_site_issues(
     else:
         issues = await site_issue_service.list_site_issues(await require_mine_assignment(user))
     return [to_response(issue) for issue in issues]
+
+
+@router.patch("/{issue_id}", response_model=SiteIssueResponse)
+async def update_site_issue_status(
+    issue_id: str,
+    payload: UpdateSiteIssueStatusRequest,
+    user: User = Depends(require_role("safety_officer", "corporate_manager")),
+) -> SiteIssueResponse:
+    """Resolve (or reopen) a site issue. Workers are excluded deliberately —
+    reporting a hazard and declaring it fixed are different authorities.
+
+    Scoped with accessible_mine_ids rather than require_mine_assignment so the
+    one dependency covers both roles: a safety officer's single assigned mine,
+    a corporate manager's whole set.
+    """
+    issue = await SiteIssue.get(PydanticObjectId(issue_id))
+    if not issue:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Site issue not found")
+    if issue.mine_id not in await accessible_mine_ids(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an assigned mine")
+
+    issue = await site_issue_service.set_site_issue_status(issue=issue, status=payload.status)
+    return to_response(issue)
 
 
 @router.post("/detect", response_model=SiteIssueResponse | None)

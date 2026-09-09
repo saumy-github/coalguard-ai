@@ -1,10 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
-# build-essential: web3's pinned lru-dict has no cp312 wheel, needs to compile from source
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y build-essential
+# No apt deps: every pinned requirement ships a cp312 wheel. The former
+# build-essential block existed solely for web3's pinned lru-dict, and web3
+# moved to the blockchain/ service (see blockchain/Dockerfile).
 
 WORKDIR /app
 

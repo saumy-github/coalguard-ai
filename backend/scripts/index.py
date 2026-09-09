@@ -14,6 +14,7 @@ import asyncio
 
 from scripts.db import connect
 from scripts.seed_issues import seed_issues
+from scripts.seed_reports import seed_reports
 from scripts.seed_users import seed_users
 
 
@@ -25,6 +26,9 @@ async def main() -> None:
 
     print("\n🌱 Seeding issues...\n")
     await seed_issues()
+
+    print("\n🌱 Seeding reports...\n")
+    await seed_reports()
 
     print("\n✨ Seeding complete.")
     client.close()

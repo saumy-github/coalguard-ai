@@ -59,6 +59,39 @@ services:
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     restart: unless-stopped
 
+  # Offline EVM chain (chain_id 31337) for developing and demoing the whole
+  # anchoring flow with no faucet, no RPC provider and no internet. Started
+  # only on request via `npm run chain:node` (profile: chain), so the normal
+  # `dev:up` never pays for it. Node is pinned to 20 because Hardhat 2 hangs
+  # silently on newer Node — same reason the chain:* scripts containerise it.
+  hardhat:
+    image: node:20
+    profiles: ["chain"]
+    working_dir: /app
+    volumes:
+      - ./blockchain:/app
+    command: ["npx", "hardhat", "node", "--hostname", "0.0.0.0"]
+    ports:
+      - "127.0.0.1:8545:8545"
+    restart: unless-stopped
+
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8003:8000"
+    env_file:
+      - ./blockchain/.env
+    volumes:
+      - ./blockchain/src:/app/src  # Hot-reloads code inside Docker!
+      - ./blockchain/abi:/app/abi
+      - ./blockchain/deployments:/app/deployments
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+
 volumes:
   mongo_dev_data:
   redis_dev_data:

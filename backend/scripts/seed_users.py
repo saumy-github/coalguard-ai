@@ -91,6 +91,14 @@ async def seed_users() -> None:
             profile.mine = mine.id
         elif seed["role"] == "corporate_manager":
             profile.mines = [mine.id]
+        elif seed["role"] == "regulator":
+            # Post-refactor, a regulator's scope is its own explicit `mines`
+            # array (Section 1 item 4 of research/feature-audit-6-sep.md) —
+            # there's no more sitewide auto-derivation from corporate_manager
+            # assignments to fall back on. Seed it with every demo mine so the
+            # seed regulator is actually usable out of the box, same as the
+            # old derived behavior would have produced for this demo data.
+            profile.mines = [primary_mine.id, secondary_mine.id]
         set_profile(user, profile)
 
         await user.insert()

@@ -62,7 +62,7 @@ Grouped by who mostly owns them, but everything ultimately meets in MongoDB and 
 | OCR | EasyOCR / Tesseract — planned, not started |
 | Voice / Speech | Web Speech API or Bhashini/Sarvam AI for multilingual voice notes; a live Worker↔Officer voice/text chat channel — planned, not started (voice notes are captured today but not transcribed) |
 | Workflow automation | n8n — planned, not started |
-| Blockchain | Solidity + Hardhat, `web3.py`, Polygon testnet — planned, not started; deferred behind the simpler `RegulatoryReport` workflow for now (§7m) |
+| Blockchain | Solidity + Hardhat, `web3.py`, **Ethereum Sepolia** (not Polygon) — **built**, as a separate `blockchain/` microservice rather than code inside `backend/`; see §7m and `research/blockchain_ledger.md` |
 | Infra | Docker + Docker Compose (BuildKit cache mounts, hot-reload volumes for local dev); VPS/Oracle Cloud + Vercel deployment — still the plan, not yet done |
 
 `backend` and `ai_engine` are deliberately separate services/containers — the web backend (users, auth, issues) needs to stay light and responsive; PyTorch/YOLOv8/LangChain are heavy and CPU-blocking, so they live in `ai_engine` and get called over HTTP. Today only two of `ai_engine`'s endpoints are actually called from `backend`: PPE detection and anomaly detection (see §5).
@@ -81,7 +81,7 @@ Grouped by who mostly owns them, but everything ultimately meets in MongoDB and 
 | **`regulator`** | Regulatory Authority | **Derived, not assigned** (see below) | Aggregate KPIs, per-mine compliance status, review/verify Corporate reports, create Corporate Management accounts |
 | **`admin`** | Admin | Global — no `MineAssignment` needed | Create any role/mine, change any user's role, grant/revoke mine assignments |
 
-Live telemetry/camera feeds, ticket assign/resolve, manual Worker check-in/out, financial penalty metrics, blockchain hash verification, and system-wide onboarding UI beyond user/mine/access provisioning remain **not built** — see §1/§7 for exactly what each role's dashboard covers today versus the original design.
+Live telemetry/camera feeds, ticket assign/resolve, manual Worker check-in/out, financial penalty metrics, and system-wide onboarding UI beyond user/mine/access provisioning remain **not built** — see §1/§7 for exactly what each role's dashboard covers today versus the original design. Blockchain hash verification is built as an **API** (`POST /audit/verify/...`, §7m) but has **no dashboard UI** — a Regulator reaches it through `/docs` or curl, not a button.
 
 ### Scope model: `mine_assignments`, not `mine_id`/`subsidiary_id` on the user
 
@@ -210,7 +210,7 @@ graph TD
 - **`HealthCheckup`** — `worker_id`, `date`, `result`, `next_due_at`. **Not built.**
 
 ### Integrity, automation, misc
-- **`AuditLedgerEntry`** — `ticket_id` or `inspection_id`, `report_hash` (SHA-256), `tx_hash`, `block_number`, `chain` (polygon-testnet), `logged_at`. **Not built** — deferred per §1; see `RegulatoryReport` below for what ships in the meantime.
+- **`AuditLedgerEntry`** — **not built as a backend model, by design.** The `blockchain/` service owns this state in its own `coalguard_ledger` database as `LedgerEntry` (`record_type`, `record_id`, `mine_id`, `payload_hash`, `version`, `status`, `tx_hash`, `nonce`, `block_number`, `gas_used`, `chain_id`, `contract_address`, `attempts`, `last_error`, timestamps). It is operational queue state — nonces, retries, receipts — not domain data, and only that service ever learns transaction status. The backend reads it over HTTP. See §7m.
 - **`AlertLog`** — `ticket_id`, `channel` (sms/whatsapp/email), `recipient`, `sent_at`, `escalation_level`. **Not built.**
 - **`ScheduledReport`** — `mine_id` (or a list of mine ids, for a Corporate Manager's multi-mine summary — no `subsidiary_id` grouping; that concept is dropped, see `Mine`'s note above), `template` (daily_shift / weekly_compliance / monthly_environmental / quarterly_safety / annual_statutory), `period_start`, `period_end`, `pdf_url`, `recipients`, `generated_at`. **Not built.**
 - **`OCRDocument`** — `mine_id`, `doc_type` (logbook/attendance), `raw_image_url`, `extracted_text`, `uploaded_by`, `uploaded_at`. **Not built.**
@@ -237,7 +237,7 @@ backend/src/
 **Cross-service calls** (`backend` never runs heavy AI code itself):
 - ✅ `ai_engine` — **two of its endpoints are actually called today**: `POST /api/cv/detect` (PPE detection → `PersonIssue`, §7j) and `POST /api/predictive/anomaly` (sensor anomaly → `SiteIssue`, §7l point 1), both plain `httpx` calls from `services/ai_engine_client.py`. RAG (`/api/rag/check-compliance`, §7i) and the forecasting endpoint (`/api/predictive/forecast`, §7l point 2) are built in `ai_engine` but have **no caller in `backend` yet** — still the plan, not wired.
 - `n8n` — `backend` fires a webhook (ticket created/escalated) with the ticket payload; n8n owns the actual SMS/WhatsApp/email/escalation logic. **Not built** (no `Ticket` model to trigger it yet either, §4).
-- Blockchain — `backend/src/services/audit.py` computes the SHA-256 hash and calls `web3.py` against the Hardhat-deployed contract's ABI, then writes the resulting `tx_hash`/`block_number` into `AuditLedgerEntry`. **Not built** — deferred, see §1/§4.
+- Blockchain — **built, but not here.** `web3.py` lives in the `blockchain/` service, never in `backend/`. `backend/src/services/audit_service.py` is a thin HTTP connector that sends `{record_type, record_id}` and lets that service read the record, hash it, and own the chain interaction. The backend hashes nothing: a hash the backend computes, and a verification the backend performs, would only prove the backend agrees with itself — and the backend is exactly what a hostile DBA controls. See §7m.
 
 **WebSockets**: one endpoint streams simulated `TelemetryReading`s per mine (including the gas-leak simulation spike), another pushes ticket/alert notifications to connected dashboards. Redis pub/sub is the fan-out mechanism if more than one backend replica is ever running. **Not built** — no WebSocket endpoint exists in `backend` today.
 
@@ -358,9 +358,19 @@ All three return the same JWT; the frontend stores it and attaches it as a Beare
 2. **A trend line for production — built, not wired.** Given a mine's daily coal-extraction history (`POST /api/predictive/forecast`), it fits a trend line through the past and projects the next 30 days against the mine's EC cap, returning COMPLIANT/AT_RISK/EXCEEDED. Nothing in `backend` calls this endpoint — it's blocked on `ProductionLog` (§4) not existing yet to supply the history, and `ProductionVsCap` (§6) not existing to render it.
 
 ### m) Blockchain Audit Ledger
-**Not built** — explicitly deferred, not merely unstarted. The plan: when a `Ticket`/`Inspection` is created or resolved, `backend` computes a SHA-256 hash and calls a Hardhat-deployed `AuditLedger.sol` contract via `web3.py` (`logReport`/`resolveReport`), recording `tx_hash`/`block_number` in `AuditLedgerEntry`; a Regulator could then re-hash the current MongoDB record and compare it on-chain to prove tampering.
+**Built** — as a separate `blockchain/` microservice. This section previously described it as deferred; that deferral (Decision #13, `research/saumy/09-changes-5-sep.md`) held until `RegulatoryReport` (§4) shipped, which it now has. Full design: `research/blockchain_ledger.md`. Setup: `SETUP.md` §8.
 
-`research/saumy/09-changes-5-sep.md` Decision #13 deliberately trims this out of the first regulator-oversight build in favor of shipping `RegulatoryReport` (§4) first — a plain, immutable-by-convention (never-mutated, append-only-by-chain) report/verification record, with no cryptographic proof yet. The plan's own "implementation order" already put the hash-chain ledger *after* the report/action models, so this isn't a reversal, just landing exactly where that order said it would. Revisit the ledger once the report workflow is in real use; a full permissioned blockchain (vs. a simpler in-database chained-hash ledger) is explicitly a later reassessment, not the first step.
+Three departures from the design this section used to carry, each deliberate:
+
+1. **The service owns the chain, not `backend`.** `web3.py` is not a backend dependency and was removed from `backend/requirements.txt`. `backend/src/services/audit_service.py` sends `{record_type, record_id}` over HTTP; the ledger service re-reads the record, hashes it, and submits. The reasoning is adversarial: the claim is "a DBA cannot silently edit Mongo", so a hash computed by the thing a DBA controls proves nothing.
+2. **Ethereum Sepolia, not Polygon**, and config-driven (`CHAIN_ID`/`CHAIN_RPC_URL`), so a local Hardhat node at 31337 is the same code path — the whole flow demos offline with no faucet.
+3. **A generic `anchor()`, not `logReport`/`resolveReport`.** Anchors are append-only and versioned: `{recordType, recordId, mineId, payloadHash}` covers any record type without a redeploy, and there is nothing to "resolve" because a resolution is its own record with its own anchor.
+
+The regulator story in practice: `POST /audit/verify/mine/<id>` re-hashes the live MongoDB document and asks the contract. Untouched → `VERIFIED`. Edited behind the app's back → `TAMPERED`, with both hashes visible. Deleted outright → the record is gone from the app, but `GET /api/ledger/records/mine/<id>/onchain` still returns its full anchor history from the chain alone, which is the proof the deletion happened.
+
+Anchoring is best-effort and asynchronous — a chain outage can never fail or slow a compliance write. Verification is the opposite: it raises rather than returning an empty result, and an unreachable RPC returns `UNAVAILABLE`, never `TAMPERED`.
+
+Currently anchoring the `Mine` record type; the payload-builder registry in `audit_service.py` is where a second type gets added.
 
 ### n) OCR Document Digitization
 **Not built.** A scanned image of a legacy logbook/attendance sheet would be run through EasyOCR/Tesseract in `ai_engine`, with extracted text stored as an `OCRDocument` — lowest priority feature, unchanged from the original plan.

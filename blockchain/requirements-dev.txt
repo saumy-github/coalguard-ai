@@ -1,0 +1,7 @@
+# Dev-only. Deliberately NOT in requirements.txt so pytest never enters the
+# runtime image. Install inside the running container when you want to run the
+# canonicaliser tests:
+#     docker compose exec blockchain pip install -r requirements-dev.txt
+#     docker compose exec blockchain pytest
+-r requirements.txt
+pytest==8.3.3

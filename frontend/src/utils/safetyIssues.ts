@@ -36,6 +36,7 @@ interface SiteIssueRecord {
   recommended_action: string | null;
   status: string;
   created_at: string;
+  resolved_at: string | null;
 }
 
 interface PersonIssueRecord {
@@ -49,6 +50,7 @@ interface PersonIssueRecord {
   severity: string;
   status: string;
   created_at: string;
+  resolved_at: string | null;
 }
 
 export interface UnifiedIssue {
@@ -64,6 +66,7 @@ export interface UnifiedIssue {
   recommended_action: string;
   status: string;
   created_at: string;
+  resolved_at: string | null;
 }
 
 // Shared by SafetyOverviewPage and SafetyIssuesPage (research/saumy/
@@ -89,6 +92,7 @@ export async function fetchCombinedIssues(): Promise<UnifiedIssue[]> {
       recommended_action: issue.recommended_action || 'No recommended action recorded.',
       status: issue.status,
       created_at: issue.created_at,
+      resolved_at: issue.resolved_at,
     })),
     ...person.data.map((issue) => ({
       id: issue.id,
@@ -103,6 +107,7 @@ export async function fetchCombinedIssues(): Promise<UnifiedIssue[]> {
       recommended_action: PERSON_ISSUE_ACTION[issue.issue_type] ?? PERSON_ISSUE_ACTION.other,
       status: issue.status,
       created_at: issue.created_at,
+      resolved_at: issue.resolved_at,
     })),
   ];
 

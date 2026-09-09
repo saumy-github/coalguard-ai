@@ -24,6 +24,11 @@ class SiteIssue(Document):
     photo_url: Optional[str] = None
     status: SiteIssueStatus = "open"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Set when `status` flips to "resolved", cleared on reopen. This is what
+    # makes RegulatoryReport.average_resolution_time_hours a measurement rather
+    # than a corporate declaration — see services/regulatory_report_service.py.
+    # Null on every issue predating this field, so the metric must tolerate it.
+    resolved_at: Optional[datetime] = None
 
     class Settings:
         name = "site_issues"

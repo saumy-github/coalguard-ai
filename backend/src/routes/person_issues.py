@@ -1,9 +1,15 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from beanie import PydanticObjectId
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from ..auth.dependencies import accessible_mine_ids, require_mine_assignment, require_role
 from ..models.person_issue import PersonIssue
 from ..models.user import User
 from ..schemas.person_issues import PersonIssueResponse
+from ..schemas.person_issues import (
+    CreatePersonIssueRequest,
+    PersonIssueResponse,
+    UpdatePersonIssueStatusRequest,
+)
 from ..services import person_issue_service
 
 router = APIRouter(prefix="/person-issues", tags=["person-issues"])
@@ -24,6 +30,7 @@ def to_response(issue: PersonIssue) -> PersonIssueResponse:
         severity=issue.severity,
         status=issue.status,
         created_at=issue.created_at,
+        resolved_at=issue.resolved_at,
     )
 
 
@@ -55,6 +62,26 @@ async def list_my_person_issues(
         mine_id=await require_mine_assignment(user), worker_id=user.id
     )
     return [to_response(issue) for issue in issues]
+
+
+@router.patch("/{issue_id}", response_model=PersonIssueResponse)
+async def update_person_issue_status(
+    issue_id: str,
+    payload: UpdatePersonIssueStatusRequest,
+    user: User = Depends(require_role("safety_officer", "corporate_manager")),
+) -> PersonIssueResponse:
+    """Resolve (or reopen) a person/PPE issue. Same authority split and same
+    scope check as PATCH /site-issues/{issue_id} — a worker cannot close a
+    violation recorded against them.
+    """
+    issue = await PersonIssue.get(PydanticObjectId(issue_id))
+    if not issue:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person issue not found")
+    if issue.mine_id not in await accessible_mine_ids(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an assigned mine")
+
+    issue = await person_issue_service.set_person_issue_status(issue=issue, status=payload.status)
+    return to_response(issue)
 
 
 @router.post("/detect", response_model=PersonIssueResponse | None)

@@ -1,10 +1,16 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from beanie import PydanticObjectId
 from beanie.operators import In
 
 from . import ai_engine_client
-from ..models.person_issue import PersonIssue, PersonIssueSeverity, PersonIssueType
+from ..models.person_issue import (
+    PersonIssue,
+    PersonIssueSeverity,
+    PersonIssueStatus,
+    PersonIssueType,
+)
 
 
 async def create_person_issue(
@@ -32,6 +38,17 @@ async def create_person_issue(
         severity=severity,
     )
     await issue.insert()
+    return issue
+
+
+async def set_person_issue_status(*, issue: PersonIssue, status: PersonIssueStatus) -> PersonIssue:
+    """Mirrors site_issue_service.set_site_issue_status' contract exactly —
+    the two must stay in step, since the report aggregator treats both
+    collections identically when computing resolution times.
+    """
+    issue.status = status
+    issue.resolved_at = datetime.now(timezone.utc) if status == "resolved" else None
+    await issue.save()
     return issue
 
 
