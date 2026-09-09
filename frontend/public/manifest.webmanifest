@@ -1,0 +1,28 @@
+{
+  "name": "CoalGuard AI — Mine Governance & Intelligence Platform",
+  "short_name": "CoalGuard AI",
+  "description": "AI-Powered Smart Mine Governance, Safety, Compliance and Intelligence Platform for India's Coal Mining Sector.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0c09",
+  "theme_color": "#0f0c09",
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
