@@ -1,6 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IndiaMineMap } from '../IndiaMineMap';
+
+// Leaflet + react-leaflet (~150 KB) load only when this below-the-fold section
+// mounts — kept out of the landing page's initial download.
+const IndiaMineMap = lazy(() => import('../IndiaMineMap').then((m) => ({ default: m.IndiaMineMap })));
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { ROLES, type UserType } from '../../utils/userTypes';
@@ -200,8 +203,8 @@ export const LandingPage = () => {
             <RevealOnScroll>
               <div className="space-y-12 pr-0 lg:pr-8">
                 <div>
-                  <h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-blue-900 to-blue-600 tracking-tight mb-6 drop-shadow-sm">Intelligent Safety Pillars</h2>
-                  <p className="text-xl text-slate-800 font-medium">Everything you need to ensure maximum compliance and worker safety in high-risk environments.</p>
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-blue-900 to-blue-600 tracking-tight mb-6 drop-shadow-sm">Intelligent Safety Pillars</h2>
+                  <p className="text-lg sm:text-xl text-slate-800 font-medium">Everything you need to ensure maximum compliance and worker safety in high-risk environments.</p>
                 </div>
 
                 <div className="space-y-8">
@@ -327,7 +330,15 @@ export const LandingPage = () => {
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">Where We Operate</h2>
               <p className="text-lg text-slate-400">Live across multiple mines, monitored from one unified platform.</p>
             </div>
-            <IndiaMineMap />
+            <Suspense
+              fallback={
+                <div className="h-[420px] rounded-3xl border border-white/10 bg-white/5 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-white/15 border-t-white/70 animate-spin" />
+                </div>
+              }
+            >
+              <IndiaMineMap />
+            </Suspense>
           </RevealOnScroll>
         </div>
       </section>

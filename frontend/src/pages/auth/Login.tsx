@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from '../../store/authStore';
@@ -12,7 +12,7 @@ import {
   ArrowRight,
   ShieldAlert,
   User,
-  ChevronRight,
+  ChevronDown,
   ArrowLeft
 } from 'lucide-react';
 import { CoalGuardLogo } from '../../components/common/CoalGuardLogo';
@@ -92,8 +92,21 @@ export const Login = () => {
   const [identifier, setIdentifier] = useState(initialAccount.identifier);
   const [password, setPassword] = useState(DEMO_PASSWORD);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isRoleOpen, setIsRoleOpen] = useState(false);
+  const roleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (roleRef.current && !roleRef.current.contains(event.target as Node)) {
+        setIsRoleOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleRoleSelect = (account: typeof DEMO_ACCOUNTS[0]) => {
+    setIsRoleOpen(false);
     if (selectedAccount.role === account.role) return;
     setSelectedAccount(account);
     setIdentifier(account.identifier);
@@ -124,13 +137,14 @@ export const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-zinc-950 font-sans selection:bg-zinc-700 selection:text-white">
       
-      {/* Top Left Back Button */}
-      <button 
-        onClick={() => navigate('/')} 
-        className="absolute top-6 left-6 z-50 flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group px-4 py-2 bg-zinc-900/50 hover:bg-zinc-800/80 rounded-lg border border-white/5 backdrop-blur-md"
+      {/* Top Left Back Button — compact on mobile so it doesn't collide with
+          the centered brand mark below it. */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50 flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-900/50 hover:bg-zinc-800/80 rounded-lg border border-white/5 backdrop-blur-md"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span className="text-sm font-semibold tracking-wide">Back to Home</span>
+        <span className="text-xs sm:text-sm font-semibold tracking-wide">Back<span className="hidden sm:inline"> to Home</span></span>
       </button>
 
       {/* Sleek Graphite Gradient Background */}
@@ -147,71 +161,97 @@ export const Login = () => {
       <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-zinc-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-zinc-700/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <div className="w-full max-w-5xl relative z-10 flex flex-col items-center">
-        
+      <div className="w-full max-w-5xl relative z-10 flex flex-col items-center pt-12 sm:pt-0">
+
         {/* Brand Header */}
-        <div className="text-center mb-10 animate-fade-in-up">
-          <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-black/50 border border-white/10 relative overflow-hidden">
+        <div className="text-center mb-6 sm:mb-10 animate-fade-in-up">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-2xl shadow-black/50 border border-white/10 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
-            <CoalGuardLogo className="w-8 h-8 text-zinc-100 relative z-10" />
+            <CoalGuardLogo className="w-7 h-7 sm:w-8 sm:h-8 text-zinc-100 relative z-10" />
           </div>
-          <h1 className="text-3xl font-extrabold text-zinc-100 tracking-tight drop-shadow-sm">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-100 tracking-tight drop-shadow-sm">
             COAL<span className="text-zinc-500">GUARD</span>
           </h1>
         </div>
 
         {/* Main Two-Column Card (Premium Graphite Glass) */}
-        <div className="w-full bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden flex flex-col md:flex-row min-h-[550px]">
-          
-          {/* Left Column: Role Selector */}
-          <div className="md:w-5/12 bg-black/20 p-6 md:p-8 border-b md:border-b-0 md:border-r border-white/5 flex flex-col justify-center relative">
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6 pl-2">Select Access Role</h2>
-            <div className="space-y-3 relative z-10">
-              {DEMO_ACCOUNTS.map((account) => {
-                const Icon = account.icon;
-                const isSelected = selectedAccount.role === account.role;
+        <div className="w-full bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden flex flex-col md:flex-row md:min-h-[550px]">
+
+          {/* Left Column: Role Selector — top-aligned so the dropdown panel
+              opens downward with room to spare inside the card's clipped
+              (overflow-hidden, rounded) bounds. */}
+          <div className="md:w-5/12 bg-black/20 p-5 sm:p-6 md:p-8 md:pt-12 border-b md:border-b-0 md:border-r border-white/5 flex flex-col relative">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-4 md:mb-6 pl-2">Select Access Role</h2>
+
+            {/* Custom dropdown (not a native <select>) — keeps the per-role
+                icon + accent, and a native select's popup misbehaves inside
+                this card's backdrop-blur ancestor (see common/Dropdown.tsx). */}
+            <div ref={roleRef} className="relative z-20">
+              {(() => {
+                const SelectedIcon = selectedAccount.icon;
                 return (
                   <button
-                    key={account.role}
                     type="button"
-                    onClick={() => handleRoleSelect(account)}
-                    className={`w-full flex items-center justify-between p-4 rounded-xl transition-all duration-300 group overflow-hidden relative ${
-                      isSelected 
-                        ? 'bg-zinc-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.2)] border-white/10' 
-                        : 'bg-transparent hover:bg-zinc-800/40 border-transparent hover:border-white/5'
-                    } border`}
+                    onClick={() => setIsRoleOpen((open) => !open)}
+                    aria-haspopup="listbox"
+                    aria-expanded={isRoleOpen}
+                    className="w-full flex items-center justify-between gap-3 p-3.5 md:p-4 rounded-xl border border-white/10 bg-zinc-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all duration-300 relative overflow-hidden"
                   >
-                    {/* Active Indicator Line */}
-                    {isSelected && (
-                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${account.bgAccent} rounded-l-xl`}></div>
-                    )}
-                    
-                    <div className="flex items-center gap-4 relative z-10 pl-1">
-                      <div className={`p-2.5 rounded-lg transition-all duration-300 ${
-                        isSelected ? account.iconBgActive : 'bg-zinc-800/50 group-hover:bg-zinc-800'
-                      }`}>
-                        <Icon className={`w-5 h-5 ${isSelected ? '' : account.color} transition-colors duration-300`} />
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${selectedAccount.bgAccent} rounded-l-xl`}></div>
+                    <div className="flex items-center gap-3 sm:gap-4 pl-1 min-w-0">
+                      <div className={`p-2.5 rounded-lg shrink-0 ${selectedAccount.iconBgActive}`}>
+                        <SelectedIcon className="w-5 h-5" />
                       </div>
-                      <div className="text-left">
-                        <div className={`font-semibold tracking-wide transition-colors duration-300 ${isSelected ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
-                          {account.role}
-                        </div>
-                      </div>
+                      <span className="font-semibold tracking-wide text-white truncate">{selectedAccount.role}</span>
                     </div>
-                    
-                    <ChevronRight className={`w-5 h-5 transition-all duration-300 ${isSelected ? 'text-zinc-500 translate-x-0 opacity-100' : 'text-zinc-700 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} />
+                    <ChevronDown className={`w-5 h-5 shrink-0 text-zinc-400 transition-transform duration-300 ${isRoleOpen ? 'rotate-180' : ''}`} />
                   </button>
                 );
-              })}
+              })()}
+
+              {isRoleOpen && (
+                <ul
+                  role="listbox"
+                  /* In-flow, not absolute: the card is overflow-hidden (for its
+                     rounded corners), which would clip an absolutely-positioned
+                     menu. Expanding in-flow just grows the card instead. */
+                  className="mt-2 max-h-80 overflow-y-auto p-1.5 rounded-xl bg-black/30 border border-white/10 shadow-inner space-y-1"
+                >
+                  {DEMO_ACCOUNTS.map((account) => {
+                    const Icon = account.icon;
+                    const isSelected = selectedAccount.role === account.role;
+                    return (
+                      <li key={account.role} role="option" aria-selected={isSelected}>
+                        <button
+                          type="button"
+                          onClick={() => handleRoleSelect(account)}
+                          className={`w-full flex items-center gap-3 sm:gap-4 p-3 rounded-lg transition-colors duration-200 group text-left ${
+                            isSelected ? 'bg-zinc-800' : 'hover:bg-white/5'
+                          }`}
+                        >
+                          <div className={`p-2.5 rounded-lg shrink-0 transition-colors duration-200 ${
+                            isSelected ? account.iconBgActive : 'bg-zinc-800/50 group-hover:bg-zinc-800'
+                          }`}>
+                            <Icon className={`w-5 h-5 ${isSelected ? '' : account.color} transition-colors duration-200`} />
+                          </div>
+                          <span className={`font-semibold tracking-wide truncate ${isSelected ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+                            {account.role}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
 
           {/* Right Column: Form */}
-          <div className="md:w-7/12 p-8 md:p-12 relative flex flex-col justify-center bg-gradient-to-br from-transparent to-zinc-900/20">
+          <div className="md:w-7/12 p-6 sm:p-8 md:p-12 relative flex flex-col justify-center bg-gradient-to-br from-transparent to-zinc-900/20">
             <div className={`transition-all duration-300 transform ${isAnimating ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
-              
-              <div className="mb-10 text-center md:text-left">
-                <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Sign In</h2>
+
+              <div className="mb-8 md:mb-10 text-center md:text-left">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">Sign In</h2>
                 <p className="text-zinc-400">Authenticating as <span className="font-semibold text-zinc-200">{selectedAccount.role}</span></p>
               </div>
 
@@ -237,7 +277,7 @@ export const Login = () => {
 
                 {/* Password Input */}
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center ml-1">
+                  <div className="flex flex-wrap gap-2 justify-between items-center ml-1">
                     <label className="text-sm font-semibold text-zinc-300">Password</label>
                     <span className="text-xs text-zinc-500 font-mono bg-zinc-900/50 px-2 py-0.5 rounded-md border border-white/5">Demo: {DEMO_PASSWORD}</span>
                   </div>

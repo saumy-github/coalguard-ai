@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -23,7 +23,11 @@ import {
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
-import { MarkAttendanceModal } from '../attendance/MarkAttendanceModal';
+// Camera + liveness-detection code — pulled in only when the worker actually
+// opens the Punch-In flow, not on every dashboard load.
+const MarkAttendanceModal = lazy(() =>
+  import('../attendance/MarkAttendanceModal').then((m) => ({ default: m.MarkAttendanceModal })),
+);
 import { useSyncManager } from '../../hooks/useSyncManager';
 import { addIssueReport } from '../../utils/db';
 
@@ -268,14 +272,18 @@ export const WorkerOverviewPage = () => {
 
       </GraphiteWrapper>
 
-      <MarkAttendanceModal
-        isOpen={isAttendanceModalOpen}
-        onClose={() => setIsAttendanceModalOpen(false)}
-        onSuccess={(rec) => {
-          setTodayAttendance(rec.attendance_record || rec);
-          loadAttendance();
-        }}
-      />
+      {isAttendanceModalOpen && (
+        <Suspense fallback={null}>
+          <MarkAttendanceModal
+            isOpen={isAttendanceModalOpen}
+            onClose={() => setIsAttendanceModalOpen(false)}
+            onSuccess={(rec) => {
+              setTodayAttendance(rec.attendance_record || rec);
+              loadAttendance();
+            }}
+          />
+        </Suspense>
+      )}
     </DashboardLayout>
   );
 };
@@ -482,6 +490,7 @@ export const WorkerReportPage = () => {
                       <img
                         src={photoPreviewUrl}
                         alt="Attached"
+                        decoding="async"
                         className="w-14 h-14 object-cover rounded-xl border border-white/10"
                       />
                       <button

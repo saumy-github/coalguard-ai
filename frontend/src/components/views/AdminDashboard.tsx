@@ -341,6 +341,8 @@ export const AdminUsersPage = () => {
                            <img
                              src={`${API_URL}${u.photo_url}`}
                              alt=""
+                             loading="lazy"
+                             decoding="async"
                              className="w-9 h-9 rounded-full object-cover border border-white/10 shrink-0"
                            />
                          ) : (

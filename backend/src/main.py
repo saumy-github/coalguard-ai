@@ -36,7 +36,10 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    # FRONTEND_URL may be a comma-separated list (a single value splits to a
+    # one-item list, unchanged) so one backend can accept both a localhost
+    # dev frontend and one opened from another device on the LAN.
+    allow_origins=[o.strip() for o in settings.frontend_url.split(",") if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
