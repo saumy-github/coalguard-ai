@@ -101,9 +101,11 @@ export const AppRoutes = () => (
       {/* Corporate Management's real route tree (Decision #11) — production/
           compliance/ESG/forecasts stay mock/deferred, so there's no route for
           them yet; see 09's "remove now" table. `/reports` was added in Phase 7
-          once the report-submission workflow existed. */}
+          once the report-submission workflow existed. `/map` came with the
+          mine-map rollout to the multi-mine roles (MULTI_MINE_ROLES). */}
       <Route path="/dashboard/corporate" element={<RequireRole role="corporate_manager"><CorporateOverviewPage /></RequireRole>} />
       <Route path="/dashboard/corporate/reports" element={<RequireRole role="corporate_manager"><CorporateReportsPage /></RequireRole>} />
+      <Route path="/dashboard/corporate/map" element={<RequireRole role="corporate_manager"><MineMapPage /></RequireRole>} />
       <Route path="/dashboard/corporate/profile" element={<RequireRole role="corporate_manager"><CorporateProfilePage /></RequireRole>} />
 
       {/* Regulatory Authority's real route tree (Decision #13, trimmed to the
@@ -111,6 +113,7 @@ export const AppRoutes = () => (
           Audit History stay deferred; no route for them yet. */}
       <Route path="/dashboard/regulatory" element={<RequireRole role="regulator"><RegulatoryOverviewPage /></RequireRole>} />
       <Route path="/dashboard/regulatory/mines" element={<RequireRole role="regulator"><RegulatoryMinesPage /></RequireRole>} />
+      <Route path="/dashboard/regulatory/map" element={<RequireRole role="regulator"><MineMapPage /></RequireRole>} />
       <Route path="/dashboard/regulatory/compliance" element={<RequireRole role="regulator"><RegulatoryCompliancePage /></RequireRole>} />
       <Route path="/dashboard/regulatory/reports" element={<RequireRole role="regulator"><RegulatoryReportsPage /></RequireRole>} />
       <Route path="/dashboard/regulatory/profile" element={<RequireRole role="regulator"><RegulatoryProfilePage /></RequireRole>} />
@@ -121,6 +124,7 @@ export const AppRoutes = () => (
           reader anywhere in the app (deleted in Phase 9). */}
       <Route path="/dashboard/admin/users" element={<RequireRole role="admin"><AdminUsersPage /></RequireRole>} />
       <Route path="/dashboard/admin/mines" element={<RequireRole role="admin"><AdminMinesPage /></RequireRole>} />
+      <Route path="/dashboard/admin/map" element={<RequireRole role="admin"><MineMapPage /></RequireRole>} />
       <Route path="/dashboard/admin/profile" element={<RequireRole role="admin"><AdminProfilePage /></RequireRole>} />
 
       {/* Shared attendance kiosk device — not tied to one role's own tree. */}
