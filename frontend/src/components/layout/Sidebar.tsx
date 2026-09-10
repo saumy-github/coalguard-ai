@@ -44,11 +44,13 @@ const NAV_ITEMS_BY_ROLE: Record<UserType, () => NavItem[]> = {
   corporate_manager: () => [
     { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: '/dashboard/corporate' },
     { id: 'reports', label: 'Compliance Reports', icon: <FileText className="w-5 h-5" />, path: '/dashboard/corporate/reports' },
+    { id: 'map', label: 'Mine Map', icon: <Map className="w-5 h-5" />, path: '/dashboard/corporate/map' },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" />, path: '/dashboard/corporate/profile' }
   ],
   regulator: () => [
     { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: '/dashboard/regulatory' },
     { id: 'mines', label: 'Mines', icon: <Layers className="w-5 h-5" />, path: '/dashboard/regulatory/mines' },
+    { id: 'map', label: 'Mine Map', icon: <Map className="w-5 h-5" />, path: '/dashboard/regulatory/map' },
     { id: 'compliance', label: 'Compliance', icon: <FileCheck className="w-5 h-5" />, path: '/dashboard/regulatory/compliance' },
     { id: 'reports', label: 'Reports', icon: <FileText className="w-5 h-5" />, path: '/dashboard/regulatory/reports' },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" />, path: '/dashboard/regulatory/profile' }
@@ -56,6 +58,7 @@ const NAV_ITEMS_BY_ROLE: Record<UserType, () => NavItem[]> = {
   admin: () => [
     { id: 'users', label: 'Users', icon: <Users className="w-5 h-5" />, path: '/dashboard/admin/users' },
     { id: 'mines', label: 'Mines', icon: <Layers className="w-5 h-5" />, path: '/dashboard/admin/mines' },
+    { id: 'map', label: 'Mine Map', icon: <Map className="w-5 h-5" />, path: '/dashboard/admin/map' },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" />, path: '/dashboard/admin/profile' }
   ]
 };

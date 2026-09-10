@@ -14,7 +14,7 @@ import asyncio
 from src.auth.security import hash_password
 from src.models.mine import Mine
 from src.models.mine_level import MineLevel
-from src.models.user import User, empty_profile_for_role, set_profile
+from src.models.user import User, empty_profile_for_role, get_profile, set_profile
 from src.services.mine_layout_service import generate_level_layout
 from src.services.org_service import ensure_placeholder_mine, ensure_second_demo_mine
 
@@ -45,14 +45,30 @@ SEED_USERS = [
 
 
 async def ensure_mine_levels_seeded(mine: Mine) -> None:
-    if await MineLevel.find_one(MineLevel.mine_id == mine.id) is None:
-        for level in DEMO_MINE_LEVELS:
-            layout = generate_level_layout(level["level"], level["section_count"])
+    existing_levels = {
+        lvl.level: lvl
+        for lvl in await MineLevel.find(MineLevel.mine_id == mine.id).to_list()
+    }
+    for level in DEMO_MINE_LEVELS:
+        lvl_name = level["level"]
+        existing = existing_levels.get(lvl_name)
+        if existing is None:
+            layout = generate_level_layout(lvl_name, level["section_count"])
             await MineLevel(mine_id=mine.id, **level, **layout).insert()
-        print(f"Seeded {len(DEMO_MINE_LEVELS)} MineLevel rows for {mine.name}")
+            print(f"  [new]    MineLevel {lvl_name} for {mine.name}")
+        elif not existing.sections or not existing.view_box or not existing.boundary:
+            layout = generate_level_layout(lvl_name, level["section_count"])
+            existing.boundary = layout["boundary"]
+            existing.view_box = layout["view_box"]
+            existing.sections = layout["sections"]
+            await existing.save()
+            print(f"  [update] MineLevel {lvl_name} layout updated for {mine.name}")
 
 
 async def seed_users() -> None:
+    # Clean up corrupted users with neither email nor phone
+    await User.find({"email": None, "phone": None}).delete()
+
     primary_mine = await ensure_placeholder_mine()
     secondary_mine = await ensure_second_demo_mine()
     await ensure_mine_levels_seeded(primary_mine)
@@ -72,9 +88,36 @@ async def seed_users() -> None:
         if seed.get("phone"):
             conditions.append({"phone": seed["phone"]})
 
+        expected_profile = empty_profile_for_role(seed["role"])
+        if seed["role"] in ("worker", "safety_officer"):
+            expected_profile.mine = mine.id
+        elif seed["role"] == "corporate_manager":
+            expected_profile.mines = [mine.id]
+        elif seed["role"] == "regulator":
+            expected_profile.mines = [primary_mine.id, secondary_mine.id]
+
         existing = await User.find_one({"$or": conditions}) if conditions else None
         if existing:
-            print(f"  [skip] {seed['role']:<22} {identifier} (already exists)")
+            current_profile = get_profile(existing)
+            needs_update = False
+            if seed["role"] in ("worker", "safety_officer"):
+                if getattr(current_profile, "mine", None) != mine.id:
+                    current_profile.mine = mine.id
+                    needs_update = True
+            elif seed["role"] == "corporate_manager":
+                if mine.id not in (getattr(current_profile, "mines", None) or []):
+                    current_profile.mines = [mine.id]
+                    needs_update = True
+            elif seed["role"] == "regulator":
+                if set(getattr(current_profile, "mines", None) or []) != {primary_mine.id, secondary_mine.id}:
+                    current_profile.mines = [primary_mine.id, secondary_mine.id]
+                    needs_update = True
+            if existing.profile is None or needs_update:
+                set_profile(existing, current_profile)
+                await existing.save()
+                print(f"  [update] {seed['role']:<22} {identifier} (profile/mine synced)")
+            else:
+                print(f"  [skip]   {seed['role']:<22} {identifier} (already exists)")
             continue
 
         user = User(
@@ -85,24 +128,9 @@ async def seed_users() -> None:
             full_name=seed.get("full_name"),
             active=True,
         )
-
-        profile = empty_profile_for_role(seed["role"])
-        if seed["role"] in ("worker", "safety_officer"):
-            profile.mine = mine.id
-        elif seed["role"] == "corporate_manager":
-            profile.mines = [mine.id]
-        elif seed["role"] == "regulator":
-            # Post-refactor, a regulator's scope is its own explicit `mines`
-            # array (Section 1 item 4 of research/feature-audit-6-sep.md) —
-            # there's no more sitewide auto-derivation from corporate_manager
-            # assignments to fall back on. Seed it with every demo mine so the
-            # seed regulator is actually usable out of the box, same as the
-            # old derived behavior would have produced for this demo data.
-            profile.mines = [primary_mine.id, secondary_mine.id]
-        set_profile(user, profile)
-
+        set_profile(user, expected_profile)
         await user.insert()
-        print(f"  [new]  {seed['role']:<22} {identifier}")
+        print(f"  [new]    {seed['role']:<22} {identifier}")
 
     print(f"\nPassword for all seeded users: {TEST_PASSWORD}\n")
 

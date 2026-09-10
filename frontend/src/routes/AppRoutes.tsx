@@ -53,29 +53,24 @@ export const AppRoutes = () => (
     <Route path="/dashboard/safety/map" element={<RequireRole role="safety_officer"><MineMapPage /></RequireRole>} />
     <Route path="/dashboard/safety/profile" element={<RequireRole role="safety_officer"><SafetyProfilePage /></RequireRole>} />
 
-    {/* Corporate Management's real route tree (Decision #11) — production/
-        compliance/ESG/forecasts stay mock/deferred, so there's no route for
-        them yet; see 09's "remove now" table. `/reports` was added in Phase 7
-        once the report-submission workflow existed. */}
+    {/* Corporate Management's real route tree */}
     <Route path="/dashboard/corporate" element={<RequireRole role="corporate_manager"><CorporateOverviewPage /></RequireRole>} />
     <Route path="/dashboard/corporate/reports" element={<RequireRole role="corporate_manager"><CorporateReportsPage /></RequireRole>} />
+    <Route path="/dashboard/corporate/map" element={<RequireRole role="corporate_manager"><MineMapPage /></RequireRole>} />
     <Route path="/dashboard/corporate/profile" element={<RequireRole role="corporate_manager"><CorporateProfilePage /></RequireRole>} />
 
-    {/* Regulatory Authority's real route tree (Decision #13, trimmed to the
-        report/verification loop — Phase 7). Inspections/Actions Required/
-        Audit History stay deferred; no route for them yet. */}
+    {/* Regulatory Authority's real route tree */}
     <Route path="/dashboard/regulatory" element={<RequireRole role="regulator"><RegulatoryOverviewPage /></RequireRole>} />
     <Route path="/dashboard/regulatory/mines" element={<RequireRole role="regulator"><RegulatoryMinesPage /></RequireRole>} />
+    <Route path="/dashboard/regulatory/map" element={<RequireRole role="regulator"><MineMapPage /></RequireRole>} />
     <Route path="/dashboard/regulatory/compliance" element={<RequireRole role="regulator"><RegulatoryCompliancePage /></RequireRole>} />
     <Route path="/dashboard/regulatory/reports" element={<RequireRole role="regulator"><RegulatoryReportsPage /></RequireRole>} />
     <Route path="/dashboard/regulatory/profile" element={<RequireRole role="regulator"><RegulatoryProfilePage /></RequireRole>} />
 
-    {/* Admin's real route tree (Decision #14) — System Health/Data & Storage/
-        AI System/Activity Logs/Settings stay deferred; no route for them yet.
-        Last of the 5 roles to migrate — `activeSubTab` now has no remaining
-        reader anywhere in the app (deleted in Phase 9). */}
+    {/* Admin's real route tree */}
     <Route path="/dashboard/admin/users" element={<RequireRole role="admin"><AdminUsersPage /></RequireRole>} />
     <Route path="/dashboard/admin/mines" element={<RequireRole role="admin"><AdminMinesPage /></RequireRole>} />
+    <Route path="/dashboard/admin/map" element={<RequireRole role="admin"><MineMapPage /></RequireRole>} />
     <Route path="/dashboard/admin/profile" element={<RequireRole role="admin"><AdminProfilePage /></RequireRole>} />
 
     {/* Shared attendance kiosk device — not tied to one role's own tree. */}

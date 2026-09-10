@@ -52,8 +52,12 @@ const pointsToPath = (points: [number, number][]): string =>
   points.length ? 'M' + points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L') + 'Z' : '';
 
 function buildRenderLayout(level: MineLevelData, openSections: Set<number>) {
+  if (!level.view_box || level.view_box.length < 4 || !level.sections) {
+    return null;
+  }
   const [viewMinX, viewMinY, viewWidth, viewHeight] = level.view_box;
-  const boundaryPath = pointsToPath(level.boundary);
+  if (!viewWidth || !viewHeight) return null;
+  const boundaryPath = pointsToPath(level.boundary || []);
 
   const cells: Cell[] = level.sections.map((section) => {
     const status = openSections.has(section.section) ? 'open' : 'clear';
@@ -124,6 +128,9 @@ export const MineLevelMap = () => {
         const { data } = await api.get<MineLevelData[]>('/mine-levels', { params });
         setLevels(data);
         if (data.length) setSelectedLevel([...data].sort((a, b) => a.level.localeCompare(b.level))[0].level);
+      } catch (err) {
+        console.error('Failed to load mine levels:', err);
+        setLevels([]);
       } finally {
         setIsLoading(false);
       }
