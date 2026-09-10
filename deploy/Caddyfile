@@ -1,0 +1,12 @@
+# Reverse proxy + automatic HTTPS for the backend, so the Vercel (HTTPS)
+# frontend can call it without the browser's mixed-content block.
+#
+# Replace REPLACE_WITH_YOUR_HOST below with your VM's sslip.io hostname,
+# e.g. if the VM's public IP is 1.2.3.4, use: 1-2-3-4.sslip.io
+# (no DNS setup needed — sslip.io already resolves that hostname to the IP
+# embedded in it). Caddy gets a real Let's Encrypt cert for it automatically
+# the first time it starts, as long as ports 80 and 443 are open on the VM.
+
+REPLACE_WITH_YOUR_HOST.sslip.io {
+	reverse_proxy localhost:8000
+}

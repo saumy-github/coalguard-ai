@@ -1,0 +1,67 @@
+# Production compose file for the VM. Differences from the root docker-compose.yml:
+#   - No `redis` / `chromadb` services — verified unused (see research/deployment-7-sep.md).
+#   - `ai_engine` has no published port — `backend` reaches it over the internal
+#     Docker network (`http://ai_engine:8000`), it never needs to be reachable
+#     from outside the VM.
+#   - No dev bind-mounts / `--reload` — runs the image as built, not live source.
+#   - `mongodb` stays bound to `127.0.0.1` only — never reachable from outside the VM.
+#   - `blockchain` is included but optional: leave `ANCHOR_ENABLED=false` in
+#     blockchain/.env (or stop this one service) until the Sepolia config is
+#     finished — nothing else in the stack depends on it being up.
+
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"   # only Caddy talks to this, over localhost
+    env_file:
+      - ../backend/.env
+    volumes:
+      - ../uploads:/app/uploads
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+
+  ai_engine:
+    build:
+      context: ../ai_engine
+      dockerfile: Dockerfile
+    env_file:
+      - ../ai_engine/.env
+    volumes:
+      - ../ai_engine/data:/app/data
+      - ../uploads:/app/uploads
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    # no `ports:` — reachable only as http://ai_engine:8000 inside the compose network
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo_prod_data:/data/db
+    restart: unless-stopped
+
+  blockchain:
+    build:
+      context: ../blockchain
+      dockerfile: Dockerfile
+    env_file:
+      - ../blockchain/.env
+    volumes:
+      - ../blockchain/abi:/app/abi
+      - ../blockchain/deployments:/app/deployments
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    # no `ports:` — backend reaches it as http://blockchain:8000 internally;
+    # safe to leave running with ANCHOR_ENABLED=false, or comment this whole
+    # service out until Step 0 in research/deployment-7-sep.md is finished.
+
+volumes:
+  mongo_prod_data:

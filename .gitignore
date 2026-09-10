@@ -261,6 +261,7 @@ uploads/temp_selfies/*
 .Trashes
 
 .vscode
+.claude
 # Blockchain / Hardhat
 # Build output and local-chain state only. The ABI, the Sepolia deployment
 # record and the Sepolia Ignition state are all COMMITTED on purpose — a fresh

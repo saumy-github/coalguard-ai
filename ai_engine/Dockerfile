@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.10-slim
 
 # System deps:
@@ -6,13 +7,14 @@ FROM python:3.10-slim
 #   libgomp1                — PyTorch / ONNX multi-threading
 #   build-essential         — compile hnswlib (chromadb) + mediapipe native ext
 #   libssl-dev              — some pip wheel TLS fallbacks
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     libgomp1 \
     build-essential \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libssl-dev
 
 # Venv lives outside /app so it can't be shadowed by bind-mount volumes.
 # Anyone who `docker compose exec`s in gets it active with no extra step.
@@ -22,15 +24,17 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 
 # Upgrade pip & wheel tools first
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel
 
 COPY requirements.txt .
 
 # 1. CPU-only PyTorch (saves ~2 GB vs CUDA bundle)
 # 2. All remaining requirements
-RUN pip install --no-cache-dir torch==2.3.0 torchvision==0.18.0 \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install torch==2.3.0 torchvision==0.18.0 \
         --extra-index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install -r requirements.txt
 
 COPY . .
 
