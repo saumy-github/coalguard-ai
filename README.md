@@ -170,21 +170,42 @@ sih26/
 | Backend API source | `backend/src/` |
 | ML/AI microservice source | `ai_engine/src/` |
 | Blockchain contract + anchoring service | `blockchain/contracts/`, `blockchain/src/` |
-| Architecture / design documentation | `research/lld.md` |
+| Architecture / deployment documentation | `research/deployment-7-sep.md` |
 | Final PPT / presentation | `submission/` |
 | Local dev setup instructions | `SETUP.md` |
 
 ## 8. Final Presentation
 
-See [submission/DeluluDevs_SIH2026.pdf](submission/DeluluDevs_SIH2026.pdf).
+The complete pitch deck and architecture presentation is available at:
+- **[DeluluDevs_SIH2026.pdf](submission/DeluluDevs_SIH2026.pdf)**
 
 ## 9. Demo Video
 
-_Add the demo video link here before submission._
+Watch the complete platform walkthrough covering Web Command Center, AI Hazard Detection, DGMS Regulatory Assistant, and Mobile PWA Geofenced Attendance:
+
+[![CoalGuard AI Demo Video](https://img.youtube.com/vi/zFd65UCWHd0/hqdefault.jpg)](https://www.youtube.com/watch?v=zFd65UCWHd0)
+
+> **Direct Link**: [Watch Demo Video on YouTube](https://www.youtube.com/watch?v=zFd65UCWHd0)
 
 ## 10. Screenshots / Prototype Photos
 
-_Add product screenshots here before submission (e.g. under `assets/screenshots/`)._
+### Web Platform (Safety Command Center & AI Evidence)
+
+| Safety Command Center | AI Vision PPE Detection & DGMS Regulations |
+| :---: | :---: |
+| ![Safety Command Center](assets/screenshots/web3.png) | ![AI Vision Detection](assets/screenshots/web6.png) |
+
+| Interactive Underground Mine Digital Twin | Priority Issues Feed & Shift Management |
+| :---: | :---: |
+| ![Mine Level Map](assets/screenshots/web4.png) | ![Issues Queue](assets/screenshots/web5.png) |
+
+### Mobile PWA (Worker Experience)
+
+| Role Selection | Biometric Attendance Check-In | Automated AI Hazard Triage |
+| :---: | :---: | :---: |
+| <img src="assets/screenshots/mobile2.jpeg" width="260" alt="Mobile Role Selection" /> | <img src="assets/screenshots/mobile3.jpeg" width="260" alt="Biometric Check-In" /> | <img src="assets/screenshots/mobile4.jpeg" width="260" alt="AI Triage Reporting" /> |
+
+_Full asset collection available in [assets/screenshots/](assets/screenshots/)._
 
 ## 11. Installation
 
@@ -215,4 +236,7 @@ Full setup guide (prerequisites per OS, what goes in each `.env`, blockchain dep
 
 ## 13. Future Scope
 
-See [future_scope.md](future_scope.md).
+- **IoT Sensor Mesh Integration**: Real-time telemetry ingestion from underground methane, carbon monoxide, and airflow telemetry sensors via LoRaWAN/mesh relays.
+- **Offline-First PWA Sync**: Full background queueing for hazardous zone incident reports with automatic synchronization once surface network is restored.
+- **Statutory DGMS Inspector Portal**: Direct, tamper-proof read-only compliance dashboards for Directorate General of Mines Safety field inspectors.
+- **Zero-Knowledge Worker Proofs**: Privacy-preserving biometric and attendance verification anchored directly on-chain.
