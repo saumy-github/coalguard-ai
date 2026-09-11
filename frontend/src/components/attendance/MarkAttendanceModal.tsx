@@ -1,17 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Camera,
   CheckCircle2,
-  AlertTriangle,
+  AlertCircle,
   MapPin,
-  ShieldCheck,
-  Eye,
   RefreshCw,
   X,
-  Crosshair,
-  UserCheck,
+  User,
   Navigation,
-  ArrowLeft,
+  ShieldCheck,
+  Eye,
+  Clock
 } from 'lucide-react';
 
 import { api } from '../../utils/api';
@@ -49,15 +49,15 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
 
   const [workerId, setWorkerId] = useState(getInitialWorkerId());
   const [scanState, setScanState] = useState<ScanState>('idle');
-  const [statusMessage, setStatusMessage] = useState<string>('Align your face in the oval guide');
+  const [statusMessage, setStatusMessage] = useState<string>('Center your face in the camera view');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number>(3);
+  const [countdown, setCountdown] = useState<number>(5);
   const [captureProgress, setCaptureProgress] = useState<number>(0);
 
   // Geolocation state
   const [deviceCoords, setDeviceCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
-  const [simulateOnSite, setSimulateOnSite] = useState<boolean>(true); // Default to on-site for demo/presentation ease
-  const [locationStatus, setLocationStatus] = useState<string>('Detecting location...');
+  const [simulateOnSite, setSimulateOnSite] = useState<boolean>(true);
+  const [locationStatus, setLocationStatus] = useState<string>('Detecting mine boundary...');
 
   // Result state
   const [attendanceResult, setAttendanceResult] = useState<any>(null);
@@ -74,9 +74,9 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-      osc.frequency.setValueAtTime(880.0, audioCtx.currentTime + 0.12); // A5
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(880.0, audioCtx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
@@ -86,6 +86,18 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
       // Audio not permitted or not supported — ignore
     }
   };
+
+  // Prevent background scroll while modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   // Start Camera Stream
   const startCamera = async () => {
@@ -105,7 +117,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
     } catch {
       setScanState('error');
       setErrorMessage(
-        'Camera permission denied or camera not found. Please enable camera access in your browser settings.'
+        'Camera permission was denied or no camera device was found. Please allow camera access in your browser settings.'
       );
     }
   };
@@ -125,7 +137,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
       return;
     }
 
-    setLocationStatus('Acquiring GPS signal...');
+    setLocationStatus('Locating mine perimeter...');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setDeviceCoords({
@@ -133,7 +145,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
         });
-        setLocationStatus('GPS Acquired');
+        setLocationStatus('GPS active');
       },
       (err) => {
         setLocationStatus(`GPS unavailable (${err.message}). Using mine site simulation.`);
@@ -150,7 +162,8 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
       setErrorMessage(null);
       setAttendanceResult(null);
       setCaptureProgress(0);
-      setStatusMessage('Align your face in the oval guide');
+      setCountdown(5);
+      setStatusMessage('Center your face in the camera view');
       startCamera();
       fetchLocation();
     } else {
@@ -162,7 +175,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
     };
   }, [isOpen]);
 
-  // Capture single frame as Blob (optimized to max 640px for fast upload and inference)
+  // Capture single frame as Blob (optimized max 640px for fast upload and inference)
   const captureFrameBlob = (): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const video = videoRef.current;
@@ -206,40 +219,37 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
     });
   };
 
-  // Initiate Biometric Sequence
+  // Initiate Biometric Sequence with 5-second countdown timer
   const startBiometricSequence = async () => {
     setErrorMessage(null);
     setScanState('countdown');
-    setCountdown(3);
+    setCountdown(5);
 
-    // 3.. 2.. 1.. Countdown
-    for (let c = 3; c > 0; c--) {
+    // 5-second countdown: 5.. 4.. 3.. 2.. 1.. (1 second per count)
+    for (let c = 5; c > 0; c--) {
       setCountdown(c);
-      setStatusMessage(`Get ready... Blink your eyes when prompted (${c})`);
-      await new Promise((r) => setTimeout(r, 800));
+      setStatusMessage(`Please hold steady... Capturing in ${c} seconds`);
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
     setScanState('capturing');
-    setStatusMessage('BLINK NOW! Capturing face sequence...');
-    setCaptureProgress(10);
+    setStatusMessage('Blink your eyes naturally — recording verification frames...');
+    setCaptureProgress(15);
 
     const capturedBlobs: Blob[] = [];
     const totalFrames = 3;
 
     try {
-      // Capture 3 frames across ~600ms to capture natural blink motion
       for (let i = 0; i < totalFrames; i++) {
         const blob = await captureFrameBlob();
         capturedBlobs.push(blob);
         setCaptureProgress(Math.round(((i + 1) / totalFrames) * 100));
-        await new Promise((r) => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 250));
       }
 
-      // Step: Verifying via Backend & AI Engine
       setScanState('verifying');
-      setStatusMessage('Analyzing Geofence & Liveness & Face Biometrics...');
+      setStatusMessage('Verifying facial identity and mine geofence boundary...');
 
-      // Determine coordinates
       const effectiveLat = simulateOnSite ? DEFAULT_MINE.lat : (deviceCoords?.lat ?? DEFAULT_MINE.lat);
       const effectiveLng = simulateOnSite ? DEFAULT_MINE.lng : (deviceCoords?.lng ?? DEFAULT_MINE.lng);
 
@@ -262,7 +272,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
       const data = response.data;
       setAttendanceResult(data);
       setScanState('success');
-      setStatusMessage('Attendance Confirmed & Recorded!');
+      setStatusMessage('Attendance recorded successfully.');
       playSuccessChime();
 
       if (onSuccess) {
@@ -274,50 +284,51 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
         err?.response?.data?.detail ||
         err?.response?.data?.message ||
         err?.message ||
-        'Attendance verification failed. Please try again.';
+        'Verification was not successful. Please ensure your face is well-lit and aligned, then try again.';
       setErrorMessage(detail);
-      setStatusMessage('Verification Failed');
+      setStatusMessage('Verification Not Completed');
     }
   };
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-sm animate-fade-in">
+      {/* Backdrop click to close */}
+      <div className="fixed inset-0" onClick={onClose} />
+
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg bg-zinc-900 border border-amber-500/30 rounded-2xl shadow-2xl shadow-amber-500/10 overflow-hidden flex flex-col my-auto">
+      <div
+        className="relative w-full max-w-lg my-auto bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-white/5 bg-black/40 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center space-x-1 text-zinc-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition text-xs font-bold mr-1"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back</span>
-            </button>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <Crosshair className="w-5 h-5 animate-pulse" />
+        <div className="px-6 py-4 border-b border-zinc-800 bg-zinc-900/90 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400">
+              <Camera className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold tracking-wider text-white uppercase font-mono">
-                Geo-Fenced Face Attendance
-              </h2>
-              <p className="text-xs text-zinc-400">1-to-1 Anti-Spoofing & Biometric Verification</p>
+              <h3 className="text-base font-semibold text-white">
+                Daily Attendance Check-In
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Facial identity verification and mine boundary confirmation
+              </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition"
-            title="Close"
+            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Viewfinder Section */}
-        <div className="relative aspect-4/3 w-full bg-black overflow-hidden flex items-center justify-center">
+        {/* Viewfinder Area */}
+        <div className="relative aspect-4/3 w-full bg-zinc-950 overflow-hidden flex items-center justify-center">
           <video
             ref={videoRef}
             className="w-full h-full object-cover transform -scale-x-100"
@@ -327,207 +338,177 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
           />
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* HUD Target Overlay */}
+          {/* Simple, gentle face guide overlay */}
           <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-            {/* Corner brackets */}
-            <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-amber-400/70" />
-            <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-amber-400/70" />
-            <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-amber-400/70" />
-            <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-amber-400/70" />
-
-            {/* Oval Face Reticle */}
             <div
-              className={`w-44 h-56 rounded-[50%] border-2 border-dashed transition-all duration-300 flex items-center justify-center ${
+              className={`w-48 h-60 rounded-[50%] border-2 transition-all duration-300 flex items-center justify-center ${
                 scanState === 'capturing'
-                  ? 'border-green-400 scale-105 shadow-[0_0_20px_rgba(74,222,128,0.4)]'
+                  ? 'border-emerald-400 scale-102 bg-emerald-500/5'
                   : scanState === 'verifying'
-                  ? 'border-blue-400 animate-pulse'
+                  ? 'border-blue-400 animate-pulse bg-blue-500/5'
                   : scanState === 'error'
-                  ? 'border-red-500'
+                  ? 'border-red-400 bg-red-500/5'
                   : scanState === 'success'
-                  ? 'border-green-500 border-solid'
-                  : 'border-amber-400/60'
+                  ? 'border-emerald-500 bg-emerald-500/10'
+                  : 'border-zinc-400/50'
               }`}
             >
               {scanState === 'countdown' && (
-                <span className="text-6xl font-black text-amber-400 font-mono animate-ping">
-                  {countdown}
-                </span>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-6xl font-bold text-white drop-shadow-lg">
+                    {countdown}
+                  </span>
+                  <span className="text-xs text-zinc-200 mt-1 font-medium bg-black/60 px-3 py-1 rounded-full flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Capturing in {countdown}s</span>
+                  </span>
+                </div>
               )}
+
               {scanState === 'capturing' && (
-                <div className="text-center bg-black/60 px-3 py-1 rounded-full border border-green-500/50">
-                  <Eye className="w-6 h-6 text-green-400 mx-auto animate-bounce" />
-                  <span className="text-xs text-green-300 font-mono font-bold">BLINK EYES</span>
+                <div className="text-center bg-black/70 px-4 py-2 rounded-full border border-emerald-500/40 shadow-lg">
+                  <Eye className="w-5 h-5 text-emerald-400 mx-auto animate-bounce mb-1" />
+                  <span className="text-xs text-emerald-300 font-medium">Blink your eyes</span>
                 </div>
               )}
             </div>
 
-            {/* Scanning Laser Animation during verification */}
-            {scanState === 'verifying' && (
-              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#38bdf8] animate-[bounce_1.5s_infinite]" />
-            )}
-
-            {/* Top HUD Banner */}
-            <div className="absolute top-3 left-0 right-0 flex justify-center">
-              <span className="text-[10px] font-mono tracking-widest px-2.5 py-0.5 rounded bg-black/80 border border-white/10 text-amber-300 uppercase">
-                {scanState === 'verifying' ? 'Neural Matcher Active' : 'SFace + MediaPipe Mesh'}
-              </span>
-            </div>
-
-            {/* Bottom HUD Banner */}
-            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono text-zinc-300 bg-black/80 px-3 py-1.5 rounded-lg border border-white/10">
-              <div className="flex items-center space-x-1.5 truncate">
-                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            {/* Subtle location chip at bottom of viewfinder */}
+            <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-xs text-zinc-200 bg-black/70 px-3 py-1.5 rounded-lg backdrop-blur-sm border border-white/10">
+              <div className="flex items-center gap-1.5 truncate">
+                <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                 <span className="truncate">
                   {simulateOnSite
-                    ? `${DEFAULT_MINE.name} (0 m - Inside Boundary)`
+                    ? `${DEFAULT_MINE.name} (Within mine perimeter)`
                     : deviceCoords
                     ? `${deviceCoords.lat.toFixed(4)}°, ${deviceCoords.lng.toFixed(4)}°`
                     : locationStatus}
                 </span>
               </div>
-              <span
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
-                  simulateOnSite
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/40'
-                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                }`}
-              >
-                {simulateOnSite ? 'ON-SITE GEOFENCE' : 'GPS LIVE'}
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                {simulateOnSite ? 'On-Site Verified' : 'Live GPS'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-4 space-y-4 bg-zinc-900">
-          {/* Status / Instruction text */}
+        {/* Modal Controls & Feedback Body */}
+        <div className="p-5 space-y-4 bg-zinc-900 overflow-y-auto">
+          
+          {/* Status Instruction Bar */}
           <div className="flex items-center justify-between text-xs">
-            <span className="text-zinc-400 font-medium">{statusMessage}</span>
+            <span className="text-zinc-300 font-medium">{statusMessage}</span>
             {scanState === 'capturing' && (
-              <span className="font-mono text-green-400 font-bold">{captureProgress}%</span>
+              <span className="text-emerald-400 font-semibold">{captureProgress}%</span>
             )}
           </div>
 
-          {/* Progress Bar */}
+          {/* Smooth Progress Bar */}
           {(scanState === 'capturing' || scanState === 'verifying') && (
             <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-200 ${
-                  scanState === 'verifying'
-                    ? 'w-full bg-cyan-400 animate-pulse'
-                    : 'bg-amber-500'
+                  scanState === 'verifying' ? 'w-full bg-blue-500 animate-pulse' : 'bg-emerald-500'
                 }`}
                 style={{ width: scanState === 'verifying' ? '100%' : `${captureProgress}%` }}
               />
             </div>
           )}
 
-          {/* Error State Banner */}
+          {/* Error Banner */}
           {scanState === 'error' && errorMessage && (
-            <div className="p-3 bg-red-950/70 border border-red-700/80 rounded-xl text-red-200 text-xs flex items-start space-x-2">
-              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-bold">Verification Refused</p>
-                <p className="text-zinc-300 mt-0.5">{errorMessage}</p>
+            <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-200 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-semibold text-red-300">Verification Unsuccessful</p>
+                <p className="text-zinc-300 leading-relaxed">{errorMessage}</p>
               </div>
             </div>
           )}
 
-          {/* Success State Banner */}
+          {/* Success Banner */}
           {scanState === 'success' && attendanceResult && (
-            <div className="p-3.5 bg-green-950/70 border border-green-600/80 rounded-xl text-green-100 text-xs space-y-2">
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
-                <span className="font-bold text-sm text-green-300">
-                  Punch-In Verified & Logged
-                </span>
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Attendance Confirmed & Logged</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 pt-1 text-zinc-300 font-mono text-[11px] border-t border-green-800/40">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-500/20 text-zinc-300">
                 <div>
-                  <span className="text-zinc-400 block">Worker:</span>
-                  <span className="text-white font-bold">{attendanceResult?.worker_name || workerId}</span>
+                  <span className="text-zinc-500 block text-[11px]">Worker</span>
+                  <span className="text-white font-medium">{attendanceResult?.worker_name || workerId}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400 block">Mine Site:</span>
-                  <span className="text-white">{DEFAULT_MINE.name}</span>
+                  <span className="text-zinc-500 block text-[11px]">Mine Sector</span>
+                  <span className="text-white font-medium">{DEFAULT_MINE.name}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400 block">Perimeter:</span>
-                  <span className="text-green-400">
-                    {attendanceResult?.attendance_record?.distance_from_site_m ?? 0} m (Within 100m)
-                  </span>
+                  <span className="text-zinc-500 block text-[11px]">Geofence</span>
+                  <span className="text-emerald-400 font-medium">Inside Perimeter</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400 block">Liveness:</span>
-                  <span className="text-green-400">Blink Confirmed</span>
+                  <span className="text-zinc-500 block text-[11px]">Facial Check</span>
+                  <span className="text-emerald-400 font-medium">Verified</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Settings & Simulation Controls */}
+          {/* Settings & Info when Idle */}
           {scanState === 'idle' && (
-            <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between">
-                <label className="text-zinc-300 font-medium flex items-center space-x-1.5">
-                  <UserCheck className="w-4 h-4 text-amber-400" />
-                  <span>Worker Identifier:</span>
+            <div className="p-3.5 bg-zinc-950/60 rounded-xl border border-zinc-800 space-y-3 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-zinc-400 font-medium flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Worker Profile:</span>
                 </label>
                 <input
                   type="text"
                   value={workerId}
                   onChange={(e) => setWorkerId(e.target.value)}
-                  placeholder="e.g. saumy"
-                  className="bg-zinc-800 border border-white/10 text-white px-2.5 py-1 rounded text-xs w-36 text-right font-mono focus:border-amber-500 focus:outline-none"
+                  placeholder="Worker ID"
+                  className="bg-zinc-900 border border-zinc-700 text-white px-2.5 py-1 rounded-lg text-xs w-36 text-right focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
-              {/* Geofence Mode Toggle */}
-              <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                <div className="flex items-center space-x-1.5">
-                  <Navigation className="w-4 h-4 text-blue-400" />
-                  <div>
-                    <span className="text-zinc-300 font-medium block">Mine Geofence Mode</span>
-                    <span className="text-[10px] text-zinc-500">
-                      {simulateOnSite ? 'Simulating ECL Sector 7G site coords' : 'Using real browser GPS'}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800/80">
+                <div className="flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="text-zinc-400">Mine Location Mode</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSimulateOnSite(!simulateOnSite)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold transition ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                     simulateOnSite
-                      ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400'
+                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
                       : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                   }`}
                 >
-                  {simulateOnSite ? 'Simulate On-Site' : 'Live Device GPS'}
+                  {simulateOnSite ? 'Simulate On-Site' : 'Live Browser GPS'}
                 </button>
               </div>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-3 pt-1">
+          <div className="flex items-center gap-3 pt-1">
             {scanState === 'idle' && (
               <>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-3 rounded-xl text-sm font-bold text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 transition flex items-center justify-center space-x-1.5"
+                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/80 transition-colors"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
+                  Cancel
                 </button>
                 <button
                   type="button"
                   onClick={startBiometricSequence}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-md shadow-blue-600/20"
                 >
-                  <Camera className="w-5 h-5" />
-                  <span>Mark Attendance Now</span>
+                  <Camera className="w-4 h-4" />
+                  <span>Start 5s Check-In</span>
                 </button>
               </>
             )}
@@ -537,18 +518,17 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-3 rounded-xl text-sm font-bold text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 transition flex items-center justify-center space-x-1.5"
+                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/80 transition-colors"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
+                  Close
                 </button>
                 <button
                   type="button"
                   onClick={startBiometricSequence}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span>Retry Verification</span>
+                  <span>Try Again</span>
                 </button>
               </>
             )}
@@ -557,33 +537,46 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 bg-green-500 hover:bg-green-400 text-zinc-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
               >
-                <CheckCircle2 className="w-5 h-5" />
+                <CheckCircle2 className="w-4 h-4" />
                 <span>Done & Return</span>
               </button>
             )}
 
-            {(scanState === 'capturing' || scanState === 'verifying') && (
-              <div className="flex-1 py-3 bg-zinc-800 text-zinc-300 rounded-xl text-sm font-mono flex items-center justify-center space-x-2">
-                <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
-                <span>
-                  {scanState === 'capturing' ? 'Recording Eye Blink...' : 'Processing Verification...'}
-                </span>
+            {(scanState === 'countdown' || scanState === 'capturing' || scanState === 'verifying') && (
+              <div className="flex-1 py-2.5 bg-zinc-800 text-zinc-300 rounded-xl text-xs flex items-center justify-center gap-2">
+                {scanState === 'countdown' ? (
+                  <>
+                    <Clock className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                    <span>Starting in {countdown} seconds...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                    <span>
+                      {scanState === 'capturing' ? 'Recording blink sequence...' : 'Verifying face biometrics...'}
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </div>
+
         </div>
 
-        {/* Footer info note */}
-        <div className="px-4 py-2 bg-black/60 border-t border-white/5 text-[10px] text-zinc-500 flex items-center justify-between">
-          <span className="flex items-center space-x-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-green-500" />
-            <span>Encrypted Biometric Pipeline • 24h Selfie Purge</span>
+        {/* Quiet Footer Note */}
+        <div className="px-6 py-2.5 bg-zinc-950/80 border-t border-zinc-800 text-[11px] text-zinc-500 flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Secure mine verification</span>
           </span>
-          <span className="font-mono">SIH26 Compliance Engine</span>
+          <span>ECL Sector 7G</span>
         </div>
+
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };

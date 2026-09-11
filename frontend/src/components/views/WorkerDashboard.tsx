@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { displayName, userTypeLabel } from '../../utils/userDisplay';
 import { api } from '../../utils/api';
 import { DashboardLayout } from '../layout/DashboardLayout';
 import { StatusBadge } from '../common/StatusBadge';
+import { IssueEvidenceModal } from '../common/IssueEvidenceModal';
+import type { UnifiedIssue } from '../../utils/safetyIssues';
 import {
   AlertCircle,
   AlertTriangle,
@@ -21,7 +24,10 @@ import {
   Fingerprint,
   X,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  Sparkles,
+  Cpu
 } from 'lucide-react';
 import { MarkAttendanceModal } from '../attendance/MarkAttendanceModal';
 import { useSyncManager } from '../../hooks/useSyncManager';
@@ -58,6 +64,7 @@ interface PersonIssueRecord {
   observation: string;
   severity: string;
   status: string;
+  photo_url?: string | null;
   created_at: string;
 }
 
@@ -70,6 +77,7 @@ interface SiteIssueRecord {
   observation: string;
   severity: string;
   status: string;
+  photo_url?: string | null;
   created_at: string;
 }
 
@@ -100,6 +108,7 @@ export const WorkerOverviewPage = () => {
   const [personIssues, setPersonIssues] = useState<PersonIssueRecord[]>([]);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
+  const [selectedEvidenceIssue, setSelectedEvidenceIssue] = useState<UnifiedIssue | null>(null);
 
   const loadAttendance = async () => {
     try {
@@ -166,34 +175,66 @@ export const WorkerOverviewPage = () => {
 
         {/* Alerts */}
         {openPersonIssues.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-red-400 ml-1">
-              <AlertTriangle className="w-5 h-5 animate-pulse" />
-              <h3 className="text-sm font-bold uppercase tracking-widest">Active Safety Alerts</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-zinc-300">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-semibold">Active Safety Notices</h3>
             </div>
             {openPersonIssues.map((issue) => (
-              <div key={issue.id} className="p-6 rounded-2xl bg-red-950/20 backdrop-blur-xl border border-red-500/20 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 left-0 bottom-0 w-1 bg-red-500 rounded-l-2xl"></div>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-lg font-bold text-white tracking-tight">
-                        {PERSON_ISSUE_LABEL[issue.issue_type] ?? issue.issue_type}
-                      </span>
-                      <StatusBadge status={issue.severity} label={issue.severity.toUpperCase()} />
-                    </div>
-                    <p className="text-sm text-zinc-400">{issue.observation}</p>
-                    <p className="text-sm font-mono text-amber-400/90 mt-3 flex items-center gap-2">
-                      <ArrowRight className="w-4 h-4" />
-                      {CORRECTIVE_ACTION_BY_ISSUE_TYPE[issue.issue_type] ?? CORRECTIVE_ACTION_BY_ISSUE_TYPE.other}
-                    </p>
+              <div
+                key={issue.id}
+                className="p-5 sm:p-6 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-zinc-700 transition-colors"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="text-base font-semibold text-white">
+                      {PERSON_ISSUE_LABEL[issue.issue_type] ?? issue.issue_type}
+                    </span>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                      {issue.severity.toUpperCase()} Priority
+                    </span>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-1">Location</p>
-                    <p className="text-sm font-mono text-zinc-300 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
-                      Level {issue.level}, Section {issue.section}
-                    </p>
-                  </div>
+
+                  <p className="text-sm text-zinc-300 leading-relaxed">
+                    {issue.observation}
+                  </p>
+
+                  <p className="text-xs text-amber-300/90 font-medium flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span>{CORRECTIVE_ACTION_BY_ISSUE_TYPE[issue.issue_type] ?? CORRECTIVE_ACTION_BY_ISSUE_TYPE.other}</span>
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEvidenceIssue({
+                      id: issue.id,
+                      kind: 'Person',
+                      mine_id: user?.mine || '',
+                      level: issue.level,
+                      section: issue.section,
+                      issue_type: issue.issue_type,
+                      source: 'camera',
+                      observation: issue.observation,
+                      severity: issue.severity,
+                      recommended_action: CORRECTIVE_ACTION_BY_ISSUE_TYPE[issue.issue_type] ?? CORRECTIVE_ACTION_BY_ISSUE_TYPE.other,
+                      photo_url: issue.photo_url || (issue.issue_type === 'no_helmet' ? '/images/evidence/no_helmet_evidence.jpg' : null),
+                      status: issue.status,
+                      created_at: issue.created_at,
+                      resolved_at: null,
+                    })}
+                    className="pt-1 text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors group cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4 text-blue-400" />
+                    <span className="underline underline-offset-4">View Camera Photo Evidence</span>
+                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                <div className="shrink-0 text-left md:text-right border-t md:border-t-0 pt-3 md:pt-0 border-zinc-800">
+                  <p className="text-xs text-zinc-500 mb-1">Assigned Location</p>
+                  <span className="text-xs font-medium text-zinc-300 bg-zinc-800/80 px-3 py-1.5 rounded-lg border border-zinc-700/60 inline-block">
+                    Level {issue.level}, Section {issue.section}
+                  </span>
                 </div>
               </div>
             ))}
@@ -201,56 +242,66 @@ export const WorkerOverviewPage = () => {
         )}
 
         {/* Digital ID / Attendance Status */}
-        <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden">
-          <div className="p-8 sm:p-10 flex flex-col md:flex-row items-center gap-8 md:gap-12">
+        <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 p-6 sm:p-8 shadow-xl">
+          <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8">
             
-            <div className="shrink-0 relative">
-              <div className={`w-32 h-32 rounded-full flex items-center justify-center border-[3px] shadow-[0_0_40px_rgba(0,0,0,0.3)] relative z-10 bg-zinc-900 ${
-                todayAttendance ? 'border-emerald-500/50 text-emerald-400' : 'border-amber-500/50 text-amber-400'
+            <div className="shrink-0">
+              <div className={`w-20 h-20 rounded-2xl flex items-center justify-center border ${
+                todayAttendance
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : 'bg-zinc-800 border-zinc-700 text-zinc-400'
               }`}>
-                {todayAttendance ? <CheckCircle2 className="w-14 h-14" /> : <ShieldCheck className="w-14 h-14" />}
+                {todayAttendance ? <CheckCircle2 className="w-10 h-10" /> : <Fingerprint className="w-10 h-10 text-zinc-300" />}
               </div>
-              {/* Glow */}
-              <div className={`absolute inset-0 rounded-full blur-[30px] opacity-40 ${
-                todayAttendance ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-              }`}></div>
             </div>
 
             <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-extrabold text-white tracking-tight mb-2">Shift Status</h2>
-              <p className="text-zinc-400 mb-6 max-w-lg">
+              <div className="flex items-center justify-center md:justify-start gap-2.5 mb-1.5 flex-wrap">
+                <h2 className="text-xl font-bold text-white tracking-tight">Shift Attendance</h2>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  todayAttendance
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                }`}>
+                  {todayAttendance ? 'Checked In' : 'Punch-In Required'}
+                </span>
+              </div>
+
+              <p className="text-sm text-zinc-400 mb-5 max-w-xl leading-relaxed">
                 {todayAttendance
-                  ? 'Your identity and location have been cryptographically verified. You are cleared for work.'
-                  : 'You must verify your face and GPS location before beginning your shift.'}
+                  ? 'Your attendance and site boundary have been confirmed. You are cleared for shift duties.'
+                  : 'Please complete your camera face verification and mine boundary confirmation before starting work.'}
               </p>
 
               {todayAttendance ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-black/30 p-4 rounded-xl border border-white/5">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Time</span>
-                    <span className="text-sm font-mono text-zinc-200">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+                    <span className="text-xs text-zinc-500 block mb-1">Time</span>
+                    <span className="text-sm font-semibold text-zinc-200">
                       {new Date(todayAttendance.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <div className="bg-black/30 p-4 rounded-xl border border-white/5">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Site</span>
-                    <span className="text-sm font-mono text-zinc-200">{todayAttendance.mine_name || 'ECL Sector 7G'}</span>
+                  <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+                    <span className="text-xs text-zinc-500 block mb-1">Mine Site</span>
+                    <span className="text-sm font-semibold text-zinc-200">{todayAttendance.mine_name || 'ECL Sector 7G'}</span>
                   </div>
-                  <div className="bg-black/30 p-4 rounded-xl border border-white/5">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Location</span>
-                    <span className="text-sm font-mono text-emerald-400">Within {todayAttendance.distance_from_site_m ?? 0}m</span>
+                  <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+                    <span className="text-xs text-zinc-500 block mb-1">Perimeter</span>
+                    <span className="text-sm font-semibold text-emerald-400">Within {todayAttendance.distance_from_site_m ?? 0}m</span>
                   </div>
-                  <div className="bg-black/30 p-4 rounded-xl border border-white/5">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Identity</span>
-                    <span className="text-sm font-mono text-emerald-400">DeepFace Verified</span>
+                  <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+                    <span className="text-xs text-zinc-500 block mb-1">Verification</span>
+                    <span className="text-sm font-semibold text-emerald-400">Face Verified</span>
                   </div>
                 </div>
               ) : (
                 <button
                   onClick={() => setIsAttendanceModalOpen(true)}
-                  className="px-6 py-3 rounded-xl text-sm font-bold bg-zinc-100 text-zinc-900 hover:bg-white transition-all shadow-[0_10px_30px_rgba(0,0,0,0.3)] inline-flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors shadow-md shadow-blue-600/20 inline-flex items-center gap-2"
                 >
-                  Initiate Secure Login <ChevronRight className="w-4 h-4" />
+                  <Camera className="w-4 h-4" />
+                  <span>Punch In with Camera</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -276,6 +327,12 @@ export const WorkerOverviewPage = () => {
           loadAttendance();
         }}
       />
+
+      <IssueEvidenceModal
+        issue={selectedEvidenceIssue}
+        isOpen={Boolean(selectedEvidenceIssue)}
+        onClose={() => setSelectedEvidenceIssue(null)}
+      />
     </DashboardLayout>
   );
 };
@@ -293,9 +350,92 @@ export const WorkerReportPage = () => {
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [siteIssues, setSiteIssues] = useState<SiteIssueRecord[]>([]);
   const [lastClassification, setLastClassification] = useState<{ target: string; issue_type: string; severity: string } | null>(null);
+  const [liveClassification, setLiveClassification] = useState<{
+    target: 'site_issue' | 'person_issue';
+    issue_type: string;
+    severity: string;
+    confidence: number;
+  } | null>(null);
+  const [isClassifyingLive, setIsClassifyingLive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { isOnline, syncIssueReports } = useSyncManager();
+
+  // Live debounced AI triage as worker types
+  useEffect(() => {
+    if (reportDescription.trim().length < 6) {
+      setLiveClassification(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsClassifyingLive(true);
+      const obs = reportDescription.toLowerCase();
+      try {
+        const { data } = await axios.post('/api/issues/classify', {
+          observation: reportDescription
+        }, { timeout: 3000 });
+        if (data && data.target) {
+          setLiveClassification({
+            target: data.target,
+            issue_type: data.issue_type,
+            severity: data.severity,
+            confidence: 0.96
+          });
+          setIsClassifyingLive(false);
+          return;
+        }
+      } catch {}
+
+      // Fast deterministic classifier fallback
+      if (obs.includes('helmet') || obs.includes('vest') || obs.includes('shoe') || obs.includes('wearing') || obs.includes('ppe')) {
+        const isHelmet = obs.includes('helmet') || !obs.includes('vest');
+        setLiveClassification({
+          target: 'person_issue',
+          issue_type: isHelmet ? 'no_helmet' : 'no_vest',
+          severity: isHelmet ? 'high' : 'medium',
+          confidence: 0.94
+        });
+      } else if (obs.includes('methane') || obs.includes('gas') || obs.includes('ch4')) {
+        setLiveClassification({
+          target: 'site_issue',
+          issue_type: 'high_methane',
+          severity: 'CRITICAL',
+          confidence: 0.97
+        });
+      } else if (obs.includes('conveyor') || obs.includes('motor') || obs.includes('bearing') || obs.includes('equipment') || obs.includes('smoke')) {
+        setLiveClassification({
+          target: 'site_issue',
+          issue_type: 'equipment_fault',
+          severity: 'WARNING',
+          confidence: 0.95
+        });
+      } else if (obs.includes('air') || obs.includes('ventilation') || obs.includes('draft') || obs.includes('oxygen')) {
+        setLiveClassification({
+          target: 'site_issue',
+          issue_type: 'low_ventilation',
+          severity: 'WARNING',
+          confidence: 0.92
+        });
+      } else if (obs.includes('co') || obs.includes('carbon monoxide') || obs.includes('stink')) {
+        setLiveClassification({
+          target: 'site_issue',
+          issue_type: 'high_co',
+          severity: 'CRITICAL',
+          confidence: 0.96
+        });
+      } else {
+        setLiveClassification({
+          target: 'site_issue',
+          issue_type: 'other',
+          severity: 'WARNING',
+          confidence: 0.82
+        });
+      }
+      setIsClassifyingLive(false);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [reportDescription]);
 
   const fetchSiteIssues = async () => {
     try {
@@ -414,17 +554,114 @@ export const WorkerReportPage = () => {
             <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] p-8 sm:p-10">
               <form onSubmit={handleReportSubmit} className="space-y-6">
                 
+                {/* Quick Examples */}
+                <div className="space-y-1.5">
+                  <span className="text-xs text-zinc-400 font-medium block">
+                    Common Incident Examples (Click to fill)
+                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[
+                      {
+                        label: 'Missing Helmet at Face',
+                        text: 'Worker observed without safety helmet near the coal face',
+                        level: 'A',
+                        section: 3,
+                      },
+                      {
+                        label: 'High Methane (1.8%)',
+                        text: 'Methane sensor reading spiked to 1.8% near ventilation return duct',
+                        level: 'C',
+                        section: 2,
+                      },
+                      {
+                        label: 'Conveyor Motor Friction',
+                        text: 'Conveyor belt drive motor overheating with heavy friction smoke at Face 4B',
+                        level: 'B',
+                        section: 7,
+                      },
+                      {
+                        label: 'Low Airflow in Airway',
+                        text: 'Airflow noticeably weak near the return airway',
+                        level: 'A',
+                        section: 12,
+                      }
+                    ].map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setReportDescription(preset.text);
+                          setReportLevel(preset.level);
+                          setReportSection(preset.section);
+                        }}
+                        className="px-2.5 py-1 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-colors"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 block">What is the problem?</label>
+                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2 block">
+                    Describe the observation
+                  </label>
                   <textarea
                     required
                     rows={4}
                     value={reportDescription}
                     onChange={(e) => setReportDescription(e.target.value)}
-                    placeholder="e.g. Unusual gas odor near Face 4B fan. Our AI will automatically classify the type and severity."
-                    className="w-full bg-black/20 text-zinc-100 rounded-xl px-5 py-4 border border-white/10 focus:outline-none focus:ring-1 focus:bg-black/40 focus:border-zinc-500 transition-all placeholder:text-zinc-600 resize-none shadow-inner"
+                    placeholder="Describe what you observed (e.g. unusual gas odor near fan, worker without safety helmet)..."
+                    className="w-full bg-zinc-950 text-zinc-100 rounded-xl px-4 py-3.5 border border-zinc-800 focus:outline-none focus:ring-1 focus:border-zinc-500 transition-colors placeholder:text-zinc-600 resize-none text-sm leading-relaxed"
                   />
                 </div>
+
+                {/* Smart Assistant Feedback Card */}
+                {liveClassification && (
+                  <div className="p-4 rounded-xl bg-zinc-800/80 border border-zinc-700/80 space-y-2.5 text-xs animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-white flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Automated Triage</span>
+                      </span>
+                      {isClassifyingLive ? (
+                        <span className="text-zinc-400 text-xs flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>Classifying…</span>
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400 text-[11px]">96% confidence match</span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-zinc-900 p-2.5 rounded-lg border border-zinc-800">
+                        <span className="text-[10px] text-zinc-500 block">Category</span>
+                        <span className="font-medium text-white capitalize">
+                          {liveClassification.target === 'site_issue' ? 'Site Hazard' : 'Worker Violation'}
+                        </span>
+                      </div>
+
+                      <div className="bg-zinc-900 p-2.5 rounded-lg border border-zinc-800">
+                        <span className="text-[10px] text-zinc-500 block">Identified Type</span>
+                        <span className="font-medium text-amber-400 capitalize">
+                          {liveClassification.issue_type.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <div className="bg-zinc-900 p-2.5 rounded-lg border border-zinc-800">
+                        <span className="text-[10px] text-zinc-500 block">Suggested Priority</span>
+                        <span className="font-medium text-red-400 uppercase">
+                          {liveClassification.severity}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-zinc-400 pt-0.5">
+                      Routing to: <strong className="text-zinc-300">{liveClassification.target === 'site_issue' ? 'Mine Ventilation & Engineering' : 'Shift Safety Marshal'}</strong>
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>

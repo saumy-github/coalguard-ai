@@ -16,7 +16,8 @@ import {
   Layers,
   Users,
   ArrowRight,
-  LogOut
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 import { CoalGuardLogo } from '../common/CoalGuardLogo';
 
@@ -39,6 +40,7 @@ const NAV_ITEMS_BY_ROLE: Record<UserType, () => NavItem[]> = {
     { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: '/dashboard/safety' },
     { id: 'issues', label: 'Safety Issues', icon: <AlertCircle className="w-5 h-5" />, path: '/dashboard/safety/issues' },
     { id: 'map', label: 'Mine Map', icon: <Map className="w-5 h-5" />, path: '/dashboard/safety/map' },
+    { id: 'regulations', label: 'DGMS Regulations', icon: <BookOpen className="w-5 h-5" />, path: '/dashboard/safety/regulations' },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" />, path: '/dashboard/safety/profile' }
   ],
   corporate_manager: () => [

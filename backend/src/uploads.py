@@ -12,7 +12,9 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 
-UPLOADS_ROOT = Path(__file__).resolve().parent.parent / "uploads"
+_local_root = Path(__file__).resolve().parent.parent / "uploads"
+_repo_root = Path(__file__).resolve().parent.parent.parent / "uploads"
+UPLOADS_ROOT = _repo_root if _repo_root.exists() else _local_root
 PENDING_DIR = UPLOADS_ROOT / "pending"
 SITE_ISSUES_DIR = UPLOADS_ROOT / "site_issues"
 PERSON_ISSUES_DIR = UPLOADS_ROOT / "person_issues"

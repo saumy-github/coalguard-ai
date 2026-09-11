@@ -33,6 +33,7 @@ async def seed_issues() -> None:
             "issue_type": "equipment_fault", "source": "manual",
             "observation": "Conveyor belt motor overheating at Face 4B.",
             "severity": "WARNING",
+            "photo_url": "/uploads/site_issues/conveyor_fault_evidence.jpg",
         },
         {
             "mine_id": ecl.id, "level": "C", "section": 2,
@@ -63,6 +64,7 @@ async def seed_issues() -> None:
         issue_type="no_helmet", source="manual",
         observation="Worker observed without safety helmet near the coal face.",
         severity="high",
+        photo_url="/uploads/person_issues/no_helmet_evidence.jpg",
     )
     await person_issue.insert()
     print("Seeded 1 PersonIssue row")

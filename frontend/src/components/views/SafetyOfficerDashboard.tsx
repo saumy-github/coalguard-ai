@@ -16,9 +16,12 @@ import {
   Users,
   CheckCircle2,
   MapPin,
-  Clock
+  Clock,
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { api } from '../../utils/api';
+import { DgmsRagAssistant } from '../common/DgmsRagAssistant';
 
 
 function useCombinedIssues() {
@@ -237,20 +240,50 @@ export const SafetyIssuesPage = () => {
         subtitle="Comprehensive log of all site and worker/PPE issues at your mine, prioritized by severity."
         badge="Issue Command"
       >
-        <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 min-h-[500px]">
-          <div className="space-y-4">
-            {issues.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-zinc-500 border border-white/5 border-dashed rounded-2xl bg-black/20">
-                <ShieldAlert className="w-12 h-12 mb-4 opacity-50" />
-                <p className="text-lg font-medium">No safety issues reported.</p>
-                <p className="text-sm mt-1 font-mono">Your mine is currently operating safely.</p>
+        <div className="space-y-8">
+          <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-2xl p-6 sm:p-8 min-h-[400px]">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5 flex-wrap gap-2">
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-tight">Active Incident & Hazard Stream</h3>
+                <p className="text-xs text-zinc-400 font-mono mt-0.5">Click any issue to inspect CCTV camera evidence, AI bounding boxes & DGMS statutory audit.</p>
               </div>
-            )}
-            {issues.map((issue) => (
-              <IssueRow key={`${issue.kind}-${issue.id}`} issue={issue} />
-            ))}
+              <span className="text-xs font-mono px-3 py-1 rounded-full bg-zinc-800 text-zinc-300 border border-white/5">
+                {issues.length} Issues Tracked
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {issues.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-zinc-500 border border-white/5 border-dashed rounded-2xl bg-black/20">
+                  <ShieldAlert className="w-12 h-12 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No safety issues reported.</p>
+                  <p className="text-sm mt-1 font-mono">Your mine is currently operating safely.</p>
+                </div>
+              )}
+              {issues.map((issue) => (
+                <IssueRow key={`${issue.kind}-${issue.id}`} issue={issue} />
+              ))}
+            </div>
           </div>
+
+          {/* Integrated DGMS Statutory Compliance Assistant */}
+          <DgmsRagAssistant />
         </div>
+      </PageLayout>
+    </DashboardLayout>
+  );
+};
+
+// Dedicated DGMS Statutory Regulations Page — /dashboard/safety/regulations
+export const SafetyRegulationsPage = () => {
+  return (
+    <DashboardLayout>
+      <PageLayout
+        title="DGMS Statutory Regulations & Legal Knowledge"
+        subtitle="Real-time statutory compliance audit against Coal Mines Regulations 2017 (CMR) and DGMS Technical Circulars."
+        badge="DGMS RAG Assistant"
+      >
+        <DgmsRagAssistant />
       </PageLayout>
     </DashboardLayout>
   );

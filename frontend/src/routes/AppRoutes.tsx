@@ -8,7 +8,7 @@ import { Login } from '../pages/auth/Login';
 import { Dashboard } from '../pages/Dashboard';
 import { MineMapPage } from '../pages/MineMapPage';
 import { WorkerOverviewPage, WorkerReportPage, WorkerProfilePage } from '../components/views/WorkerDashboard';
-import { SafetyOverviewPage, SafetyIssuesPage, SafetyProfilePage } from '../components/views/SafetyOfficerDashboard';
+import { SafetyOverviewPage, SafetyIssuesPage, SafetyProfilePage, SafetyRegulationsPage } from '../components/views/SafetyOfficerDashboard';
 import { CorporateOverviewPage, CorporateReportsPage, CorporateProfilePage } from '../components/views/CorporateDashboard';
 import {
   RegulatoryOverviewPage,
@@ -45,18 +45,22 @@ export const AppRoutes = () => (
     <Route path="/dashboard/worker" element={<RequireRole role="worker"><WorkerOverviewPage /></RequireRole>} />
     <Route path="/dashboard/worker/report" element={<RequireRole role="worker"><WorkerReportPage /></RequireRole>} />
     <Route path="/dashboard/worker/map" element={<RequireRole role="worker"><MineMapPage /></RequireRole>} />
+    <Route path="/dashboard/worker/ai" element={<Navigate to="/dashboard/worker/report" replace />} />
     <Route path="/dashboard/worker/profile" element={<RequireRole role="worker"><WorkerProfilePage /></RequireRole>} />
 
     {/* Safety Officer's real route tree */}
     <Route path="/dashboard/safety" element={<RequireRole role="safety_officer"><SafetyOverviewPage /></RequireRole>} />
     <Route path="/dashboard/safety/issues" element={<RequireRole role="safety_officer"><SafetyIssuesPage /></RequireRole>} />
     <Route path="/dashboard/safety/map" element={<RequireRole role="safety_officer"><MineMapPage /></RequireRole>} />
+    <Route path="/dashboard/safety/regulations" element={<RequireRole role="safety_officer"><SafetyRegulationsPage /></RequireRole>} />
+    <Route path="/dashboard/safety/ai" element={<RequireRole role="safety_officer"><SafetyRegulationsPage /></RequireRole>} />
     <Route path="/dashboard/safety/profile" element={<RequireRole role="safety_officer"><SafetyProfilePage /></RequireRole>} />
 
     {/* Corporate Management's real route tree */}
     <Route path="/dashboard/corporate" element={<RequireRole role="corporate_manager"><CorporateOverviewPage /></RequireRole>} />
     <Route path="/dashboard/corporate/reports" element={<RequireRole role="corporate_manager"><CorporateReportsPage /></RequireRole>} />
     <Route path="/dashboard/corporate/map" element={<RequireRole role="corporate_manager"><MineMapPage /></RequireRole>} />
+    <Route path="/dashboard/corporate/ai" element={<Navigate to="/dashboard/corporate" replace />} />
     <Route path="/dashboard/corporate/profile" element={<RequireRole role="corporate_manager"><CorporateProfilePage /></RequireRole>} />
 
     {/* Regulatory Authority's real route tree */}
@@ -64,6 +68,8 @@ export const AppRoutes = () => (
     <Route path="/dashboard/regulatory/mines" element={<RequireRole role="regulator"><RegulatoryMinesPage /></RequireRole>} />
     <Route path="/dashboard/regulatory/map" element={<RequireRole role="regulator"><MineMapPage /></RequireRole>} />
     <Route path="/dashboard/regulatory/compliance" element={<RequireRole role="regulator"><RegulatoryCompliancePage /></RequireRole>} />
+    <Route path="/dashboard/regulatory/regulations" element={<RequireRole role="regulator"><SafetyRegulationsPage /></RequireRole>} />
+    <Route path="/dashboard/regulatory/ai" element={<RequireRole role="regulator"><SafetyRegulationsPage /></RequireRole>} />
     <Route path="/dashboard/regulatory/reports" element={<RequireRole role="regulator"><RegulatoryReportsPage /></RequireRole>} />
     <Route path="/dashboard/regulatory/profile" element={<RequireRole role="regulator"><RegulatoryProfilePage /></RequireRole>} />
 
@@ -71,6 +77,7 @@ export const AppRoutes = () => (
     <Route path="/dashboard/admin/users" element={<RequireRole role="admin"><AdminUsersPage /></RequireRole>} />
     <Route path="/dashboard/admin/mines" element={<RequireRole role="admin"><AdminMinesPage /></RequireRole>} />
     <Route path="/dashboard/admin/map" element={<RequireRole role="admin"><MineMapPage /></RequireRole>} />
+    <Route path="/dashboard/admin/ai" element={<Navigate to="/dashboard/admin/users" replace />} />
     <Route path="/dashboard/admin/profile" element={<RequireRole role="admin"><AdminProfilePage /></RequireRole>} />
 
     {/* Shared attendance kiosk device — not tied to one role's own tree. */}

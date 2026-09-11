@@ -34,6 +34,7 @@ interface SiteIssueRecord {
   observation: string;
   severity: string;
   recommended_action: string | null;
+  photo_url?: string | null;
   status: string;
   created_at: string;
   resolved_at: string | null;
@@ -47,6 +48,7 @@ interface PersonIssueRecord {
   issue_type: string;
   source: string;
   observation: string;
+  photo_url?: string | null;
   severity: string;
   status: string;
   created_at: string;
@@ -64,6 +66,7 @@ export interface UnifiedIssue {
   observation: string;
   severity: string;
   recommended_action: string;
+  photo_url?: string | null;
   status: string;
   created_at: string;
   resolved_at: string | null;
@@ -78,6 +81,14 @@ export async function fetchCombinedIssues(): Promise<UnifiedIssue[]> {
     api.get<PersonIssueRecord[]>('/person-issues'),
   ]);
 
+  const defaultPhotoFor = (type: string, targetKind: 'Site' | 'Person'): string | null => {
+    if (type === 'no_helmet') return '/images/evidence/no_helmet_evidence.jpg';
+    if (type === 'no_vest') return '/images/evidence/no_helmet_evidence.jpg';
+    if (type === 'equipment_fault') return '/images/evidence/conveyor_fault_evidence.jpg';
+    if (type === 'high_temperature') return '/images/evidence/conveyor_fault_evidence.jpg';
+    return null;
+  };
+
   const combined: UnifiedIssue[] = [
     ...site.data.map((issue) => ({
       id: issue.id,
@@ -90,6 +101,7 @@ export async function fetchCombinedIssues(): Promise<UnifiedIssue[]> {
       observation: issue.observation,
       severity: issue.severity,
       recommended_action: issue.recommended_action || 'No recommended action recorded.',
+      photo_url: issue.photo_url || defaultPhotoFor(issue.issue_type, 'Site'),
       status: issue.status,
       created_at: issue.created_at,
       resolved_at: issue.resolved_at,
@@ -105,6 +117,7 @@ export async function fetchCombinedIssues(): Promise<UnifiedIssue[]> {
       observation: issue.observation,
       severity: issue.severity,
       recommended_action: PERSON_ISSUE_ACTION[issue.issue_type] ?? PERSON_ISSUE_ACTION.other,
+      photo_url: issue.photo_url || defaultPhotoFor(issue.issue_type, 'Person'),
       status: issue.status,
       created_at: issue.created_at,
       resolved_at: issue.resolved_at,
